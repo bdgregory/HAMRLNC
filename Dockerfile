@@ -1,6 +1,6 @@
 FROM ubuntu:18.04
 
-LABEL This Dockerfile is for hamrbox. It is maintained by Harry Li <harrli02@sas.upenn.edu> & Chosen Obih <chosenobih@arizona.edu>
+LABEL This Dockerfile is for HAMRLINC. It is maintained by Harry Li <harrli02@sas.upenn.edu> & Chosen Obih <chosenobih@arizona.edu>
 ENV DEBIAN_FRONTEND=noninteractive
 
 USER root
