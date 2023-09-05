@@ -26,8 +26,9 @@
 | -a | \[use Tophat2 instead of STAR\] <br> default uses STAR |
 | -b | \[Tophat2 library choice: fr-unstranded, fr-firststrand, fr-secondstrand\] <br> default=fr-firststrand |
 | -f | \[filter\] <br> default=filter_SAM_number_hits.pl |
-| -p | \[suppress pamlinc\] |
-| -u | \[suppress featurecount\] |
+| -k | \[suppress modification analysis (left arm)\] |
+| -p | \[suppress lincRNA identification (inner right arm)\] |
+| -u | \[suppress regular featurecount (outer right arm)\] |
 | -v | \[evolinc option: M or MO\] <br> default=M |
 | -Q | \[HAMR: minimum qualuty score\] <br> default=30 |
 | -C | \[HAMR: minimum coverage\] <br> default=50 |
