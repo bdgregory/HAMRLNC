@@ -1,5 +1,6 @@
 # HAMRLINC: High-throughput Analysis of Modified Ribonucleotides and Long Intergenic Non-Coding RNAs
-![HAMRbox_Workflow_v5](https://github.com/harrlol/HAMRLINC/assets/87460010/aa2b83f4-889b-42d1-9594-1f6715326ee6)
+![HAMRbox_Workflow_v5](https://github.com/harrlol/HAMRLINC/assets/87460010/c21b748b-b7e5-44bb-ba6b-83045d6c7521)
+
 
 
 ## Overview
