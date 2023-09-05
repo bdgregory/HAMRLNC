@@ -27,6 +27,7 @@ cat <<'EOF'
     -a	[use TopHat2 instead of STAR]
     -b	[Tophat library choice: fr-unstranded, fr-firststrand, fr-secondstrand]
     -f	[filter]
+    -k  [suppress hamrbox]
     -p  [suppress pamlinc]
     -u  [suppress featurecount]
     -v  [evolinc option: M or MO, default=M]
@@ -39,7 +40,6 @@ cat <<'EOF'
     -G  </path/to/CAGE RNA file> (optional file for evolinc_i)
     -D  </path/to/known lincRNA file> (optional file for evolinc_i)
     -m	[HAMR model]
-    -n	[number of threads]
     -h	[help message] 
 
 
@@ -62,6 +62,7 @@ filter=$curdir/filter_SAM_number_hits.pl
 model=$curdir/euk_trna_mods.Rdata
 pamlinc=true
 featurecount=true
+hamrbox=true
 generator=""
 
 #############Grabbing arguments############
@@ -105,6 +106,9 @@ while getopts ":o:t:c:g:i:l:e:s:A:f:m:n:hQCabpvEPF:" opt; do
      ;;
     p)
     pamlinc=false
+    ;;
+    k)
+    hamrbox=false
     ;;
     u)
     featurecount=false
@@ -248,6 +252,77 @@ fqgrab2 () {
 
     echo "[$sname] trimming complete, performing fastqc..."
     fastqc $dumpout/trimmed/$tt"_trimmed.fq" -o $dumpout/fastqc_results
+}
+
+pamlinc () {
+    if [[ "$tophatlib" = fr-firststrand ]]; then
+        stringtie \
+            $smpout/unique.bam \
+            -o $smpout/transcriptAssembly.gtf \
+            -G $annotation \
+            -p $threads \
+            -rf
+    elif [[ "$tophatlib" = fr-secondstrand ]]; then
+        stringtie \
+            $smpout/unique.bam \
+            -o $smpout/transcriptAssembly.gtf \
+            -G $annotation \
+            -p $threads \
+            -fr
+    else
+        stringtie \
+            $smpout/unique.bam \
+            -o $smpout/transcriptAssembly.gtf \
+            -G $annotation \
+            -p $threads \
+    fi
+
+    # next run cuff compare
+    cuffcompare \
+        $smpout/transcriptAssembly.gtf \
+        -r $annotation \
+        -s $genome \
+        -T \
+        -o $smpout/cuffed
+
+        # run evolinc
+    if [ "$evolinc_option" == "M" ]; then
+        evolinc-part-I.sh \
+            -c $smpout/cuffed.combined.gtf \
+            -g $genome \
+            -u $annotation \
+            -r $annotation \
+            -n $threads \
+            -o $smpout/lincRNA
+    elif [ "$evolinc_option" == "MO" ]; then
+        evolinc-part-I.sh \
+            -c $smpout/cuffed.combined.gtf \
+            -g $genome \
+            -u $annotation \
+            -r $annotation \
+            -n $threads \
+            -o $smpout/lincRNA \
+            -b $blast_file \
+            -t $cage_file \
+            -x $known_linc
+    fi
+
+    # run constitutive feature count within pamlinc (left arm) 
+    if [ "$seq_type" == "PE" ]; then
+        featureCounts \
+            -T $threads \
+            #this is bound to be buggy, ask
+            -a $smpout/lincRNA/${filename3}.lincRNA.updated.gtf \
+            -o $smpout/lincRNA_featurecount.txt \
+            $smpout/unique.bam
+    elif [ "$seq_type" == "SE" ]; then
+        featureCounts \
+            -T $threads \
+            -s $fclib \
+            -a $smpout/lincRNA/${filename}.lincRNA.updated.gtf \
+            -o $smpout/lincRNA_featurecount.txt \
+            $smpout/unique.bam
+    fi 
 }
 
 fastq2hamr () {
@@ -436,78 +511,10 @@ fastq2hamr () {
     if [[ "$pamlinc" = true ]]; then
         # run stringtie accordingly, note PE and SE here is taken care of
         # output is unnamed and stored in each fastq folder
-        if [[ "$tophatlib" = fr-firststrand ]]; then
-            stringtie \
-                $smpout/unique.bam \
-                -o $smpout/transcriptAssembly.gtf \
-                -G $annotation \
-                -p $threads \
-                -rf
-        elif [[ "$tophatlib" = fr-secondstrand ]]; then
-            stringtie \
-                $smpout/unique.bam \
-                -o $smpout/transcriptAssembly.gtf \
-                -G $annotation \
-                -p $threads \
-                -fr
-        else
-            stringtie \
-                $smpout/unique.bam \
-                -o $smpout/transcriptAssembly.gtf \
-                -G $annotation \
-                -p $threads \
-        fi
-
-        # next run cuff compare
-        cuffcompare \
-            $smpout/transcriptAssembly.gtf \
-            -r $annotation \
-            -s $genome \
-            -T \
-            -o $smpout/cuffed
-
-        # run evolinc
-        if [ "$evolinc_option" == "M" ]; then
-            evolinc-part-I.sh \
-                -c $smpout/cuffed.combined.gtf \
-                -g $genome \
-                -u $annotation \
-                -r $annotation \
-                -n $threads \
-                -o $smpout/lincRNA
-        elif [ "$evolinc_option" == "MO" ]; then
-            evolinc-part-I.sh \
-                -c $smpout/cuffed.combined.gtf \
-                -g $genome \
-                -u $annotation \
-                -r $annotation \
-                -n $threads \
-                -o $smpout/lincRNA \
-                -b $blast_file \
-                -t $cage_file \
-                -x $known_linc
-        fi
-
-        # run constitutive feature count within pamlinc (left arm) 
-        if [ "$seq_type" == "PE" ]; then
-            featureCounts \
-                -T $threads \
-                #this is bound to be buggy, ask
-                -a $smpout/lincRNA/${filename3}.lincRNA.updated.gtf \
-                -o $smpout/lincRNA_featurecount.txt \
-                $smpout/unique.bam
-        elif [ "$seq_type" == "SE" ]; then
-            featureCounts \
-                -T $threads \
-                -s $fclib \
-                -a $smpout/lincRNA/${filename}.lincRNA.updated.gtf \
-                -o $smpout/lincRNA_featurecount.txt \
-                $smpout/unique.bam
-        fi 
+        pamlinc
     fi  
 
     wait
-
 
     ###############################################
     ########regular feature count logic here (right arm)###########
@@ -530,79 +537,86 @@ fastq2hamr () {
         fi 
     fi
 
-    #adds read groups using picard, note the RG arguments are disregarded here
-    echo "[$smpkey] adding/replacing read groups..."
-    gatk AddOrReplaceReadGroups \
-        I=$smpout/unique.bam \
-        O=$smpout/unique_RG.bam \
-        RGID=1 \
-        RGLB=xxx \
-        RGPL=illumina_100se \
-        RGPU=HWI-ST1395:97:d29b4acxx:8 \
-        RGSM=sample
-    echo "[$smpkey] finished adding/replacing read groups"
-    echo ""
-
     wait
 
-    #reorder the reads using picard
-    echo "[$smpkey] reordering..."
-    echo "$genome"
-    gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" ReorderSam \
-        I=$smpout/unique_RG.bam \
-        O=$smpout/unique_RG_ordered.bam \
-        R=$genome \
-        CREATE_INDEX=TRUE \
-        SEQUENCE_DICTIONARY=$dict \
-        TMP_DIR=$smpout/tmp
-    echo "[$smpkey] finished reordering"
-    echo ""
+    ###############################################
+    ########original continuation of fastq2hamr here###########
+    ############################################### 
+    # run below only if hamrbox is true
+    if [[ "$hamrbox" = true ]]; then
+        #adds read groups using picard, note the RG arguments are disregarded here
+        echo "[$smpkey] adding/replacing read groups..."
+        gatk AddOrReplaceReadGroups \
+            I=$smpout/unique.bam \
+            O=$smpout/unique_RG.bam \
+            RGID=1 \
+            RGLB=xxx \
+            RGPL=illumina_100se \
+            RGPU=HWI-ST1395:97:d29b4acxx:8 \
+            RGSM=sample
+        echo "[$smpkey] finished adding/replacing read groups"
+        echo ""
 
-    wait
+        wait
 
-    #splitting and cigarring the reads, using genome analysis tool kit
-    #note can alter arguments to allow cigar reads 
-    echo "[$smpkey] getting split and cigar reads..."
-    gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" SplitNCigarReads \
-        -R $genome \
-        -I $smpout/unique_RG_ordered.bam \
-        -O $smpout/unique_RG_ordered_splitN.bam
-        # -U ALLOW_N_CIGAR_READS
-    echo "[$smpkey] finished splitting N cigarring"
-    echo ""
+        #reorder the reads using picard
+        echo "[$smpkey] reordering..."
+        echo "$genome"
+        gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" ReorderSam \
+            I=$smpout/unique_RG.bam \
+            O=$smpout/unique_RG_ordered.bam \
+            R=$genome \
+            CREATE_INDEX=TRUE \
+            SEQUENCE_DICTIONARY=$dict \
+            TMP_DIR=$smpout/tmp
+        echo "[$smpkey] finished reordering"
+        echo ""
 
-    wait
+        wait
 
-    #final resorting using picard
-    echo "[$smpkey] resorting..."
-    gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" SortSam \
-        I=$smpout/unique_RG_ordered_splitN.bam \
-        O=$smpout/unique_RG_ordered_splitN.resort.bam \
-        SORT_ORDER=coordinate
-    echo "[$smpkey] finished resorting"
-    echo ""
+        #splitting and cigarring the reads, using genome analysis tool kit
+        #note can alter arguments to allow cigar reads 
+        echo "[$smpkey] getting split and cigar reads..."
+        gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" SplitNCigarReads \
+            -R $genome \
+            -I $smpout/unique_RG_ordered.bam \
+            -O $smpout/unique_RG_ordered_splitN.bam
+            # -U ALLOW_N_CIGAR_READS
+        echo "[$smpkey] finished splitting N cigarring"
+        echo ""
 
-    wait
+        wait
 
-    #hamr step, can take ~1hr
-    echo "[$smpkey] hamr..."
-    python /HAMR/hamr.py \
-        -fe $smpout/unique_RG_ordered_splitN.resort.bam $genome $model $smpout $smpname $quality $coverage $err H4 $pvalue $fdr .05
-    wait
+        #final resorting using picard
+        echo "[$smpkey] resorting..."
+        gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" SortSam \
+            I=$smpout/unique_RG_ordered_splitN.bam \
+            O=$smpout/unique_RG_ordered_splitN.resort.bam \
+            SORT_ORDER=coordinate
+        echo "[$smpkey] finished resorting"
+        echo ""
 
-    if [ ! -e "$smpout/${smpname}.mods.txt" ]; then 
-        cd $hamrout
-        printf "${smpname} \n" >> zero_mod.txt
-        cd
-    else
-    # HAMR needs separate folders to store temp for each sample, so we move at the end
-        cp $smpout/${smpname}.mods.txt $hamrout
+        wait
+
+        #hamr step, can take ~1hr
+        echo "[$smpkey] hamr..."
+        python /HAMR/hamr.py \
+            -fe $smpout/unique_RG_ordered_splitN.resort.bam $genome $model $smpout $smpname $quality $coverage $err H4 $pvalue $fdr .05
+        wait
+
+        if [ ! -e "$smpout/${smpname}.mods.txt" ]; then 
+            cd $hamrout
+            printf "${smpname} \n" >> zero_mod.txt
+            cd
+        else
+        # HAMR needs separate folders to store temp for each sample, so we move at the end
+            cp $smpout/${smpname}.mods.txt $hamrout
+        fi
+
+        # Move the unique_RG_ordered.bam and unique_RG_ordered.bai to a folder for read depth analysis
+        cp $smpout/unique_RG_ordered.bam $out/pipeline/depth/$smpname.bam
+        cp $smpout/unique_RG_ordered.bai $out/pipeline/depth/$smpname.bai
     fi
-
-    # Move the unique_RG_ordered.bam and unique_RG_ordered.bai to a folder for read depth analysis
-    cp $smpout/unique_RG_ordered.bam $out/pipeline/depth/$smpname.bam
-    cp $smpout/unique_RG_ordered.bai $out/pipeline/depth/$smpname.bai
-fi
 }
 
 consensusOverlap () {
@@ -734,6 +748,12 @@ fi
 
 mismatch=$(($length*6/100))
 overhang=$(($mismatch-1))
+
+# check that the user didn't suppress all three programs -- if so, there's no need to run anything
+if [ $pamlinc = false ] && [ $featurecount = false ] && [ $hamrbox = false ]; then
+    echo "User has suppressed all functionalities. Exiting..."
+    exit 0
+fi
 
 ##########fqgrab housekeeping begins#########
 if [ ! -d "$out" ]; then mkdir $out; echo "created path: $out"; fi
