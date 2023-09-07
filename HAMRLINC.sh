@@ -66,7 +66,7 @@ hamrbox=true
 generator=""
 
 #############Grabbing arguments############
-while getopts ":o:t:c:g:i:l:e:s:A:f:m:n:hQCabpvEPF:" opt; do
+while getopts ":o:t:c:g:i:l:e:s:fmnhQCabkTGDupvEPF:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -255,20 +255,23 @@ fqgrab2 () {
 }
 
 pamlinc () {
+    echo "################################################################"
+    echo "############## Entering lincRNA abundance quantification pipeline ##############"
+    echo "################################################################"
     if [[ "$tophatlib" = fr-firststrand ]]; then
         stringtie \
             $smpout/unique.bam \
             -o $smpout/transcriptAssembly.gtf \
             -G $annotation \
             -p $threads \
-            -rf
+            --rf
     elif [[ "$tophatlib" = fr-secondstrand ]]; then
         stringtie \
             $smpout/unique.bam \
             -o $smpout/transcriptAssembly.gtf \
             -G $annotation \
             -p $threads \
-            -fr
+            --fr
     else
         stringtie \
             $smpout/unique.bam \
@@ -308,21 +311,25 @@ pamlinc () {
     fi
 
     # run constitutive feature count within pamlinc (left arm) 
-    if [ "$seq_type" == "PE" ]; then
-        featureCounts \
-            -T $threads \
-            #this is bound to be buggy, ask
-            -a $smpout/lincRNA/${filename3}.lincRNA.updated.gtf \
-            -o $smpout/lincRNA_featurecount.txt \
-            $smpout/unique.bam
-    elif [ "$seq_type" == "SE" ]; then
+    if [ "$det" -eq 1 ]; then
         featureCounts \
             -T $threads \
             -s $fclib \
             -a $smpout/lincRNA/${filename}.lincRNA.updated.gtf \
             -o $smpout/lincRNA_featurecount.txt \
             $smpout/unique.bam
+    else
+        featureCounts \
+            -T $threads \
+            #this is bound to be buggy, ask
+            -a $smpout/lincRNA/${filename3}.lincRNA.updated.gtf \
+            -o $smpout/lincRNA_featurecount.txt \
+            $smpout/unique.bam
     fi 
+fi
+    echo "################################################################"
+    echo "############## lincRNA abundance quantification pipeline completed ##############"
+    echo "################################################################"
 }
 
 fastq2hamr () {
@@ -519,24 +526,29 @@ fastq2hamr () {
     ###############################################
     ########regular feature count logic here (right arm)###########
     ############################################### 
+    echo "################################################################"
+    echo "############## Entering regular transcript abundance quantification pipeline ##############"
+    echo "################################################################"
     # run feature count for normal alignment transcript quantification if user didn't suppress
     if [[ "$featurecount" = true ]]; then
-        if [ "$seq_type" == "PE" ]; then
-            featureCounts \
-                -T $threads \
-                -a $annotation \
-                -o $smpout/alignment_featurecount.txt \
-                $smpout/unique.bam
-        elif [ "$seq_type" == "SE" ]; then
+        if [ "$det" -eq 1 ]; then
             featureCounts \
                 -T $threads \
                 -s $fclib \
                 -a $annotation \
                 -o $smpout/alignment_featurecount.txt \
                 $smpout/unique.bam
+        else
+            featureCounts \
+                -T $threads \
+                -a $annotation \
+                -o $smpout/alignment_featurecount.txt \
+                $smpout/unique.bam
         fi 
     fi
-
+    echo "################################################################"
+    echo "############## Regular transcript abundance quantification pipeline completed ##############"
+    echo "################################################################"
     wait
 
     ###############################################
