@@ -18,6 +18,7 @@ cat <<'EOF'
     -c	<filenames for each fastq.csv>
     -g	<reference genome.fa>
     -i  <reference genome annotation.gff3>
+    -z  <reference genome annotation.gtf>
     -l	<read length>
     -s	<genome size in bp >
     -e	<genome annotation generator>
@@ -66,7 +67,7 @@ hamrbox=true
 generator=""
 
 #############Grabbing arguments############
-while getopts ":o:t:c:g:i:l:e:s:fmnhQCabkTGDupvEPF:" opt; do
+while getopts ":o:t:c:g:i:z:l:b:e:v:s:fmnhQCakTGDupEPF:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -83,6 +84,9 @@ while getopts ":o:t:c:g:i:l:e:s:fmnhQCabkTGDupvEPF:" opt; do
     i)
     annotation=$OPTARG # reference genome annotation
      ;;
+    z)
+    annotationgtf=$OPTARG # reference genome annotation
+    ;;
     l)
     length+=$OPTARG # read length 
      ;;
@@ -99,7 +103,7 @@ while getopts ":o:t:c:g:i:l:e:s:fmnhQCabkTGDupvEPF:" opt; do
     model=$OPTARG
      ;;
     v)
-    evolinc_option=$OPTARG
+    evolinc_option="$OPTARG"
     ;;
     n)
     threads=$OPTARG
@@ -252,84 +256,6 @@ fqgrab2 () {
 
     echo "[$sname] trimming complete, performing fastqc..."
     fastqc $dumpout/trimmed/$tt"_trimmed.fq" -o $dumpout/fastqc_results
-}
-
-pamlinc () {
-    echo "################################################################"
-    echo "############## Entering lincRNA abundance quantification pipeline ##############"
-    echo "################################################################"
-    if [[ "$tophatlib" = fr-firststrand ]]; then
-        stringtie \
-            $smpout/unique.bam \
-            -o $smpout/transcriptAssembly.gtf \
-            -G $annotation \
-            -p $threads \
-            --rf
-    elif [[ "$tophatlib" = fr-secondstrand ]]; then
-        stringtie \
-            $smpout/unique.bam \
-            -o $smpout/transcriptAssembly.gtf \
-            -G $annotation \
-            -p $threads \
-            --fr
-    else
-        stringtie \
-            $smpout/unique.bam \
-            -o $smpout/transcriptAssembly.gtf \
-            -G $annotation \
-            -p $threads \
-    fi
-
-    # next run cuff compare
-    cuffcompare \
-        $smpout/transcriptAssembly.gtf \
-        -r $annotation \
-        -s $genome \
-        -T \
-        -o $smpout/cuffed
-
-        # run evolinc
-    if [ "$evolinc_option" == "M" ]; then
-        evolinc-part-I.sh \
-            -c $smpout/cuffed.combined.gtf \
-            -g $genome \
-            -u $annotation \
-            -r $annotation \
-            -n $threads \
-            -o $smpout/lincRNA
-    elif [ "$evolinc_option" == "MO" ]; then
-        evolinc-part-I.sh \
-            -c $smpout/cuffed.combined.gtf \
-            -g $genome \
-            -u $annotation \
-            -r $annotation \
-            -n $threads \
-            -o $smpout/lincRNA \
-            -b $blast_file \
-            -t $cage_file \
-            -x $known_linc
-    fi
-
-    # run constitutive feature count within pamlinc (left arm) 
-    if [ "$det" -eq 1 ]; then
-        featureCounts \
-            -T $threads \
-            -s $fclib \
-            -a $smpout/lincRNA/${filename}.lincRNA.updated.gtf \
-            -o $smpout/lincRNA_featurecount.txt \
-            $smpout/unique.bam
-    else
-        featureCounts \
-            -T $threads \
-            #this is bound to be buggy, ask
-            -a $smpout/lincRNA/${filename3}.lincRNA.updated.gtf \
-            -o $smpout/lincRNA_featurecount.txt \
-            $smpout/unique.bam
-    fi 
-fi
-    echo "################################################################"
-    echo "############## lincRNA abundance quantification pipeline completed ##############"
-    echo "################################################################"
 }
 
 fastq2hamr () {
@@ -516,46 +442,127 @@ fastq2hamr () {
     ############################################### 
     # if user didn't suppress pamlinc, start the pipeline, note the constitutive featurecount after evolinc
     if [[ "$pamlinc" = true ]]; then
+        echo "################################################################"
+        echo "############## Entering lincRNA abundance quantification pipeline ##############"
+        echo "################################################################"
         # run stringtie accordingly, note PE and SE here is taken care of
         # output is unnamed and stored in each fastq folder
-        pamlinc
-    fi  
+        echo "[$smpkey] producing transcript assembly using stringtie..."
+        if [[ "$tophatlib" = fr-firststrand ]]; then
+            echo "[$smpkey] running stringtie with --rf"
+            stringtie \
+                $smpout/unique.bam \
+                -o $smpout/transcriptAssembly.gtf \
+                -G $annotation \
+                -p $threads \
+                --rf
+        elif [[ "$tophatlib" = fr-secondstrand ]]; then
+            echo "[$smpkey] running stringtie with --fr"
+            stringtie \
+                $smpout/unique.bam \
+                -o $smpout/transcriptAssembly.gtf \
+                -G $annotation \
+                -p $threads \
+                --fr
+        else
+            echo "[$smpkey] running stringtie assuming an unstranded library"
+            stringtie \
+                $smpout/unique.bam \
+                -o $smpout/transcriptAssembly.gtf \
+                -G $annotation \
+                -p $threads
+        fi
+
+        # next run cuff compare
+        echo "[$smpkey] merging assemblies using cuffcompare..."
+        cuffcompare \
+            $smpout/transcriptAssembly.gtf \
+            -r $annotation \
+            -s $genome \
+            -T \
+            -o $smpout/cuffed
+
+        # run evolinc
+        echo "[$smpkey] annotating lincRNA using Evolinc-i..."
+        if [ "$evolinc_option" == "M" ]; then
+            echo "[$smpkey] M option identified for evolinc"
+            /Data04/harrli02/repo/Evolinc-I-master/evolinc-part-I.sh \
+                -c $smpout/cuffed.combined.gtf \
+                -g $genome \
+                -u $annotation \
+                -r $annotation \
+                -n $threads \
+                -o $smpout/lincRNA
+        elif [ "$evolinc_option" == "MO" ]; then
+            echo "[$smpkey] MO option identified for evolinc"
+            /Data04/harrli02/repo/Evolinc-I-master/evolinc-part-I.sh \
+                -c $smpout/cuffed.combined.gtf \
+                -g $genome \
+                -u $annotation \
+                -r $annotation \
+                -n $threads \
+                -o $smpout/lincRNA \
+                -b $blast_file \
+                -t $cage_file \
+                -x $known_linc
+        fi
+
+        # run constitutive feature count within pamlinc (left arm) 
+        echo "[$smpkey] quantifying lincRNA abundance using featurecounts..."
+        if [ "$det" -eq 1 ]; then
+            echo "[$smpkey] running featurecount with $fclib as the -s argument"
+            featureCounts \
+                -T $threads \
+                -s $fclib \
+                -a $smpout/lincRNA/lincRNA.updated.gtf \
+                -o $smpout/lincRNA_featurecount.txt \
+                $smpout/unique.bam
+        else
+            featureCounts \
+                -T $threads \
+                #this is bound to be buggy, ask
+                -a $smpout/lincRNA/lincRNA.updated.gtf \
+                -o $smpout/lincRNA_featurecount.txt \
+                $smpout/unique.bam
+        fi 
+        echo "################################################################"
+        echo "############## lincRNA abundance quantification pipeline completed ##############"
+        echo "################################################################"
+    fi
 
     wait
 
     ###############################################
     ########regular feature count logic here (right arm)###########
     ############################################### 
-    echo "################################################################"
-    echo "############## Entering regular transcript abundance quantification pipeline ##############"
-    echo "################################################################"
     # run feature count for normal alignment transcript quantification if user didn't suppress
     if [[ "$featurecount" = true ]]; then
+        echo "[$smpkey] quantifying regular transcript abundance using featurecounts..."
         if [ "$det" -eq 1 ]; then
+            echo "[$smpkey] running featurecount with $fclib as the -s argument"
             featureCounts \
                 -T $threads \
                 -s $fclib \
-                -a $annotation \
+                -a $annotationgtf \
                 -o $smpout/alignment_featurecount.txt \
                 $smpout/unique.bam
         else
             featureCounts \
                 -T $threads \
-                -a $annotation \
+                -a $annotationgtf \
                 -o $smpout/alignment_featurecount.txt \
                 $smpout/unique.bam
-        fi 
+        fi
     fi
-    echo "################################################################"
-    echo "############## Regular transcript abundance quantification pipeline completed ##############"
-    echo "################################################################"
     wait
 
     ###############################################
     ########original continuation of fastq2hamr here###########
     ############################################### 
     # run below only if hamrbox is true
-    if [[ "$hamrbox" = true ]]; then
+    if [[ "$hamrbox" = false ]]; then
+        echo "hamrbox functionality suppressed, $smpkey analysis completed."
+    else
         #adds read groups using picard, note the RG arguments are disregarded here
         echo "[$smpkey] adding/replacing read groups..."
         gatk AddOrReplaceReadGroups \
@@ -993,6 +1000,10 @@ for smp in $hamrin/*.$suf
 do ((i=i%$ttop)); ((i++==0)) && wait
   fastq2hamr &
 done
+
+if [[ "$hamrbox" = false ]]; then
+    exit 0
+fi
 
 wait
 
