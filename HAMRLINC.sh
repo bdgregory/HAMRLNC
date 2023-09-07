@@ -1,8 +1,7 @@
 #!/bin/bash
 set -u
 
-# Harry Li, University of Pennsylvania
-
+# Harry Li, University of Pennsylvania & Chosen Obih, University of Arizona
 
 usage () {
     echo ""
@@ -184,7 +183,7 @@ elif [[ $generator == "OSIR64" ]]; then
 else
     echo "##################################################"
     echo "model organism code not recognized, please check your input"
-    echo "HAMRbox will proceed with limited functionalities"
+    echo "HAMRLINC will proceed with limited functionalities"
     echo "##################################################"
 fi
 
@@ -736,7 +735,7 @@ consensusOverlap () {
 ######################################################### Main Program Begins #########################################
 
 echo ""
-echo "##################################### Begin HAMRbox #################################"
+echo "##################################### Begin HAMRLINC #################################"
 echo ""
 
 # Check if the required arguments are provided
@@ -1098,7 +1097,7 @@ if ! command -v intersectBed > /dev/null; then
     exit 1
 fi
 
-# checks if genomedir is populated with generated annotation files, if not, hamrbox can't run anymore, exit
+# checks if genomedir is populated with generated annotation files, if not, HAMRLINC can't run anymore, exit
 count=`ls -1 $genomedir/*.bed 2>/dev/null | wc -l`
   if [ $count == 0 ]; then 
     if [[ ! -z "$generator" ]]; then
@@ -1107,7 +1106,7 @@ count=`ls -1 $genomedir/*.bed 2>/dev/null | wc -l`
     else
         echo "#########NOTICE###########"
         echo "##########No annotation generator or annotation files found, please check your supplied arguments##########"
-        echo "##########As a result, HAMRbox will stop here. Please provide the above files in the next run############"
+        echo "##########As a result, HAMRLINC will stop here. Please provide the above files in the next run############"
         exit 1
     fi
   else 
@@ -1233,5 +1232,5 @@ if [ -e $genomedir/*_CDS.bed ] && [ -e $genomedir/*_fiveUTR.bed ] && [ -e $genom
 fi
 
 echo ""
-echo "#################################### HAMRbox has finished running #######################################"
+echo "#################################### HAMRLINC has finished running #######################################"
 echo ""
