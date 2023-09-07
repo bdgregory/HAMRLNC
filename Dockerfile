@@ -97,7 +97,9 @@ RUN cpanm URI/Escape.pm
 
 
 # R libraries
-RUN apt-get -y install ca-certificates software-properties-common gnupg2 gnupg1 gnupg && \
+RUN apt-get update && apt-get upgrade -y && \
+	apt-get -y install ca-certificates software-properties-common gnupg2 gnupg1 gnupg && \
+	#apt-key adv --keyserver hkp://pgp.mit.edu --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9 && \
 	apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9 && \
 	add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/" && \
 	apt-get install -y r-base && \
@@ -148,6 +150,7 @@ ENV PATH="/gatk-4.3.0.0:${PATH}"
 # pip3
 RUN apt-get update
 RUN apt-get install -y libgdal-dev
+RUN apt-get install -y python3-pip
 RUN pip3 install --upgrade pip
 RUN apt-get install python3-venv -y
 
