@@ -1,7 +1,8 @@
 #!/bin/bash
 set -u
 
-# Harry Li, University of Pennsylvania & Chosen Obih, University of Arizona
+# Harry Li, University of Pennsylvania
+
 
 usage () {
     echo ""
@@ -66,7 +67,7 @@ hamrbox=true
 generator=""
 
 #############Grabbing arguments############
-while getopts ":o:t:c:g:i:z:l:b:e:v:s:fmnhQCakTGDupEPF:" opt; do
+while getopts ":o:t:c:g:i:z:l:b:e:v:s:n:fmhQCakTGDupEPF:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -106,7 +107,7 @@ while getopts ":o:t:c:g:i:z:l:b:e:v:s:fmnhQCakTGDupEPF:" opt; do
     ;;
     n)
     threads=$OPTARG
-     ;;
+    ;;
     p)
     pamlinc=false
     ;;
@@ -187,10 +188,17 @@ else
     echo "##################################################"
 fi
 
+# designate log file, if exist, clear, and have all stdout written
+logstart=$(date "+%Y.%m.%d-%H.%M.%S")
+logfile=$out/Log_$logstart.log
+exec > >(tee -a "$logfile") 2>&1
+#below captures only echo...?
+#exec 2>&1 1>>$logfile 3>&1
+
 ######################################################### Subprogram Definition #########################################
 fqgrab () {
 
-  echo "begin downloading $line..."
+  echo "begin downloading $line..." 
 
   fasterq-dump "$line" -O $dumpout/raw --verbose
 
@@ -240,7 +248,7 @@ fqgrab () {
     fastqc $dumpout/trimmed/$line"_1_trimmed.fq" -o $dumpout/fastqc_results
     fastqc $dumpout/trimmed/$line"_2_trimmed.fq" -o $dumpout/fastqc_results
   fi
-  echo "finished processing $line"
+  echo "[$(date '+%d/%m/%Y %H:%M:%S')] finished processing $line"
   echo ""
 }
 
@@ -258,12 +266,6 @@ fqgrab2 () {
 }
 
 fastq2hamr () {
-    # last check on HAMR
-    if [ ! -n "/HAMR/hamr.py" ]; then
-        echo "HAMR not installed, please check."
-        exit 1
-    fi
-
     smpext=$(basename "$smp")
     smpdir=$(dirname "$smp")
     smpkey="${smpext%.*}"
@@ -332,7 +334,7 @@ fastq2hamr () {
     echo "[$smpkey] You can find the HAMR output file for $smpkey at $hamrout/$smpname.mod.txt" 
 
 
-    echo "[$smpkey] Begin HAMR pipeline"
+    echo "$(date '+%d/%m/%Y %H:%M:%S') [$smpkey] Begin HAMR pipeline"
     cd $smpout
     # maps the trimmed reads to provided annotated genome, can take ~1.5hr
 
@@ -444,6 +446,7 @@ fastq2hamr () {
         echo "################################################################"
         echo "############## Entering lincRNA abundance quantification pipeline ##############"
         echo "################################################################"
+        echo "$(date '+%d/%m/%Y %H:%M:%S')"
         # run stringtie accordingly, note PE and SE here is taken care of
         # output is unnamed and stored in each fastq folder
         echo "[$smpkey] producing transcript assembly using stringtie..."
@@ -485,7 +488,7 @@ fastq2hamr () {
         echo "[$smpkey] annotating lincRNA using Evolinc-i..."
         if [ "$evolinc_option" == "M" ]; then
             echo "[$smpkey] M option identified for evolinc"
-            /Data04/harrli02/repo/Evolinc-I-master/evolinc-part-I.sh \
+            evolinc-part-I.sh \
                 -c $smpout/cuffed.combined.gtf \
                 -g $genome \
                 -u $annotation \
@@ -494,7 +497,7 @@ fastq2hamr () {
                 -o $smpout/lincRNA
         elif [ "$evolinc_option" == "MO" ]; then
             echo "[$smpkey] MO option identified for evolinc"
-            /Data04/harrli02/repo/Evolinc-I-master/evolinc-part-I.sh \
+            evolinc-part-I.sh \
                 -c $smpout/cuffed.combined.gtf \
                 -g $genome \
                 -u $annotation \
@@ -536,7 +539,7 @@ fastq2hamr () {
     ############################################### 
     # run feature count for normal alignment transcript quantification if user didn't suppress
     if [[ "$featurecount" = true ]]; then
-        echo "[$smpkey] quantifying regular transcript abundance using featurecounts..."
+        echo "[$(date '+%d/%m/%Y %H:%M:%S')$smpkey] quantifying regular transcript abundance using featurecounts..."
         if [ "$det" -eq 1 ]; then
             echo "[$smpkey] running featurecount with $fclib as the -s argument"
             featureCounts \
@@ -560,7 +563,7 @@ fastq2hamr () {
     ############################################### 
     # run below only if hamrbox is true
     if [[ "$hamrbox" = false ]]; then
-        echo "hamrbox functionality suppressed, $smpkey analysis completed."
+        echo "[$(date '+%d/%m/%Y %H:%M:%S')] hamrbox functionality suppressed, $smpkey analysis completed."
     else
         #adds read groups using picard, note the RG arguments are disregarded here
         echo "[$smpkey] adding/replacing read groups..."
@@ -618,7 +621,8 @@ fastq2hamr () {
 
         #hamr step, can take ~1hr
         echo "[$smpkey] hamr..."
-        python /HAMR/hamr.py \
+        hamr_path=$(which hamr.py)
+        python $hamr_path \
             -fe $smpout/unique_RG_ordered_splitN.resort.bam $genome $model $smpout $smpname $quality $coverage $err H4 $pvalue $fdr .05
         wait
 
@@ -867,6 +871,7 @@ wait
 
 echo ""
 echo "################ Finished downloading and processing all fastq files. Entering pipeline for HAMR analysis. ######################"
+echo "$(date '+%d/%m/%Y %H:%M:%S')"
 echo ""
 
 ############fastq2hamr housekeeping begins##############
@@ -1026,6 +1031,7 @@ fi
 
 echo ""
 echo "################ Finished HAMR analysis. Producing consensus mod table and depth analysis. ######################"
+echo "$(date '+%d/%m/%Y %H:%M:%S')"
 echo ""
 
 #############fastq2hamr main ends###############
@@ -1097,7 +1103,7 @@ if ! command -v intersectBed > /dev/null; then
     exit 1
 fi
 
-# checks if genomedir is populated with generated annotation files, if not, HAMRLINC can't run anymore, exit
+# checks if genomedir is populated with generated annotation files, if not, hamrbox can't run anymore, exit
 count=`ls -1 $genomedir/*.bed 2>/dev/null | wc -l`
   if [ $count == 0 ]; then 
     if [[ ! -z "$generator" ]]; then
@@ -1120,6 +1126,7 @@ done
 
 echo ""
 echo "###############SMACK portion completed, entering EXTRACT################"
+echo "$(date '+%d/%m/%Y %H:%M:%S')"
 echo ""
 #######################################begins EXTRACT######################################
 dir=$out
@@ -1233,4 +1240,5 @@ fi
 
 echo ""
 echo "#################################### HAMRLINC has finished running #######################################"
+echo "$(date '+%d/%m/%Y %H:%M:%S')"
 echo ""
