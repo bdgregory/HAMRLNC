@@ -29,7 +29,7 @@ cat <<'EOF'
     -b	[Tophat library choice: fr-unstranded, fr-firststrand, fr-secondstrand]
     -f	[filter]
     -k  [suppress hamrbox]
-    -p  [suppress evolinc_i]
+    -p  [suppress pamlinc]
     -u  [suppress featurecount]
     -v  [evolinc option: M or MO, default=M]
     -Q	[HAMR: minimum qualuty score, default=30]
@@ -57,11 +57,11 @@ coverage=50
 err=0.01
 pvalue=1
 fdr=0.05
-evolinc_i_option="M"
+evolinc_option="M"
 tophatlib="fr-firststrand"
 filter=$curdir/filter_SAM_number_hits.pl
 model=$curdir/euk_trna_mods.Rdata
-evolinc_i=true
+pamlinc=true
 featurecount=true
 hamrbox=true
 generator=""
@@ -103,13 +103,13 @@ while getopts ":o:t:c:g:i:z:l:b:e:v:s:n:fmhQCakTGDupEPF:" opt; do
     model=$OPTARG
      ;;
     v)
-    evolinc_i_option="$OPTARG"
+    evolinc_option="$OPTARG"
     ;;
     n)
     threads=$OPTARG
     ;;
     p)
-    evolinc_i=false
+    pamlinc=false
     ;;
     k)
     hamrbox=false
@@ -162,6 +162,13 @@ while getopts ":o:t:c:g:i:z:l:b:e:v:s:n:fmhQCakTGDupEPF:" opt; do
   esac
 done
 
+# assigning additional variables
+dumpout=$out/datasets
+mismatch=$(($length*6/100))
+overhang=$(($mismatch-1))
+genomedir=$(dirname $genome)
+last_checkpoint=""
+
 # Assigning the appropriate annotationGenerate.R 
 if [[ $generator == "AT" ]]; then
     generator="/annotationGenerate/annotationGenerateAT.R"
@@ -196,6 +203,11 @@ exec > >(tee -a "$logfile") 2>&1
 #exec 2>&1 1>>$logfile 3>&1
 
 ######################################################### Subprogram Definition #########################################
+checkpoint() {
+    echo "Checkpoint reached: $1"
+    echo "$1" > $out/checkpoint.txt
+}
+
 fqgrab () {
 
   echo "begin downloading $line..." 
@@ -439,10 +451,10 @@ fastq2hamr () {
     fi
 
     ###############################################
-    ########evolinc_i logic here (left arm)###########
+    ########pamlinc logic here (left arm)###########
     ############################################### 
-    # if user didn't suppress evolinc_i, start the pipeline, note the constitutive featurecount after evolinc_i
-    if [[ "$evolinc_i" = true ]]; then
+    # if user didn't suppress pamlinc, start the pipeline, note the constitutive featurecount after evolinc
+    if [[ "$pamlinc" = true ]]; then
         echo "################################################################"
         echo "############## Entering lincRNA abundance quantification pipeline ##############"
         echo "################################################################"
@@ -486,7 +498,7 @@ fastq2hamr () {
 
         # run evolinc
         echo "[$smpkey] annotating lincRNA using Evolinc-i..."
-        if [ "$evolinc_i_option" == "M" ]; then
+        if [ "$evolinc_option" == "M" ]; then
             echo "[$smpkey] M option identified for evolinc"
             evolinc-part-I.sh \
                 -c $smpout/cuffed.combined.gtf \
@@ -495,7 +507,7 @@ fastq2hamr () {
                 -r $annotation \
                 -n $threads \
                 -o $smpout/lincRNA
-        elif [ "$evolinc_i_option" == "MO" ]; then
+        elif [ "$evolinc_option" == "MO" ]; then
             echo "[$smpkey] MO option identified for evolinc"
             evolinc-part-I.sh \
                 -c $smpout/cuffed.combined.gtf \
@@ -509,25 +521,24 @@ fastq2hamr () {
                 -x $known_linc
         fi
 
-        # run constitutive feature count within evolinc_i (left arm) if the user didn't suppress feacturecount
-        if [[ "$featurecount" = true ]]; then
-            echo "[$(date '+%d/%m/%Y %H:%M:%S')$smpkey] quantifying lincRNA-based transcript abundance using featurecounts..."
-            if [ "$det" -eq 1 ]; then
-                echo "[$smpkey] running featurecount with $fclib as the -s argument"
-                featureCounts \
-                    -T $threads \
-                    -s $fclib \
-                    -a $smpout/lincRNA/lincRNA.updated.gtf \
-                    -o $smpout/lincRNA_featurecount.txt \
-                    $smpout/unique.bam
-            else
-                featureCounts \
-                    -T $threads \
-                    -a $smpout/lincRNA/lincRNA.updated.gtf \
-                    -o $smpout/lincRNA_featurecount.txt \
-                    $smpout/unique.bam
-            fi
-        fi
+        # run constitutive feature count within pamlinc (left arm) 
+        echo "[$smpkey] quantifying lincRNA abundance using featurecounts..."
+        if [ "$det" -eq 1 ]; then
+            echo "[$smpkey] running featurecount with $fclib as the -s argument"
+            featureCounts \
+                -T $threads \
+                -s $fclib \
+                -a $smpout/lincRNA/lincRNA.updated.gtf \
+                -o $smpout/lincRNA_featurecount.txt \
+                $smpout/unique.bam
+        else
+            featureCounts \
+                -T $threads \
+                #this is bound to be buggy, ask
+                -a $smpout/lincRNA/lincRNA.updated.gtf \
+                -o $smpout/lincRNA_featurecount.txt \
+                $smpout/unique.bam
+        fi 
         echo "################################################################"
         echo "############## lincRNA abundance quantification pipeline completed ##############"
         echo "################################################################"
@@ -737,6 +748,198 @@ consensusOverlap () {
     fi
 }
 
+fqgrabhouse () {
+    ##########fqgrab housekeeping begins#########
+    if [ ! -d "$out" ]; then mkdir $out; echo "created path: $out"; fi
+
+    if [ ! -d "$out/datasets" ]; then mkdir $out/datasets; echo "created path: $out/datasets"; fi
+
+    # first see what input is provided
+    if [[ $acc == *.txt ]]; then
+        echo "SRR accession list provided, using fasterq-dump for .fastq acquisition..."
+
+        # Create directory to store original fastq files
+        if [ ! -d "$out/datasets/raw" ]; then mkdir $out/datasets/raw; fi
+        echo "You can find your original fastq files at $out/datasets/raw" 
+        mode=1
+
+    elif [[ -d $acc ]]; then
+        echo "Directory $acc is found, assuming raw fastq files are provided..."
+        mode=2
+    else
+        echo "Error recognizing input source, exiting..."
+        exit 1
+    fi
+
+    # relocate user-provided inputs
+    if [ ! -d "$out/ref" ]; then 
+        mkdir "$out/ref"
+        echo "created path: $out/ref"
+        #cp $genome "$out/ref"
+        #genome="$out/ref/$(basename $genome)"
+        #cp $annotation "$out/ref"
+        #annotation="$out/ref/$(basename $annotation)"
+    fi
+
+    if [ ! -d "$out/fileprep" ]; then 
+        mkdir "$out/fileprep"
+        echo "created path: $out/fileprep"
+        #cp $acc "$out/fileprep"
+        #cp $csv "$out/fileprep"
+    fi
+
+    # Create directory to store trimmed fastq files
+    if [ ! -d "$out/datasets/trimmed" ]; then mkdir $out/datasets/trimmed; fi
+    echo "You can find your trimmed fastq files at $out/datasets/trimmed"
+
+    # Create directory to store fastqc results
+    if [ ! -d "$out/datasets/fastqc_results" ]; then mkdir $out/datasets/fastqc_results; fi
+    echo "You can find all the fastqc test results at $out/datasets/fastqc_results"
+
+    # Run a series of command checks to ensure the entire script can run smoothly
+    if ! command -v fasterq-dump > /dev/null; then
+        echo "Failed to call fasterq-dump command. Please check your installation."
+        exit 1
+    fi
+
+    if ! command -v fastqc > /dev/null; then
+        echo "Failed to call fastqc command. Please check your installation."
+        exit 1
+    fi
+
+    if ! command -v trim_galore > /dev/null; then
+        echo "Failed to call trim_galore command. Please check your installation."
+        exit 1
+    fi
+
+    if ! command -v gatk > /dev/null; then
+        echo "Failed to call gatk command. Please check your installation."
+        exit 1
+    fi
+    ##########fqgrab housekeeping ends#########
+}
+
+fastq2hamrhouse () {
+    ############fastq2hamr housekeeping begins##############
+    # Checks if the files were trimmed or cleaned, and if so, take those files for downstream
+    hamrin=""
+    suf=""
+    # If trimmed folder present, then user specified trimming, we take trimmed files with .fq
+    if [ -d "$dumpout/trimmed" ]; then 
+        hamrin=$dumpout/trimmed
+        suf="fq"
+    else
+        echo "failed to locate trimmed fastq files"
+        exit 1
+    fi
+
+    # Creating some folders
+    if [ ! -d "$out/pipeline" ]; then mkdir $out/pipeline; echo "created path: $out/pipeline"; fi
+
+    if [ ! -d "$out/hamr_out" ]; then mkdir $out/hamr_out; echo "created path: $out/hamr_out"; fi
+
+    # Check if zero_mod is present already, if not then create one
+    if [ ! -e "$out/hamr_out/zero_mod.txt" ]; then
+        cd $out/hamr_out
+        echo "Below samples have 0 HAMR predicted mods:" > zero_mod.txt
+        cd
+    fi
+
+
+    # create dict file using fasta genome file
+    count=`ls -1 $genomedir/*.dict 2>/dev/null | wc -l`
+    if [ $count == 0 ]; then 
+    gatk CreateSequenceDictionary \
+        R=$genome
+    fi
+    dict=$(find $genomedir -maxdepth 1 -name "*.dict")
+
+    # create fai index file using fasta genome
+    count=`ls -1 $genomedir/*.fai 2>/dev/null | wc -l`
+    if [ $count == 0 ]; then 
+    samtools faidx $genome
+    fi
+
+    # Check which mapping software, and check for index
+    if [[ "$tophat" = false ]]; then  
+    # Check if indexed files already present for STAR
+        if [ -e "$out/ref/SAindex" ]; then
+            echo "STAR Genome Directory with indexed genome detected, skipping STAR indexing"
+        else
+            # Now, do the indexing step
+            # Define the SA index number argument
+            log_result=$(echo "scale=2; l($genomelength)/l(2)/2 - 1" | bc -l)
+            sain=$(echo "scale=0; if ($log_result < 14) $log_result else 14" | bc)
+            echo "Creating STAR genome index..."
+            # Create genome index 
+            STAR \
+                --runThreadN $threads \
+                --runMode genomeGenerate \
+                --genomeDir $out/ref \
+                --genomeFastaFiles $genome \
+                --sjdbGTFfile $annotation \
+                --sjdbGTFtagExonParentTranscript Parent \
+                --sjdbOverhang $overhang \
+                --genomeSAindexNbases $sain
+        fi
+    else
+        # Check if bowtie index directory is already present
+        if [ -e "$out/btref" ]; then
+            echo "bowtie indexed directory detected, skipping generating bowtie index"
+        else
+        # If not, first check if ref folder is present, if not then make
+            if [ ! -d "$out/btref" ]; then mkdir "$out/btref"; echo "created path: $out/btref"; fi
+            echo "Creating Bowtie references..."
+            bowtie2-build $genome $out/btref
+        fi
+    fi
+
+    # Run a series of command checks to ensure fastq2hamr can run smoothly
+    if ! command -v mapfile > /dev/null; then
+        echo "Failed to call mapfile command. Please check your installation."
+        exit 1
+    fi
+
+    if ! command -v STAR > /dev/null; then
+        echo "Failed to call STAR command. Please check your installation."
+        exit 1
+    fi
+
+    if ! command -v samtools > /dev/null; then
+        echo "Failed to call samtools command. Please check your installation."
+        exit 1
+    fi
+
+    if ! command -v stringtie > /dev/null; then
+        echo "Failed to call stringtie command. Please check your installation."
+        exit 1
+    fi
+
+    if ! command -v cuffcompare > /dev/null; then
+        echo "Failed to call cuffcompare command. Please check your installation."
+        exit 1
+    fi
+
+    if ! command -v featureCounts > /dev/null; then
+        echo "Failed to call featureCounts command. Please check your installation."
+        exit 1
+    fi
+
+    if ! command -v gatk > /dev/null; then
+        echo "Failed to call gatk command. Please check your installation."
+        exit 1
+    fi
+
+    if ! command -v python > /dev/null; then
+        echo "Failed to call python command. Please check your installation."
+        exit 1
+    fi
+
+    # Creates a folder for depth analysis
+    if [ ! -d "$out/pipeline/depth" ]; then mkdir $out/pipeline/depth; echo "created path: $out/pipeline/depth"; fi
+    #############fastq2hamr housekeeping ends#############
+}
+
 ######################################################### Main Program Begins #########################################
 
 echo ""
@@ -769,477 +972,331 @@ else
     echo "all required arguments provided, proceding..."
 fi
 
-mismatch=$(($length*6/100))
-overhang=$(($mismatch-1))
-
 # check that the user didn't suppress all three programs -- if so, there's no need to run anything
-if [ $evolinc_i = false ] && [ $featurecount = false ] && [ $hamrbox = false ]; then
+if [ $pamlinc = false ] && [ $featurecount = false ] && [ $hamrbox = false ]; then
     echo "User has suppressed all functionalities. Exiting..."
     exit 0
 fi
 
-##########fqgrab housekeeping begins#########
-if [ ! -d "$out" ]; then mkdir $out; echo "created path: $out"; fi
-
-if [ ! -d "$out/datasets" ]; then mkdir $out/datasets; echo "created path: $out/datasets"; fi
-dumpout=$out/datasets
-
-# first see what input is provided
-if [[ $acc == *.txt ]]; then
-    echo "SRR accession list provided, using fasterq-dump for .fastq acquisition..."
-
-    # Create directory to store original fastq files
-    if [ ! -d "$out/datasets/raw" ]; then mkdir $out/datasets/raw; fi
-    echo "You can find your original fastq files at $out/datasets/raw" 
-    mode=1
-
-elif [[ -d $acc ]]; then
-    echo "Directory $acc is found, assuming raw fastq files are provided..."
-    mode=2
+# check whether checkpoint.txt is present 
+if [ -e $out/checkpoint.txt ]; then
+    last_checkpoint=$(cat checkpoint.txt)
+    echo "Resuming from checkpoint: $last_checkpoint"
 else
-    echo "Error recognizing input source, exiting..."
-    exit 1
+    last_checkpoint="start"
 fi
 
-# relocate user-provided inputs
-if [ ! -d "$out/ref" ]; then 
-    mkdir "$out/ref"
-    echo "created path: $out/ref"
-    #cp $genome "$out/ref"
-    #genome="$out/ref/$(basename $genome)"
-    #cp $annotation "$out/ref"
-    #annotation="$out/ref/$(basename $annotation)"
-fi
+# run fqgrab when checkpoint agrees so
+if [ $last_checkpoint = "start" ] || [ $last_checkpoint = "" ]; then
+    fqgrabhouse
+    ##########fqgrab main begins#########
+    if [[ $mode -eq 1 ]]; then
+        # Grabs the fastq files from acc list provided into the dir ~/datasets
+        i=0
+        while IFS= read -r line
+        do ((i=i%$threads)); ((i++==0)) && wait
+        fqgrab &
+        done < "$acc"
 
-if [ ! -d "$out/fileprep" ]; then 
-    mkdir "$out/fileprep"
-    echo "created path: $out/fileprep"
-    #cp $acc "$out/fileprep"
-    #cp $csv "$out/fileprep"
-fi
-
-# Create directory to store trimmed fastq files
-if [ ! -d "$out/datasets/trimmed" ]; then mkdir $out/datasets/trimmed; fi
-echo "You can find your trimmed fastq files at $out/datasets/trimmed"
-
-# Create directory to store fastqc results
-if [ ! -d "$out/datasets/fastqc_results" ]; then mkdir $out/datasets/fastqc_results; fi
-echo "You can find all the fastqc test results at $out/datasets/fastqc_results"
-
-# Run a series of command checks to ensure the entire script can run smoothly
-if ! command -v fasterq-dump > /dev/null; then
-    echo "Failed to call fasterq-dump command. Please check your installation."
-    exit 1
-fi
-
-if ! command -v fastqc > /dev/null; then
-    echo "Failed to call fastqc command. Please check your installation."
-    exit 1
-fi
-
-if ! command -v trim_galore > /dev/null; then
-    echo "Failed to call trim_galore command. Please check your installation."
-    exit 1
-fi
-
-if ! command -v gatk > /dev/null; then
-    echo "Failed to call gatk command. Please check your installation."
-    exit 1
-fi
-##########fqgrab housekeeping ends#########
-
-
-##########fqgrab main begins#########
-if [[ $mode -eq 1 ]]; then
-    # Grabs the fastq files from acc list provided into the dir ~/datasets
-    i=0
-    while IFS= read -r line
-    do ((i=i%$threads)); ((i++==0)) && wait
-    fqgrab &
-    done < "$acc"
-
-elif [[ $mode -eq 2 ]]; then
-    i=0
-    for fq in $acc/*; do
-    ((i=i%$threads)); ((i++==0)) && wait
-    fqgrab2 &
-    done
-fi
-
-wait
-
-##################fqgrab main ends#################
-
-echo ""
-echo "################ Finished downloading and processing all fastq files. Entering pipeline for HAMR analysis. ######################"
-echo "$(date '+%d/%m/%Y %H:%M:%S')"
-echo ""
-
-############fastq2hamr housekeeping begins##############
-# Checks if the files were trimmed or cleaned, and if so, take those files for downstream
-hamrin=""
-suf=""
-# If trimmed folder present, then user specified trimming, we take trimmed files with .fq
-if [ -d "$dumpout/trimmed" ]; then 
-    hamrin=$dumpout/trimmed
-    suf="fq"
-else
-    echo "failed to locate trimmed fastq files"
-    exit 1
-fi
-
-# Creating some folders
-if [ ! -d "$out/pipeline" ]; then mkdir $out/pipeline; echo "created path: $out/pipeline"; fi
-
-if [ ! -d "$out/hamr_out" ]; then mkdir $out/hamr_out; echo "created path: $out/hamr_out"; fi
-
-# Check if zero_mod is present already, if not then create one
-if [ ! -e "$out/hamr_out/zero_mod.txt" ]; then
-    cd $out/hamr_out
-    echo "Below samples have 0 HAMR predicted mods:" > zero_mod.txt
-    cd
-fi
-
-# Get genome directory
-genomedir=$(dirname $genome)
-
-# create dict file using fasta genome file
-count=`ls -1 $genomedir/*.dict 2>/dev/null | wc -l`
-if [ $count == 0 ]; then 
-  gatk CreateSequenceDictionary \
-    R=$genome
-fi
-dict=$(find $genomedir -maxdepth 1 -name "*.dict")
-
-# create fai index file using fasta genome
-count=`ls -1 $genomedir/*.fai 2>/dev/null | wc -l`
-if [ $count == 0 ]; then 
-  samtools faidx $genome
-fi
-
-# Check which mapping software, and check for index
-if [[ "$tophat" = false ]]; then  
-# Check if indexed files already present for STAR
-    if [ -e "$out/ref/SAindex" ]; then
-        echo "STAR Genome Directory with indexed genome detected, skipping STAR indexing"
-    else
-        # Now, do the indexing step
-        # Define the SA index number argument
-        log_result=$(echo "scale=2; l($genomelength)/l(2)/2 - 1" | bc -l)
-        sain=$(echo "scale=0; if ($log_result < 14) $log_result else 14" | bc)
-        echo "Creating STAR genome index..."
-        # Create genome index 
-        STAR \
-            --runThreadN $threads \
-            --runMode genomeGenerate \
-            --genomeDir $out/ref \
-            --genomeFastaFiles $genome \
-            --sjdbGTFfile $annotation \
-            --sjdbGTFtagExonParentTranscript Parent \
-            --sjdbOverhang $overhang \
-            --genomeSAindexNbases $sain
+    elif [[ $mode -eq 2 ]]; then
+        i=0
+        for fq in $acc/*; do
+        ((i=i%$threads)); ((i++==0)) && wait
+        fqgrab2 &
+        done
     fi
-else
-    # Check if bowtie index directory is already present
-    if [ -e "$out/btref" ]; then
-        echo "bowtie indexed directory detected, skipping generating bowtie index"
-    else
-    # If not, first check if ref folder is present, if not then make
-        if [ ! -d "$out/btref" ]; then mkdir "$out/btref"; echo "created path: $out/btref"; fi
-        echo "Creating Bowtie references..."
-        bowtie2-build $genome $out/btref
-    fi
+    wait
+    ##################fqgrab main ends#################
+
+    echo ""
+    echo "################ Finished downloading and processing all fastq files. Entering pipeline for HAMR analysis. ######################"
+    echo "$(date '+%d/%m/%Y %H:%M:%S')"
+    echo ""
+    # obtained all processed fastq files, record down checkpoint
+    $last_checkpoint = "checkpoint 1"
+    checkpoint $last_checkpoint
 fi
 
-# Run a series of command checks to ensure fastq2hamr can run smoothly
-if ! command -v mapfile > /dev/null; then
-    echo "Failed to call mapfile command. Please check your installation."
-    exit 1
-fi
-
-if ! command -v STAR > /dev/null; then
-    echo "Failed to call STAR command. Please check your installation."
-    exit 1
-fi
-
-if ! command -v samtools > /dev/null; then
-    echo "Failed to call samtools command. Please check your installation."
-    exit 1
-fi
-
-if ! command -v stringtie > /dev/null; then
-    echo "Failed to call stringtie command. Please check your installation."
-    exit 1
-fi
-
-if ! command -v cuffcompare > /dev/null; then
-    echo "Failed to call cuffcompare command. Please check your installation."
-    exit 1
-fi
-
-if ! command -v featureCounts > /dev/null; then
-    echo "Failed to call featureCounts command. Please check your installation."
-    exit 1
-fi
-
-if ! command -v gatk > /dev/null; then
-    echo "Failed to call gatk command. Please check your installation."
-    exit 1
-fi
-
-if ! command -v python > /dev/null; then
-    echo "Failed to call python command. Please check your installation."
-    exit 1
-fi
-
-# Creates a folder for depth analysis
-if [ ! -d "$out/pipeline/depth" ]; then mkdir $out/pipeline/depth; echo "created path: $out/pipeline/depth"; fi
-#############fastq2hamr housekeeping ends#############
-
-#############fastq2hamr main begins###############
-# Pipes each fastq down the hamr pipeline, and stores out put in ~/hamr_out
-# Note there's also a hamr_out in ~/pipeline/SRRNUMBER_temp/, but that one's for temp files
-i=0
-ttop=$(($threads/2))
-for smp in $hamrin/*.$suf
-do ((i=i%$ttop)); ((i++==0)) && wait
-  fastq2hamr &
-done
-
-if [[ "$hamrbox" = false ]]; then
-    exit 0
-fi
-
-wait
-
-# Check whether any hamr.mod.text is present, if not, halt the program here
-if [ -z "$(ls -A $out/hamr_out)" ]; then
-   echo "No HAMR predicted mod found for any sequencing data in this project, please see log for verification"
-   exit 1
-fi
-
-# If program didn't exit, at least 1 mod file, move zero mod record outside so it doesn't get read as a modtbl next
-mv $out/hamr_out/zero_mod.txt $out
-
-# Produce consensus bam files based on filename (per extracted from name.csv) and store in ~/consensus
-if [ ! -d "$out/consensus" ]; then mkdir $out/consensus; echo "created path: $out/consensus"; fi
-
-# Run a series of command checks to ensure findConsensus can run smoothly
-if ! command -v Rscript > /dev/null; then
-    echo "Failed to call Rscript command. Please check your installation."
-    exit 1
-fi
-
-echo ""
-echo "################ Finished HAMR analysis. Producing consensus mod table and depth analysis. ######################"
-echo "$(date '+%d/%m/%Y %H:%M:%S')"
-echo ""
-
-#############fastq2hamr main ends###############
-
-
-echo "Producing consensus file across biological replicates..."
-# Find consensus accross all reps of a given sample group
-Rscript $curdir/findConsensus.R \
-    $out/hamr_out \
-    $out/consensus
-wait
-echo "done"
-
-# The case where no consensus file is found, prevents *.bed from being created
-if [ -z "$(ls -A $out/consensus)" ]; then
-   echo "No consensus mods found within any sequencing group. Please see check individual rep for analysis. "
-   exit 1
-fi
-
-# Add depth columns with info from each rep alignment, mutate in place
-for f in $out/consensus/*.bed
-do
-  t=$(basename $f)
-  d=$(dirname $f)
-  n=${t%.*}
-  echo "starting depth analysis on $n"
-  for ff in $out/pipeline/depth/*.bam
-      do
-          if echo "$ff" | grep -q "$n"
-          then
-              tt=$(basename $ff)
-              nn=${tt%.*}
-              echo "[$n] extracting depth information from $nn"
-              for i in $(seq 1 $(wc -l < $f))
-              do
-                  chr=$(sed "${i}q;d" $f | sed 's/\t/\n/g' | sed '1q;d')
-                  pos=$(sed "${i}q;d" $f | sed 's/\t/\n/g' | sed '2q;d')
-                  dph=$(samtools coverage \
-                      -r $chr:$pos-$pos \
-                      $ff \
-                      | awk 'NR==2' | awk -F'\t' '{print $7}')
-                  awk -v "i=$i" 'NR==i {print $0"\t"var; next} 1' var="$dph" $f > $d/${nn}_new.bed && mv $d/${nn}_new.bed $f 
-              done
-              echo "[$n] finished $nn"
-            fi
-        done &
+# run fastq2hamr when checkpoint agrees
+if [ $last_checkpoint = "checkpoint 1" ]; then 
+    fastq2hamrhouse
+    #############fastq2hamr main begins###############
+    # Pipes each fastq down the hamr pipeline, and stores out put in ~/hamr_out
+    # Note there's also a hamr_out in ~/pipeline/SRRNUMBER_temp/, but that one's for temp files
+    i=0
+    ttop=$(($threads/2))
+    for smp in $hamrin/*.$suf
+    do ((i=i%$ttop)); ((i++==0)) && wait
+    fastq2hamr &
     done
-wait
 
-for f in $out/consensus/*.bed
-do
-if [ -s $f ]; then
-# The file is not-empty.
-    t=$(basename $f)
-    n=${t%.*}
-    echo "computing depth across reps for $n"
-    Rscript $curdir/depth_helper_average.R $f
-fi
-done
+    if [[ "$hamrbox" = false ]]; then
+        exit 0
+    fi
 
-wait
+    wait
 
-# Produce overlap bam files with the provided annotation library folders and store in ~/lap
-if [ ! -d "$out/lap" ]; then mkdir $out/lap; echo "created path: $out/lap"; fi
-
-# Run a series of command checks to ensure consensusOverlap can run smoothly
-if ! command -v intersectBed > /dev/null; then
-    echo "Failed to call intersectBed command. Please check your installation."
+    # Check whether any hamr.mod.text is present, if not, halt the program here
+    if [ -z "$(ls -A $out/hamr_out)" ]; then
+    echo "No HAMR predicted mod found for any sequencing data in this project, please see log for verification"
     exit 1
+    fi
+
+    # If program didn't exit, at least 1 mod file, move zero mod record outside so it doesn't get read as a modtbl next
+    mv $out/hamr_out/zero_mod.txt $out
+
+    echo ""
+    echo "################ Finished HAMR analysis. Producing consensus mod table and depth analysis. ######################"
+    echo "$(date '+%d/%m/%Y %H:%M:%S')"
+    echo ""
+
+    #############fastq2hamr main ends###############
+
+    # obtained all HAMR txts, record down checkpoint
+    last_checkpoint="checkpoint 2"
+    checkpoint $last_checkpoint
 fi
 
-# checks if genomedir is populated with generated annotation files, if not, hamrbox can't run anymore, exit
-count=`ls -1 $genomedir/*.bed 2>/dev/null | wc -l`
-  if [ $count == 0 ]; then 
-    if [[ ! -z "$generator" ]]; then
-        echo "generating annotations for overlap..."
-        Rscript $generator $annotation
-    else
-        echo "#########NOTICE###########"
-        echo "##########No annotation generator or annotation files found, please check your supplied arguments##########"
-        echo "##########As a result, HAMRLINC will stop here. Please provide the above files in the next run############"
+# run consensus when checkpoint agrees
+if [ $last_checkpoint = "checkpoint 2" ]; then 
+    ##############consensus finding begins##############
+    # Produce consensus bam files based on filename (per extracted from name.csv) and store in ~/consensus
+    if [ ! -d "$out/consensus" ]; then mkdir $out/consensus; echo "created path: $out/consensus"; fi
+
+    # Run a series of command checks to ensure findConsensus can run smoothly
+    if ! command -v Rscript > /dev/null; then
+        echo "Failed to call Rscript command. Please check your installation."
         exit 1
     fi
-  else 
-    echo "generated annotation detected, proceeding to overlapping"
-  fi
 
-# Overlap with provided libraries for each sample group
-for smp in $out/consensus/*
-do consensusOverlap
-done
+    echo "Producing consensus file across biological replicates..."
+    # Find consensus accross all reps of a given sample group
+    Rscript $curdir/findConsensus.R \
+        $out/hamr_out \
+        $out/consensus
+    wait
+    echo "done"
 
-echo ""
-echo "###############SMACK portion completed, entering EXTRACT################"
-echo "$(date '+%d/%m/%Y %H:%M:%S')"
-echo ""
-#######################################begins EXTRACT######################################
-dir=$out
-
-echo "generating long modification table..."
-# collapse all overlapped data into longdf
-Rscript $curdir/allLapPrep.R \
-    $dir/lap \
-    $dir
-echo "done"
-echo ""
-
-echo "plotting modification abundance..."
-# overview of modification proportion
-Rscript $curdir/abundByLap.R \
-    $dir/mod_long.csv \
-    $genomedir \
-    $dir
-echo "done"
-echo ""
-
-echo "performing modification cluster analysis..."
-# analyze hamr-mediated/true clustering across project
-Rscript $curdir/clusterAnalysis.R \
-    $dir/mod_long.csv \
-    $dir
-echo "done"
-echo ""
-
-# if [ ! -z "${4+x}" ]; then
-#     echo "known modification landscape provided, performing relative positional analysis to known mod..."
-#     # The csv (in modtbl format) of the known mod you want analyzed in distToKnownMod
-#     antcsv=$4
-#     # analyze hamr-mediated/true clustering across project
-#     Rscript $curdir/distToKnownMod.R \
-#         $dir/mod_long.csv \
-#         $antcsv
-#     echo "done"
-#     echo ""
-# else 
-#     echo "known modification file not detected, skipping relative positional analysis"
-#     echo ""
-# fi
-
-echo "classifying modified RNA subtype..."
-# looking at RNA subtype for mods
-Rscript $curdir/RNAtype.R \
-    $dir/mod_long.csv
-echo "done"
-echo ""
-
-if [ ! -d "$dir/go" ]; then mkdir $dir/go; echo "created path: $dir/go"; fi
-
-if [ ! -d "$dir/go/genelists" ]; then mkdir $dir/go/genelists; echo "created path: $dir/go/genelists"; fi
-
-if [ ! -d "$dir/go/pantherout" ]; then mkdir $dir/go/pantherout; echo "created path: $dir/go/pantherout"; fi
-
-if [ ! -n "/pantherapi-pyclient" ]; then
-    echo "panther installation not found, skipping go analysis"
-else    
-    echo "generating genelist from mod table..."
-    # produce gene lists for all GMUCT (for now) groups
-    Rscript $curdir/produceGenelist.R \
-        $dir/mod_long.csv \
-        $dir/go/genelists
-
-    # proceed if genelists directory is not empty
-    if [ ! -z "$(ls $dir/go/genelists)" ]; then
-        echo "sending each gene list to panther for overrepresentation analysis..."
-        # Send each gene list into panther API and generate a overrepresentation result file in another folter
-        for f in $dir/go/genelists/*.txt
-        do
-        n=$(basename $f)
-        echo "$n"
-        python /pantherapi-pyclient/pthr_go_annots.py \
-            --service enrich \
-            --params_file /pantherapi-pyclient/params/enrich.json \
-            --seq_id_file $f \
-            > $dir/go/pantherout/$n
-        done
-
-        echo "producing heatmap..."
-        # Run the R script that scavenges through a directory for result files and produce heatmap from it
-        Rscript $curdir/panther2heatmap.R \
-            $dir/go/pantherout \
-            $dir
+    # The case where no consensus file is found, prevents *.bed from being created
+    if [ -z "$(ls -A $out/consensus)" ]; then
+    echo "No consensus mods found within any sequencing group. Please see check individual rep for analysis. "
+    exit 1
     fi
+
+    # Add depth columns with info from each rep alignment, mutate in place
+    for f in $out/consensus/*.bed
+    do
+    t=$(basename $f)
+    d=$(dirname $f)
+    n=${t%.*}
+    echo "starting depth analysis on $n"
+    for ff in $out/pipeline/depth/*.bam
+        do
+            if echo "$ff" | grep -q "$n"
+            then
+                tt=$(basename $ff)
+                nn=${tt%.*}
+                echo "[$n] extracting depth information from $nn"
+                for i in $(seq 1 $(wc -l < $f))
+                do
+                    chr=$(sed "${i}q;d" $f | sed 's/\t/\n/g' | sed '1q;d')
+                    pos=$(sed "${i}q;d" $f | sed 's/\t/\n/g' | sed '2q;d')
+                    dph=$(samtools coverage \
+                        -r $chr:$pos-$pos \
+                        $ff \
+                        | awk 'NR==2' | awk -F'\t' '{print $7}')
+                    awk -v "i=$i" 'NR==i {print $0"\t"var; next} 1' var="$dph" $f > $d/${nn}_new.bed && mv $d/${nn}_new.bed $f 
+                done
+                echo "[$n] finished $nn"
+                fi
+            done &
+        done
+    wait
+
+    for f in $out/consensus/*.bed
+    do
+    if [ -s $f ]; then
+    # The file is not-empty.
+        t=$(basename $f)
+        n=${t%.*}
+        echo "computing depth across reps for $n"
+        Rscript $curdir/depth_helper_average.R $f
+    fi
+    done
+
+    wait
+
+    #############consensus finding ends###############
+
+    # obtained all consensus HAMR mods with depth, record down checkpoint
+    last_checkpoint="checkpoint 3"
+    checkpoint $last_checkpoint
 fi
 
-echo "classifying modified RNA subtype..."
-# looking at RNA subtype for mods
-Rscript $curdir/RNAtype.R \
-    $dir/mod_long.csv
-echo "done"
-echo ""
+# run overlap when checkpoint agrees
+if [ $last_checkpoint = "checkpoint 3" ]; then 
+    ##############overlapping begins##############
+    # Produce overlap bam files with the provided annotation library folders and store in ~/lap
+    if [ ! -d "$out/lap" ]; then mkdir $out/lap; echo "created path: $out/lap"; fi
 
-if [ -e $genomedir/*_CDS.bed ] && [ -e $genomedir/*_fiveUTR.bed ] && [ -e $genomedir/*_threeUTR.bed ]; then
-    c=$(find $genomedir -type f -name "*_CDS.bed")
-    f=$(find $genomedir -type f -name "*_fiveUTR.bed")
-    t=$(find $genomedir -type f -name "*_threeUTR.bed")
-    echo "mapping modification regional distribution landscape..."
-    # looking at RNA subtype for mods
-    Rscript $curdir/modRegionMapping.R \
-        $dir/mod_long.csv \
-        $f \
-        $c \
-        $t
+    # Run a series of command checks to ensure consensusOverlap can run smoothly
+    if ! command -v intersectBed > /dev/null; then
+        echo "Failed to call intersectBed command. Please check your installation."
+        exit 1
+    fi
+
+    # checks if genomedir is populated with generated annotation files, if not, hamrbox can't run anymore, exit
+    count=`ls -1 $genomedir/*.bed 2>/dev/null | wc -l`
+    if [ $count == 0 ]; then 
+        if [[ ! -z "$generator" ]]; then
+            echo "generating annotations for overlap..."
+            Rscript $generator $annotation
+        else
+            echo "#########NOTICE###########"
+            echo "##########No annotation generator or annotation files found, please check your supplied arguments##########"
+            echo "##########As a result, HAMRLINC will stop here. Please provide the above files in the next run############"
+            exit 1
+        fi
+    else 
+        echo "generated annotation detected, proceeding to overlapping"
+    fi
+
+    # Overlap with provided libraries for each sample group
+    for smp in $out/consensus/*
+    do consensusOverlap
+    done
+
+    if [ -z "$(ls -A $out/lap)" ]; then
+    echo "No overlapped mods found within any sequencing group. Please see check individual rep for analysis. "
+    exit 1
+    fi
+
+    #############overlapping ends###############
+
+    # obtained all overlapped HAMR mods, record down checkpoint
+    last_checkpoint="checkpoint 4"
+    checkpoint $last_checkpoint
+fi
+
+# run R analysis when checkpoint agrees
+if [ $last_checkpoint = "checkpoint 4" ]; then 
+    ##############R analysis begins##############
+    echo ""
+    echo "###############SMACK portion completed, entering EXTRACT################"
+    echo "$(date '+%d/%m/%Y %H:%M:%S')"
+    echo ""
+    #######################################begins EXTRACT######################################
+    dir=$out
+
+    echo "generating long modification table..."
+    # collapse all overlapped data into longdf
+    Rscript $curdir/allLapPrep.R \
+        $dir/lap \
+        $dir
     echo "done"
     echo ""
-fi
 
-echo ""
-echo "#################################### HAMRLINC has finished running #######################################"
-echo "$(date '+%d/%m/%Y %H:%M:%S')"
-echo ""
+    echo "plotting modification abundance..."
+    # overview of modification proportion
+    Rscript $curdir/abundByLap.R \
+        $dir/mod_long.csv \
+        $genomedir \
+        $dir
+    echo "done"
+    echo ""
+
+    echo "performing modification cluster analysis..."
+    # analyze hamr-mediated/true clustering across project
+    Rscript $curdir/clusterAnalysis.R \
+        $dir/mod_long.csv \
+        $dir
+    echo "done"
+    echo ""
+
+    # if [ ! -z "${4+x}" ]; then
+    #     echo "known modification landscape provided, performing relative positional analysis to known mod..."
+    #     # The csv (in modtbl format) of the known mod you want analyzed in distToKnownMod
+    #     antcsv=$4
+    #     # analyze hamr-mediated/true clustering across project
+    #     Rscript $curdir/distToKnownMod.R \
+    #         $dir/mod_long.csv \
+    #         $antcsv
+    #     echo "done"
+    #     echo ""
+    # else 
+    #     echo "known modification file not detected, skipping relative positional analysis"
+    #     echo ""
+    # fi
+
+    echo "classifying modified RNA subtype..."
+    # looking at RNA subtype for mods
+    Rscript $curdir/RNAtype.R \
+        $dir/mod_long.csv
+    echo "done"
+    echo ""
+
+    if [ ! -d "$dir/go" ]; then mkdir $dir/go; echo "created path: $dir/go"; fi
+
+    if [ ! -d "$dir/go/genelists" ]; then mkdir $dir/go/genelists; echo "created path: $dir/go/genelists"; fi
+
+    if [ ! -d "$dir/go/pantherout" ]; then mkdir $dir/go/pantherout; echo "created path: $dir/go/pantherout"; fi
+
+    if [ ! -n "/pantherapi-pyclient" ]; then
+        echo "panther installation not found, skipping go analysis"
+    else    
+        echo "generating genelist from mod table..."
+        # produce gene lists for all GMUCT (for now) groups
+        Rscript $curdir/produceGenelist.R \
+            $dir/mod_long.csv \
+            $dir/go/genelists
+
+        # proceed if genelists directory is not empty
+        if [ ! -z "$(ls $dir/go/genelists)" ]; then
+            echo "sending each gene list to panther for overrepresentation analysis..."
+            # Send each gene list into panther API and generate a overrepresentation result file in another folter
+            for f in $dir/go/genelists/*.txt
+            do
+            n=$(basename $f)
+            echo "$n"
+            python /pantherapi-pyclient/pthr_go_annots.py \
+                --service enrich \
+                --params_file /pantherapi-pyclient/params/enrich.json \
+                --seq_id_file $f \
+                > $dir/go/pantherout/$n
+            done
+
+            echo "producing heatmap..."
+            # Run the R script that scavenges through a directory for result files and produce heatmap from it
+            Rscript $curdir/panther2heatmap.R \
+                $dir/go/pantherout \
+                $dir
+        fi
+    fi
+
+    echo "classifying modified RNA subtype..."
+    # looking at RNA subtype for mods
+    Rscript $curdir/RNAtype.R \
+        $dir/mod_long.csv
+    echo "done"
+    echo ""
+
+    if [ -e $genomedir/*_CDS.bed ] && [ -e $genomedir/*_fiveUTR.bed ] && [ -e $genomedir/*_threeUTR.bed ]; then
+        c=$(find $genomedir -type f -name "*_CDS.bed")
+        f=$(find $genomedir -type f -name "*_fiveUTR.bed")
+        t=$(find $genomedir -type f -name "*_threeUTR.bed")
+        echo "mapping modification regional distribution landscape..."
+        # looking at RNA subtype for mods
+        Rscript $curdir/modRegionMapping.R \
+            $dir/mod_long.csv \
+            $f \
+            $c \
+            $t
+        echo "done"
+        echo ""
+    fi
+
+    echo ""
+    echo "#################################### HAMRLINC has finished running #######################################"
+    echo "$(date '+%d/%m/%Y %H:%M:%S')"
+    echo ""
+fi
