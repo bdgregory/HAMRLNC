@@ -140,7 +140,7 @@ ENV BINPATH /usr/bin
 RUN git clone https://github.com/harrlol/HAMR && \
 	chmod +x /HAMR/hamr.py && cp /HAMR/hamr.py $BINPATH && \
 	cp -R /HAMR/models /usr/bin/hamr_models
-ENV HAMR_MODELS_PATH=/usr/bin/hamr_models
+ENV hamr_model=/usr/bin/hamr_models
 
 # GATK (4.3.0.0)
 RUN wget https://github.com/broadinstitute/gatk/releases/download/4.3.0.0/gatk-4.3.0.0.zip && \
