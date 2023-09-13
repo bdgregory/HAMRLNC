@@ -29,9 +29,9 @@ cat <<'EOF'
     -b	[Tophat library choice: fr-unstranded, fr-firststrand, fr-secondstrand]
     -f	[filter]
     -k  [suppress hamrbox]
-    -p  [suppress pamlinc]
+    -p  [suppress evolinc_i]
     -u  [suppress featurecount]
-    -v  [evolinc option: M or MO, default=M]
+    -v  [evolinc_i_option: M or MO, default=M]
     -Q	[HAMR: minimum qualuty score, default=30]
     -C	[HAMR: minimum coveragem default=50]
     -E	[HAMR: sequencing error, default=0.01]
@@ -57,11 +57,11 @@ coverage=50
 err=0.01
 pvalue=1
 fdr=0.05
-evolinc_option="M"
+evolinc_i_option="M"
 tophatlib="fr-firststrand"
 filter=$curdir/filter_SAM_number_hits.pl
 model=$curdir/euk_trna_mods.Rdata
-pamlinc=true
+evolinc_i=true
 featurecount=true
 hamrbox=true
 generator=""
@@ -103,13 +103,13 @@ while getopts ":o:t:c:g:i:z:l:b:e:v:s:n:fmhQCakTGDupEPF:" opt; do
     model=$OPTARG
      ;;
     v)
-    evolinc_option="$OPTARG"
+    evolinc_i_option="$OPTARG"
     ;;
     n)
     threads=$OPTARG
     ;;
     p)
-    pamlinc=false
+    evolinc_i=false
     ;;
     k)
     hamrbox=false
@@ -451,10 +451,10 @@ fastq2hamr () {
     fi
 
     ###############################################
-    ########pamlinc logic here (left arm)###########
+    ########evolinc_i logic here (left arm)###########
     ############################################### 
-    # if user didn't suppress pamlinc, start the pipeline, note the constitutive featurecount after evolinc
-    if [[ "$pamlinc" = true ]]; then
+    # if user didn't suppress evolinc_i, start the pipeline, note the constitutive featurecount after evolinc
+    if [[ "$evolinc_i" = true ]]; then
         echo "################################################################"
         echo "############## Entering lincRNA abundance quantification pipeline ##############"
         echo "################################################################"
@@ -498,7 +498,7 @@ fastq2hamr () {
 
         # run evolinc
         echo "[$smpkey] annotating lincRNA using Evolinc-i..."
-        if [ "$evolinc_option" == "M" ]; then
+        if [ "$evolinc_i_option" == "M" ]; then
             echo "[$smpkey] M option identified for evolinc"
             evolinc-part-I.sh \
                 -c $smpout/cuffed.combined.gtf \
@@ -507,7 +507,7 @@ fastq2hamr () {
                 -r $annotation \
                 -n $threads \
                 -o $smpout/lincRNA
-        elif [ "$evolinc_option" == "MO" ]; then
+        elif [ "$evolinc_i_option" == "MO" ]; then
             echo "[$smpkey] MO option identified for evolinc"
             evolinc-part-I.sh \
                 -c $smpout/cuffed.combined.gtf \
@@ -521,23 +521,24 @@ fastq2hamr () {
                 -x $known_linc
         fi
 
-        # run constitutive feature count within pamlinc (left arm) 
-        echo "[$smpkey] quantifying lincRNA abundance using featurecounts..."
-        if [ "$det" -eq 1 ]; then
-            echo "[$smpkey] running featurecount with $fclib as the -s argument"
-            featureCounts \
-                -T $threads \
-                -s $fclib \
-                -a $smpout/lincRNA/lincRNA.updated.gtf \
-                -o $smpout/lincRNA_featurecount.txt \
-                $smpout/unique.bam
-        else
-            featureCounts \
-                -T $threads \
-                #this is bound to be buggy, ask
-                -a $smpout/lincRNA/lincRNA.updated.gtf \
-                -o $smpout/lincRNA_featurecount.txt \
-                $smpout/unique.bam
+        # run constitutive feature count within evolinc_i (left arm) if the user didn't suppress feacturecount
+        if [[ "$featurecount" = true ]]; then
+            echo "[$(date '+%d/%m/%Y %H:%M:%S')$smpkey] quantifying lincRNA-based transcript abundance using featurecounts..."
+            if [ "$det" -eq 1 ]; then
+                echo "[$smpkey] running featurecount with $fclib as the -s argument"
+                featureCounts \
+                    -T $threads \
+                    -s $fclib \
+                    -a $smpout/lincRNA/lincRNA.updated.gtf \
+                    -o $smpout/lincRNA_featurecount.txt \
+                    $smpout/unique.bam
+            else
+                featureCounts \
+                    -T $threads \
+                    -a $smpout/lincRNA/lincRNA.updated.gtf \
+                    -o $smpout/lincRNA_featurecount.txt \
+                    $smpout/unique.bam
+            fi
         fi 
         echo "################################################################"
         echo "############## lincRNA abundance quantification pipeline completed ##############"
@@ -973,7 +974,7 @@ else
 fi
 
 # check that the user didn't suppress all three programs -- if so, there's no need to run anything
-if [ $pamlinc = false ] && [ $featurecount = false ] && [ $hamrbox = false ]; then
+if [ $evolinc_i = false ] && [ $featurecount = false ] && [ $hamrbox = false ]; then
     echo "User has suppressed all functionalities. Exiting..."
     exit 0
 fi
