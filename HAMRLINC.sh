@@ -203,7 +203,7 @@ exec > >(tee -a "$logfile") 2>&1
 #exec 2>&1 1>>$logfile 3>&1
 
 ######################################################### Subprogram Definition #########################################
-checkpoint() {
+checkpoint () {
     echo "Checkpoint reached: $1"
     echo "$1" > $out/checkpoint.txt
 }
@@ -981,14 +981,14 @@ fi
 
 # check whether checkpoint.txt is present 
 if [ -e $out/checkpoint.txt ]; then
-    last_checkpoint=$(cat checkpoint.txt)
+    last_checkpoint=$(cat $out/checkpoint.txt)
     echo "Resuming from checkpoint: $last_checkpoint"
 else
     last_checkpoint="start"
 fi
 
 # run fqgrab when checkpoint agrees so
-if [ $last_checkpoint = "start" ] || [ $last_checkpoint = "" ]; then
+if [ "$last_checkpoint" = "start" ] || [ "$last_checkpoint" = "" ]; then
     fqgrabhouse
     ##########fqgrab main begins#########
     if [[ $mode -eq 1 ]]; then
@@ -1014,12 +1014,12 @@ if [ $last_checkpoint = "start" ] || [ $last_checkpoint = "" ]; then
     echo "$(date '+%d/%m/%Y %H:%M:%S')"
     echo ""
     # obtained all processed fastq files, record down checkpoint
-    $last_checkpoint = "checkpoint 1"
+    last_checkpoint="checkpoint1"
     checkpoint $last_checkpoint
 fi
 
 # run fastq2hamr when checkpoint agrees
-if [ $last_checkpoint = "checkpoint 1" ]; then 
+if [ "$last_checkpoint" = "checkpoint1" ]; then 
     fastq2hamrhouse
     #############fastq2hamr main begins###############
     # Pipes each fastq down the hamr pipeline, and stores out put in ~/hamr_out
@@ -1054,12 +1054,12 @@ if [ $last_checkpoint = "checkpoint 1" ]; then
     #############fastq2hamr main ends###############
 
     # obtained all HAMR txts, record down checkpoint
-    last_checkpoint="checkpoint 2"
+    last_checkpoint="checkpoint2"
     checkpoint $last_checkpoint
 fi
 
 # run consensus when checkpoint agrees
-if [ $last_checkpoint = "checkpoint 2" ]; then 
+if [ "$last_checkpoint" = "checkpoint2" ]; then 
     ##############consensus finding begins##############
     # Produce consensus bam files based on filename (per extracted from name.csv) and store in ~/consensus
     if [ ! -d "$out/consensus" ]; then mkdir $out/consensus; echo "created path: $out/consensus"; fi
@@ -1130,12 +1130,12 @@ if [ $last_checkpoint = "checkpoint 2" ]; then
     #############consensus finding ends###############
 
     # obtained all consensus HAMR mods with depth, record down checkpoint
-    last_checkpoint="checkpoint 3"
+    last_checkpoint="checkpoint3"
     checkpoint $last_checkpoint
 fi
 
 # run overlap when checkpoint agrees
-if [ $last_checkpoint = "checkpoint 3" ]; then 
+if [ "$last_checkpoint" = "checkpoint3" ]; then 
     ##############overlapping begins##############
     # Produce overlap bam files with the provided annotation library folders and store in ~/lap
     if [ ! -d "$out/lap" ]; then mkdir $out/lap; echo "created path: $out/lap"; fi
@@ -1175,12 +1175,12 @@ if [ $last_checkpoint = "checkpoint 3" ]; then
     #############overlapping ends###############
 
     # obtained all overlapped HAMR mods, record down checkpoint
-    last_checkpoint="checkpoint 4"
+    last_checkpoint="checkpoint4"
     checkpoint $last_checkpoint
 fi
 
 # run R analysis when checkpoint agrees
-if [ $last_checkpoint = "checkpoint 4" ]; then 
+if [ "$last_checkpoint" = "checkpoint4" ]; then 
     ##############R analysis begins##############
     echo ""
     echo "###############SMACK portion completed, entering EXTRACT################"
