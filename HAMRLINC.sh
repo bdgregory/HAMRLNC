@@ -18,7 +18,6 @@ cat <<'EOF'
     -c	<filenames for each fastq.csv>
     -g	<reference genome.fa>
     -i  <reference genome annotation.gff3>
-    -z  <reference genome annotation.gtf>
     -l	<read length>
     -s	<genome size in bp >
     -e	<genome annotation generator>
@@ -49,7 +48,7 @@ EOF
     exit 0
 }
 
-curdir=$(dirname $0)
+curdir=$(dirname "$0")
 threads=4
 tophat=false
 quality=30
@@ -83,9 +82,6 @@ while getopts ":o:t:c:g:i:z:l:b:e:v:s:n:fmhQCakTGDupEPF:" opt; do
      ;;
     i)
     annotation=$OPTARG # reference genome annotation
-     ;;
-    z)
-    annotationgtf=$OPTARG # reference genome annotation
     ;;
     l)
     length+=$OPTARG # read length 
@@ -149,8 +145,7 @@ while getopts ":o:t:c:g:i:z:l:b:e:v:s:n:fmhQCakTGDupEPF:" opt; do
     ;;
     h)
     usage
-     exit 1
-      ;;
+    ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
       exit 1
@@ -164,9 +159,9 @@ done
 
 # assigning additional variables
 dumpout=$out/datasets
-mismatch=$(($length*6/100))
-overhang=$(($mismatch-1))
-genomedir=$(dirname $genome)
+mismatch=$((length*6/100))
+overhang=$((mismatch-1))
+genomedir=$(dirname "$genome")
 last_checkpoint=""
 
 # Assigning the appropriate annotationGenerate.R 
@@ -205,17 +200,17 @@ exec > >(tee -a "$logfile") 2>&1
 ######################################################### Subprogram Definition #########################################
 checkpoint () {
     echo "Checkpoint reached: $1"
-    echo "$1" > $out/checkpoint.txt
+    echo "$1" > "$out"/checkpoint.txt
 }
 
 fqgrab () {
 
   echo "begin downloading $line..." 
 
-  fasterq-dump "$line" -O $dumpout/raw --verbose
+  fasterq-dump "$line" -O "$dumpout"/raw --verbose
 
   # automatically detects the suffix
-  echo $dumpout/raw/$line
+  echo "$dumpout"/raw/"$line"
   if [[ -f $dumpout/raw/$line"_1.fastq" ]]; then
     suf="fastq"
     PE=true
@@ -239,42 +234,42 @@ fqgrab () {
 
   if [[ "$PE" = false ]]; then  
     echo "[$line] performing fastqc on raw file..."
-    fastqc $dumpout/raw/$line.$suf -o $dumpout/fastqc_results &
+    fastqc "$dumpout"/raw/"$line"."$suf" -o "$dumpout"/fastqc_results &
 
     echo "[$line] trimming..."
-    trim_galore -o $dumpout/trimmed $dumpout/raw/$line.$suf
+    trim_galore -o "$dumpout"/trimmed "$dumpout"/raw/"$line"."$suf"
 
     echo "[$line] trimming complete, performing fastqc..."
-    fastqc $dumpout/trimmed/$line"_trimmed.fq" -o $dumpout/fastqc_results
+    fastqc "$dumpout"/trimmed/"$line""_trimmed.fq" -o "$dumpout"/fastqc_results
 
   else 
     echo "[$line] performing fastqc on raw file..."
-    fastqc $dumpout/raw/$line"_1.$suf" -o $dumpout/fastqc_results &
-    fastqc $dumpout/raw/$line"_2.$suf" -o $dumpout/fastqc_results &
+    fastqc "$dumpout"/raw/"$line""_1.$suf" -o "$dumpout"/fastqc_results &
+    fastqc "$dumpout"/raw/"$line""_2.$suf" -o "$dumpout"/fastqc_results &
 
     echo "[$line] trimming..."
-    trim_galore -o $dumpout/trimmed $dumpout/raw/$line"_1.$suf"
-    trim_galore -o $dumpout/trimmed $dumpout/raw/$line"_2.$suf"
+    trim_galore -o "$dumpout"/trimmed "$dumpout"/raw/"$line""_1.$suf"
+    trim_galore -o "$dumpout"/trimmed "$dumpout"/raw/"$line""_2.$suf"
 
     echo "[$line] trimming complete, performing fastqc..."
-    fastqc $dumpout/trimmed/$line"_1_trimmed.fq" -o $dumpout/fastqc_results
-    fastqc $dumpout/trimmed/$line"_2_trimmed.fq" -o $dumpout/fastqc_results
+    fastqc "$dumpout"/trimmed/"$line""_1_trimmed.fq" -o "$dumpout"/fastqc_results
+    fastqc "$dumpout"/trimmed/"$line""_2_trimmed.fq" -o "$dumpout"/fastqc_results
   fi
   echo "[$(date '+%d/%m/%Y %H:%M:%S')] finished processing $line"
   echo ""
 }
 
 fqgrab2 () {
-    sname=$(basename $fq)
+    sname=$(basename "$fq")
     tt=${sname%.*} 
     echo "[$sname] performing fastqc on raw file..."
-    fastqc $fq -o $dumpout/fastqc_results &
+    fastqc "$fq" -o "$dumpout"/fastqc_results &
 
     echo "[$sname] trimming..."
-    trim_galore -o $dumpout/trimmed $fq
+    trim_galore -o "$dumpout"/trimmed "$fq"
 
     echo "[$sname] trimming complete, performing fastqc..."
-    fastqc $dumpout/trimmed/$tt"_trimmed.fq" -o $dumpout/fastqc_results
+    fastqc "$dumpout"/trimmed/"$tt""_trimmed.fq" -o "$dumpout"/fastqc_results
 }
 
 fastq2hamr () {
@@ -338,7 +333,7 @@ fastq2hamr () {
 
     # Reassign hamr output directory
     if [ ! -d "$out/hamr_out" ]; then
-        mkdir $out/hamr_out
+        mkdir "$out"/hamr_out
         echo "created path: $out/hamr_out"
     fi
 
@@ -347,7 +342,7 @@ fastq2hamr () {
 
 
     echo "$(date '+%d/%m/%Y %H:%M:%S') [$smpkey] Begin HAMR pipeline"
-    cd $smpout
+    cd "$smpout" || exit
     # maps the trimmed reads to provided annotated genome, can take ~1.5hr
 
     if [[ "$tophat" = false ]]; then  
@@ -356,10 +351,10 @@ fastq2hamr () {
             echo "[$smpkey] Performing STAR with a single-end file."
             STAR \
             --runThreadN 2 \
-            --genomeDir $out/ref \
-            --readFilesIn $smp \
+            --genomeDir "$out"/ref \
+            --readFilesIn "$smp" \
             --sjdbOverhang $overhang \
-            --sjdbGTFfile $annotation \
+            --sjdbGTFfile "$annotation" \
             --sjdbGTFtagExonParentTranscript Parent \
             --outFilterMultimapNmax 10 \
             --outFilterMismatchNmax $mismatch \
@@ -368,10 +363,10 @@ fastq2hamr () {
             echo "[$smpkey] Performing STAR with a paired-end file."
             STAR \
             --runThreadN 2 \
-            --genomeDir $out/ref \
-            --readFilesIn $smp1 $smp2 \
+            --genomeDir "$out"/ref \
+            --readFilesIn "$smp1" "$smp2" \
             --sjdbOverhang $overhang \
-            --sjdbGTFfile $annotation \
+            --sjdbGTFfile "$annotation" \
             --sjdbGTFtagExonParentTranscript Parent \
             --outFilterMultimapNmax 10 \
             --outFilterMismatchNmax $mismatch \
@@ -382,47 +377,47 @@ fastq2hamr () {
         echo "Using TopHat2 for mapping..."
         # set read distabce based on mistmatch num
         red=8
-        if [[ $mismatch > 8 ]]; then red=$((mismatch +1)); fi
+        if [[ $mismatch -gt 8 ]]; then red=$((mismatch +1)); fi
 
         if [ "$det" -eq 1 ]; then
             echo "[$smpkey] Performing TopHat2 with a single-end file."
             tophat2 \
-                --library-type $tophatlib \
+                --library-type "$tophatlib" \
                 --read-mismatches $mismatch \
                 --read-edit-dist $red \
                 --max-multihits 10 \
                 --b2-very-sensitive \
                 --transcriptome-max-hits 10 \
                 --no-coverage-search \
-                -G $annotation \
-                -p $threads \
-                $out/btref \
-                $smp
+                -G "$annotation" \
+                -p "$threads" \
+                "$out"/btref \
+                "$smp"
         else
         echo "[$smpkey] Performing TopHat2 with a paired-end file."
             tophat2 \
-                --library-type $tophatlib \
+                --library-type "$tophatlib" \
                 --read-mismatches $mismatch \
                 --read-edit-dist $red \
                 --max-multihits 10 \
                 --b2-very-sensitive \
                 --transcriptome-max-hits 10 \
                 --no-coverage-search \
-                -G $annotation \
-                -p $threads \
-                $out/btref \
-                $smp1 $smp2
+                -G "$annotation" \
+                -p "$threads" \
+                "$out"/btref \
+                "$smp1" "$smp2"
         fi
     fi
-    cd
+    cd || exit
 
     wait
 
     #sorts the accepted hits
     echo "[$smpkey] sorting..."
     samtools sort \
-        -n $smpout/Aligned.sortedByCoord.out.bam \
-        -o $smpout/sort_accepted.bam
+        -n "$smpout"/Aligned.sortedByCoord.out.bam \
+        -o "$smpout"/sort_accepted.bam
     echo "[$smpkey] finished sorting"
     echo ""
 
@@ -431,11 +426,11 @@ fastq2hamr () {
     #filter the accepted hits by uniqueness
     echo "[$smpkey] filter unique..."
     samtools view \
-        -h $smpout/sort_accepted.bam \
-        | perl $filter 1 \
+        -h "$smpout"/sort_accepted.bam \
+        | perl "$filter" 1 \
         | samtools view -bS - \
         | samtools sort \
-        -o $smpout/unique.bam
+        -o "$smpout"/unique.bam
     echo "[$smpkey] finished filtering"
     echo ""
 
@@ -458,67 +453,67 @@ fastq2hamr () {
         echo "################################################################"
         echo "############## Entering lincRNA abundance quantification pipeline ##############"
         echo "################################################################"
-        echo "$(date '+%d/%m/%Y %H:%M:%S')"
+        date '+%d/%m/%Y %H:%M:%S'
         # run stringtie accordingly, note PE and SE here is taken care of
         # output is unnamed and stored in each fastq folder
         echo "[$smpkey] producing transcript assembly using stringtie..."
         if [[ "$tophatlib" = fr-firststrand ]]; then
             echo "[$smpkey] running stringtie with --rf"
             stringtie \
-                $smpout/unique.bam \
-                -o $smpout/transcriptAssembly.gtf \
-                -G $annotation \
-                -p $threads \
+                "$smpout"/unique.bam \
+                -o "$smpout"/transcriptAssembly.gtf \
+                -G "$annotation" \
+                -p "$threads" \
                 --rf
         elif [[ "$tophatlib" = fr-secondstrand ]]; then
             echo "[$smpkey] running stringtie with --fr"
             stringtie \
-                $smpout/unique.bam \
-                -o $smpout/transcriptAssembly.gtf \
-                -G $annotation \
-                -p $threads \
+                "$smpout"/unique.bam \
+                -o "$smpout"/transcriptAssembly.gtf \
+                -G "$annotation" \
+                -p "$threads" \
                 --fr
         else
             echo "[$smpkey] running stringtie assuming an unstranded library"
             stringtie \
-                $smpout/unique.bam \
-                -o $smpout/transcriptAssembly.gtf \
-                -G $annotation \
-                -p $threads
+                "$smpout"/unique.bam \
+                -o "$smpout/"transcriptAssembly.gtf \
+                -G "$annotation" \
+                -p "$threads"
         fi
 
         # next run cuff compare
         echo "[$smpkey] merging assemblies using cuffcompare..."
         cuffcompare \
-            $smpout/transcriptAssembly.gtf \
-            -r $annotation \
-            -s $genome \
+            "$smpout"/transcriptAssembly.gtf \
+            -r "$annotation" \
+            -s "$genome" \
             -T \
-            -o $smpout/cuffed
+            -o "$smpout"/cuffed
 
         # run evolinc
         echo "[$smpkey] annotating lincRNA using Evolinc-i..."
         if [ "$evolinc_i_option" == "M" ]; then
             echo "[$smpkey] M option identified for evolinc"
             evolinc-part-I.sh \
-                -c $smpout/cuffed.combined.gtf \
-                -g $genome \
-                -u $annotation \
-                -r $annotation \
-                -n $threads \
-                -o $smpout/lincRNA
+                -c "$smpout"/cuffed.combined.gtf \
+                -g "$genome" \
+                -u "$annotation" \
+                -r "$annotation" \
+                -n "$threads" \
+                -o "$smpout"/lincRNA
         elif [ "$evolinc_i_option" == "MO" ]; then
             echo "[$smpkey] MO option identified for evolinc"
             evolinc-part-I.sh \
-                -c $smpout/cuffed.combined.gtf \
-                -g $genome \
-                -u $annotation \
-                -r $annotation \
-                -n $threads \
-                -o $smpout/lincRNA \
-                -b $blast_file \
-                -t $cage_file \
-                -x $known_linc
+                -c "$smpout"/cuffed.combined.gtf \
+                -g "$genome" \
+                -u "$annotation" \
+                -r "$annotation" \
+                -n "$threads" \
+                -o "$smpout"/lincRNA \
+                -b "$blast_file" \
+                -t "$cage_file" \
+                -x "$known_linc"
         fi
 
         # run constitutive feature count within evolinc_i (left arm) if the user didn't suppress feacturecount
@@ -527,17 +522,17 @@ fastq2hamr () {
             if [ "$det" -eq 1 ]; then
                 echo "[$smpkey] running featurecount with $fclib as the -s argument"
                 featureCounts \
-                    -T $threads \
+                    -T "$threads" \
                     -s $fclib \
-                    -a $smpout/lincRNA/lincRNA.updated.gtf \
-                    -o $smpout/lincRNA_featurecount.txt \
-                    $smpout/unique.bam
+                    -a "$smpout"/lincRNA/lincRNA.updated.gtf \
+                    -o "$smpout"/lincRNA_featurecount.txt \
+                    "$smpout"/unique.bam
             else
                 featureCounts \
-                    -T $threads \
-                    -a $smpout/lincRNA/lincRNA.updated.gtf \
-                    -o $smpout/lincRNA_featurecount.txt \
-                    $smpout/unique.bam
+                    -T "$threads" \
+                    -a "$smpout"/lincRNA/lincRNA.updated.gtf \
+                    -o "$smpout"/lincRNA_featurecount.txt \
+                    "$smpout"/unique.bam
             fi
         fi 
         echo "################################################################"
@@ -550,23 +545,29 @@ fastq2hamr () {
     ###############################################
     ########regular feature count logic here (right arm)###########
     ############################################### 
+    # first create gtf file from gff3 file
+    gffread \
+        "$annotation" \
+        -T \
+        -o "$out"/ref/temp.gtf
+
     # run feature count for normal alignment transcript quantification if user didn't suppress
     if [[ "$featurecount" = true ]]; then
         echo "[$(date '+%d/%m/%Y %H:%M:%S')$smpkey] quantifying regular transcript abundance using featurecounts..."
         if [ "$det" -eq 1 ]; then
             echo "[$smpkey] running featurecount with $fclib as the -s argument"
             featureCounts \
-                -T $threads \
+                -T "$threads" \
                 -s $fclib \
-                -a $annotationgtf \
-                -o $smpout/alignment_featurecount.txt \
-                $smpout/unique.bam
+                -a "$out"/ref/temp.gtf \
+                -o "$smpout"/alignment_featurecount.txt \
+                "$smpout"/unique.bam
         else
             featureCounts \
-                -T $threads \
-                -a $annotationgtf \
-                -o $smpout/alignment_featurecount.txt \
-                $smpout/unique.bam
+                -T "$threads" \
+                -a "$out"/ref/temp.gtf \
+                -o "$smpout"/alignment_featurecount.txt \
+                "$smpout"/unique.bam
         fi
     fi
     wait
@@ -581,8 +582,8 @@ fastq2hamr () {
         #adds read groups using picard, note the RG arguments are disregarded here
         echo "[$smpkey] adding/replacing read groups..."
         gatk AddOrReplaceReadGroups \
-            I=$smpout/unique.bam \
-            O=$smpout/unique_RG.bam \
+            I="$smpout"/unique.bam \
+            O="$smpout"/unique_RG.bam \
             RGID=1 \
             RGLB=xxx \
             RGPL=illumina_100se \
@@ -597,12 +598,12 @@ fastq2hamr () {
         echo "[$smpkey] reordering..."
         echo "$genome"
         gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" ReorderSam \
-            I=$smpout/unique_RG.bam \
-            O=$smpout/unique_RG_ordered.bam \
-            R=$genome \
+            I="$smpout"/unique_RG.bam \
+            O="$smpout"/unique_RG_ordered.bam \
+            R="$genome" \
             CREATE_INDEX=TRUE \
-            SEQUENCE_DICTIONARY=$dict \
-            TMP_DIR=$smpout/tmp
+            SEQUENCE_DICTIONARY="$dict" \
+            TMP_DIR="$smpout"/tmp
         echo "[$smpkey] finished reordering"
         echo ""
 
@@ -612,9 +613,9 @@ fastq2hamr () {
         #note can alter arguments to allow cigar reads 
         echo "[$smpkey] getting split and cigar reads..."
         gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" SplitNCigarReads \
-            -R $genome \
-            -I $smpout/unique_RG_ordered.bam \
-            -O $smpout/unique_RG_ordered_splitN.bam
+            -R "$genome" \
+            -I "$smpout"/unique_RG_ordered.bam \
+            -O "$smpout"/unique_RG_ordered_splitN.bam
             # -U ALLOW_N_CIGAR_READS
         echo "[$smpkey] finished splitting N cigarring"
         echo ""
@@ -624,8 +625,8 @@ fastq2hamr () {
         #final resorting using picard
         echo "[$smpkey] resorting..."
         gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" SortSam \
-            I=$smpout/unique_RG_ordered_splitN.bam \
-            O=$smpout/unique_RG_ordered_splitN.resort.bam \
+            I="$smpout"/unique_RG_ordered_splitN.bam \
+            O="$smpout"/unique_RG_ordered_splitN.resort.bam \
             SORT_ORDER=coordinate
         echo "[$smpkey] finished resorting"
         echo ""
@@ -635,22 +636,22 @@ fastq2hamr () {
         #hamr step, can take ~1hr
         echo "[$smpkey] hamr..."
         hamr_path=$(which hamr.py)
-        python $hamr_path \
-            -fe $smpout/unique_RG_ordered_splitN.resort.bam $genome $model $smpout $smpname $quality $coverage $err H4 $pvalue $fdr .05
+        python "$hamr_path" \
+            -fe "$smpout"/unique_RG_ordered_splitN.resort.bam "$genome" "$model" "$smpout" $smpname $quality $coverage $err H4 $pvalue $fdr .05
         wait
 
         if [ ! -e "$smpout/${smpname}.mods.txt" ]; then 
-            cd $hamrout
-            printf "${smpname} \n" >> zero_mod.txt
-            cd
+            cd "$hamrout" || exit
+            printf '%s \n' "$smpname" >> zero_mod.txt
+            cd || exit
         else
         # HAMR needs separate folders to store temp for each sample, so we move at the end
-            cp $smpout/${smpname}.mods.txt $hamrout
+            cp "$smpout"/"${smpname}".mods.txt "$hamrout"
         fi
 
         # Move the unique_RG_ordered.bam and unique_RG_ordered.bai to a folder for read depth analysis
-        cp $smpout/unique_RG_ordered.bam $out/pipeline/depth/$smpname.bam
-        cp $smpout/unique_RG_ordered.bai $out/pipeline/depth/$smpname.bai
+        cp "$smpout"/unique_RG_ordered.bam "$out"/pipeline/depth/"$smpname".bam
+        cp "$smpout"/unique_RG_ordered.bai "$out"/pipeline/depth/"$smpname".bai
     fi
 }
 
@@ -664,103 +665,103 @@ consensusOverlap () {
     echo "consensus file prefix: $smpname"
     echo ""
 
-    count=`ls -1 $genomedir/*_CDS.bed 2>/dev/null | wc -l`
-    if [ $count != 0 ]; then 
-        cds=$(find $genomedir -maxdepth 1 -name "*_CDS.bed")
+    count=$(ls -1 "$genomedir"/*_CDS.bed 2>/dev/null | wc -l)
+    if [ "$count" != 0 ]; then 
+        cds=$(find "$genomedir" -maxdepth 1 -name "*_CDS.bed")
         #overlap with cds
         intersectBed \
-            -a $cds \
-            -b $smp \
+            -a "$cds" \
+            -b "$smp" \
             -wa -wb \
-            > $out/lap/$smpname"_CDS".bed
+            > "$out"/lap/"$smpname""_CDS".bed
         echo "finished finding overlap with CDS library"
     fi
 
-    count=`ls -1 $genomedir/*_fiveUTR.bed 2>/dev/null | wc -l`
-    if [ $count != 0 ]; then 
-        fiveutr=$(find $genomedir -maxdepth 1 -name "*_fiveUTR.bed")
+    count=$(ls -1 "$genomedir"/*_fiveUTR.bed 2>/dev/null | wc -l)
+    if [ "$count" != 0 ]; then 
+        fiveutr=$(find "$genomedir" -maxdepth 1 -name "*_fiveUTR.bed")
         #overlap with 5utr
         intersectBed \
-            -a $fiveutr \
-            -b $smp \
+            -a "$fiveutr" \
+            -b "$smp" \
             -wa -wb \
-            > $out/lap/$smpname"_fiveUTR".bed
+            > "$out"/lap/"$smpname""_fiveUTR".bed
         echo "finished finding overlap with 5UTR library"
     fi
 
-    count=`ls -1 $genomedir/*_threeUTR.bed 2>/dev/null | wc -l`
-    if [ $count != 0  ]; then 
-        threeutr=$(find $genomedir -maxdepth 1 -name "*_threeUTR.bed")
+    count=$(ls -1 "$genomedir"/*_threeUTR.bed 2>/dev/null | wc -l)
+    if [ "$count" != 0  ]; then 
+        threeutr=$(find "$genomedir" -maxdepth 1 -name "*_threeUTR.bed")
         #overlap with 3utr
         intersectBed \
-            -a ${threeutr} \
-            -b $smp \
+            -a "$threeutr" \
+            -b "$smp" \
             -wa -wb \
-            > $out/lap/$smpname"_threeUTR".bed
+            > "$out"/lap/"$smpname""_threeUTR".bed
         echo "finished finding overlap with 3UTR library"
     fi
 
-    count=`ls -1 $genomedir/*_gene.bed 2>/dev/null | wc -l`
-    if [ $count != 0 ]; then 
-        gene=$(find $genomedir -maxdepth 1 -name "*_gene.bed")
+    count=$(ls -1 "$genomedir"/*_gene.bed 2>/dev/null | wc -l)
+    if [ "$count" != 0 ]; then 
+        gene=$(find "$genomedir" -maxdepth 1 -name "*_gene.bed")
         #overlap with gene
         intersectBed \
-            -a $gene \
-            -b $smp \
+            -a "$gene" \
+            -b "$smp" \
             -wa -wb \
-            > $out/lap/$smpname"_gene".bed
+            > "$out"/lap/"$smpname""_gene".bed
         echo "finished finding overlap with gene library"
     fi
 
-    count=`ls -1 $genomedir/*_primarymRNA.bed 2>/dev/null | wc -l`
-    if [ $count != 0 ]; then 
-        mrna=$(find $genomedir -maxdepth 1 -name "*_primarymRNA.bed")
+    count=$(ls -1 "$genomedir"/*_primarymRNA.bed 2>/dev/null | wc -l)
+    if [ "$count" != 0 ]; then 
+        mrna=$(find "$genomedir" -maxdepth 1 -name "*_primarymRNA.bed")
         #overlap with mrna
         intersectBed \
-            -a $mrna \
-            -b $smp \
+            -a "$mrna" \
+            -b "$smp" \
             -wa -wb \
-            > $out/lap/$smpname"_primarymRNA".bed
+            > "$out"/lap/"$smpname""_primarymRNA".bed
         echo "finished finding overlap with primary mRNA library"
     fi
 
-    count=`ls -1 $genomedir/*_exon.bed 2>/dev/null | wc -l`
-    if [ $count != 0 ]; then 
-        exon=$(find $genomedir -maxdepth 1 -name "*_exon.bed")
+    count=$(ls -1 "$genomedir"/*_exon.bed 2>/dev/null | wc -l)
+    if [ "$count" != 0 ]; then 
+        exon=$(find "$genomedir" -maxdepth 1 -name "*_exon.bed")
         #overlap with exon
         intersectBed \
-            -a $exon \
-            -b $smp \
+            -a "$exon" \
+            -b "$smp" \
             -wa -wb \
-            > $out/lap/$smpname"_exon".bed
+            > "$out"/lap/"$smpname""_exon".bed
         echo "finished finding overlap with exon library"
     fi
 
-    count=`ls -1 $genomedir/*_ncRNA.bed 2>/dev/null | wc -l`
-    if [ $count != 0 ]; then 
-        nc=$(find $genomedir -maxdepth 1 -name "*_ncRNA.bed")
+    count=$(ls -1 "$genomedir"/*_ncRNA.bed 2>/dev/null | wc -l)
+    if [ "$count" != 0 ]; then 
+        nc=$(find "$genomedir" -maxdepth 1 -name "*_ncRNA.bed")
         #overlap with nc rna
         intersectBed \
-            -a $nc \
-            -b $smp \
+            -a "$nc" \
+            -b "$smp" \
             -wa -wb \
-            > $out/lap/$smpname"_ncRNA".bed
+            > "$out"/lap/"$smpname""_ncRNA".bed
         echo "finished finding overlap with ncRNA library"
     fi
 }
 
 fqgrabhouse () {
     ##########fqgrab housekeeping begins#########
-    if [ ! -d "$out" ]; then mkdir $out; echo "created path: $out"; fi
+    if [ ! -d "$out" ]; then mkdir "$out"; echo "created path: $out"; fi
 
-    if [ ! -d "$out/datasets" ]; then mkdir $out/datasets; echo "created path: $out/datasets"; fi
+    if [ ! -d "$out/datasets" ]; then mkdir "$out"/datasets; echo "created path: $out/datasets"; fi
 
     # first see what input is provided
     if [[ $acc == *.txt ]]; then
         echo "SRR accession list provided, using fasterq-dump for .fastq acquisition..."
 
         # Create directory to store original fastq files
-        if [ ! -d "$out/datasets/raw" ]; then mkdir $out/datasets/raw; fi
+        if [ ! -d "$out/datasets/raw" ]; then mkdir "$out"/datasets/raw; fi
         echo "You can find your original fastq files at $out/datasets/raw" 
         mode=1
 
@@ -790,11 +791,11 @@ fqgrabhouse () {
     fi
 
     # Create directory to store trimmed fastq files
-    if [ ! -d "$out/datasets/trimmed" ]; then mkdir $out/datasets/trimmed; fi
+    if [ ! -d "$out/datasets/trimmed" ]; then mkdir "$out"/datasets/trimmed; fi
     echo "You can find your trimmed fastq files at $out/datasets/trimmed"
 
     # Create directory to store fastqc results
-    if [ ! -d "$out/datasets/fastqc_results" ]; then mkdir $out/datasets/fastqc_results; fi
+    if [ ! -d "$out/datasets/fastqc_results" ]; then mkdir "$out"/datasets/fastqc_results; fi
     echo "You can find all the fastqc test results at $out/datasets/fastqc_results"
 
     # Run a series of command checks to ensure the entire script can run smoothly
@@ -835,30 +836,30 @@ fastq2hamrhouse () {
     fi
 
     # Creating some folders
-    if [ ! -d "$out/pipeline" ]; then mkdir $out/pipeline; echo "created path: $out/pipeline"; fi
+    if [ ! -d "$out/pipeline" ]; then mkdir "$out"/pipeline; echo "created path: $out/pipeline"; fi
 
-    if [ ! -d "$out/hamr_out" ]; then mkdir $out/hamr_out; echo "created path: $out/hamr_out"; fi
+    if [ ! -d "$out/hamr_out" ]; then mkdir "$out"/hamr_out; echo "created path: $out/hamr_out"; fi
 
     # Check if zero_mod is present already, if not then create one
     if [ ! -e "$out/hamr_out/zero_mod.txt" ]; then
-        cd $out/hamr_out
+        cd "$out/hamr_out" || exit
         echo "Below samples have 0 HAMR predicted mods:" > zero_mod.txt
-        cd
+        cd || exit
     fi
 
 
     # create dict file using fasta genome file
-    count=`ls -1 $genomedir/*.dict 2>/dev/null | wc -l`
-    if [ $count == 0 ]; then 
+    count=$(ls -1 "$genomedir"/*.dict 2>/dev/null | wc -l)
+    if [ "$count" == 0 ]; then 
     gatk CreateSequenceDictionary \
-        R=$genome
+        R="$genome"
     fi
-    dict=$(find $genomedir -maxdepth 1 -name "*.dict")
+    dict=$(find "$genomedir" -maxdepth 1 -name "*.dict")
 
     # create fai index file using fasta genome
-    count=`ls -1 $genomedir/*.fai 2>/dev/null | wc -l`
-    if [ $count == 0 ]; then 
-    samtools faidx $genome
+    count=$(ls -1 "$genomedir"/*.fai 2>/dev/null | wc -l)
+    if [ "$count" == 0 ]; then 
+    samtools faidx "$genome"
     fi
 
     # Check which mapping software, and check for index
@@ -876,9 +877,9 @@ fastq2hamrhouse () {
             STAR \
                 --runThreadN $threads \
                 --runMode genomeGenerate \
-                --genomeDir $out/ref \
-                --genomeFastaFiles $genome \
-                --sjdbGTFfile $annotation \
+                --genomeDir "$out"/ref \
+                --genomeFastaFiles "$genome" \
+                --sjdbGTFfile "$annotation" \
                 --sjdbGTFtagExonParentTranscript Parent \
                 --sjdbOverhang $overhang \
                 --genomeSAindexNbases $sain
@@ -891,7 +892,7 @@ fastq2hamrhouse () {
         # If not, first check if ref folder is present, if not then make
             if [ ! -d "$out/btref" ]; then mkdir "$out/btref"; echo "created path: $out/btref"; fi
             echo "Creating Bowtie references..."
-            bowtie2-build $genome $out/btref
+            bowtie2-build "$genome" "$out"/btref
         fi
     fi
 
@@ -937,7 +938,7 @@ fastq2hamrhouse () {
     fi
 
     # Creates a folder for depth analysis
-    if [ ! -d "$out/pipeline/depth" ]; then mkdir $out/pipeline/depth; echo "created path: $out/pipeline/depth"; fi
+    if [ ! -d "$out/pipeline/depth" ]; then mkdir "$out"/pipeline/depth; echo "created path: $out/pipeline/depth"; fi
     #############fastq2hamr housekeeping ends#############
 }
 
@@ -980,8 +981,8 @@ if [ $evolinc_i = false ] && [ $featurecount = false ] && [ $hamrbox = false ]; 
 fi
 
 # check whether checkpoint.txt is present 
-if [ -e $out/checkpoint.txt ]; then
-    last_checkpoint=$(cat $out/checkpoint.txt)
+if [ -e "$out"/checkpoint.txt ]; then
+    last_checkpoint=$(cat "$out"/checkpoint.txt)
     echo "Resuming from checkpoint: $last_checkpoint"
 else
     last_checkpoint="start"
@@ -995,14 +996,14 @@ if [ "$last_checkpoint" = "start" ] || [ "$last_checkpoint" = "" ]; then
         # Grabs the fastq files from acc list provided into the dir ~/datasets
         i=0
         while IFS= read -r line
-        do ((i=i%$threads)); ((i++==0)) && wait
+        do ((i=i%threads)); ((i++==0)) && wait
         fqgrab &
         done < "$acc"
 
     elif [[ $mode -eq 2 ]]; then
         i=0
-        for fq in $acc/*; do
-        ((i=i%$threads)); ((i++==0)) && wait
+        for fq in "$acc"/*; do
+        ((i=i%threads)); ((i++==0)) && wait
         fqgrab2 &
         done
     fi
@@ -1011,7 +1012,7 @@ if [ "$last_checkpoint" = "start" ] || [ "$last_checkpoint" = "" ]; then
 
     echo ""
     echo "################ Finished downloading and processing all fastq files. Entering pipeline for HAMR analysis. ######################"
-    echo "$(date '+%d/%m/%Y %H:%M:%S')"
+    date '+%d/%m/%Y %H:%M:%S'
     echo ""
     # obtained all processed fastq files, record down checkpoint
     last_checkpoint="checkpoint1"
@@ -1025,9 +1026,9 @@ if [ "$last_checkpoint" = "checkpoint1" ]; then
     # Pipes each fastq down the hamr pipeline, and stores out put in ~/hamr_out
     # Note there's also a hamr_out in ~/pipeline/SRRNUMBER_temp/, but that one's for temp files
     i=0
-    ttop=$(($threads/2))
-    for smp in $hamrin/*.$suf
-    do ((i=i%$ttop)); ((i++==0)) && wait
+    ttop=$((threads/2))
+    for smp in "$hamrin"/*."$suf"
+    do ((i=i%ttop)); ((i++==0)) && wait
     fastq2hamr &
     done
 
@@ -1038,13 +1039,13 @@ if [ "$last_checkpoint" = "checkpoint1" ]; then
     wait
 
     # Check whether any hamr.mod.text is present, if not, halt the program here
-    if [ -z "$(ls -A $out/hamr_out)" ]; then
+    if [ -z "$(ls -A "$out"/hamr_out)" ]; then
     echo "No HAMR predicted mod found for any sequencing data in this project, please see log for verification"
     exit 1
     fi
 
     # If program didn't exit, at least 1 mod file, move zero mod record outside so it doesn't get read as a modtbl next
-    mv $out/hamr_out/zero_mod.txt $out
+    mv "$out"/hamr_out/zero_mod.txt "$out"
 
     echo ""
     echo "################ Finished HAMR analysis. Producing consensus mod table and depth analysis. ######################"
@@ -1062,7 +1063,7 @@ fi
 if [ "$last_checkpoint" = "checkpoint2" ]; then 
     ##############consensus finding begins##############
     # Produce consensus bam files based on filename (per extracted from name.csv) and store in ~/consensus
-    if [ ! -d "$out/consensus" ]; then mkdir $out/consensus; echo "created path: $out/consensus"; fi
+    if [ ! -d "$out/consensus" ]; then mkdir "$out"/consensus; echo "created path: $out/consensus"; fi
 
     # Run a series of command checks to ensure findConsensus can run smoothly
     if ! command -v Rscript > /dev/null; then
@@ -1072,41 +1073,41 @@ if [ "$last_checkpoint" = "checkpoint2" ]; then
 
     echo "Producing consensus file across biological replicates..."
     # Find consensus accross all reps of a given sample group
-    Rscript $curdir/findConsensus.R \
-        $out/hamr_out \
-        $out/consensus
+    Rscript "$curdir"/findConsensus.R \
+        "$out"/hamr_out \
+        "$out"/consensus
     wait
     echo "done"
 
     # The case where no consensus file is found, prevents *.bed from being created
-    if [ -z "$(ls -A $out/consensus)" ]; then
+    if [ -z "$(ls -A "$out"/consensus)" ]; then
     echo "No consensus mods found within any sequencing group. Please see check individual rep for analysis. "
     exit 1
     fi
 
     # Add depth columns with info from each rep alignment, mutate in place
-    for f in $out/consensus/*.bed
+    for f in "$out"/consensus/*.bed
     do
-    t=$(basename $f)
-    d=$(dirname $f)
+    t=$(basename "$f")
+    d=$(dirname "$f")
     n=${t%.*}
     echo "starting depth analysis on $n"
-    for ff in $out/pipeline/depth/*.bam
+    for ff in "$out"/pipeline/depth/*.bam
         do
             if echo "$ff" | grep -q "$n"
             then
-                tt=$(basename $ff)
+                tt=$(basename "$ff")
                 nn=${tt%.*}
                 echo "[$n] extracting depth information from $nn"
-                for i in $(seq 1 $(wc -l < $f))
+                for i in $(seq 1 $(wc -l < "$f"))
                 do
-                    chr=$(sed "${i}q;d" $f | sed 's/\t/\n/g' | sed '1q;d')
-                    pos=$(sed "${i}q;d" $f | sed 's/\t/\n/g' | sed '2q;d')
+                    chr=$(sed "${i}q;d" "$f" | sed 's/\t/\n/g' | sed '1q;d')
+                    pos=$(sed "${i}q;d" "$f" | sed 's/\t/\n/g' | sed '2q;d')
                     dph=$(samtools coverage \
-                        -r $chr:$pos-$pos \
-                        $ff \
+                        -r "$chr":"$pos"-"$pos" \
+                        "$ff" \
                         | awk 'NR==2' | awk -F'\t' '{print $7}')
-                    awk -v "i=$i" 'NR==i {print $0"\t"var; next} 1' var="$dph" $f > $d/${nn}_new.bed && mv $d/${nn}_new.bed $f 
+                    awk -v "i=$i" 'NR==i {print $0"\t"var; next} 1' var="$dph" "$f" > "$d"/"${nn}"_new.bed && mv "$d"/"${nn}"_new.bed "$f" 
                 done
                 echo "[$n] finished $nn"
                 fi
@@ -1114,14 +1115,14 @@ if [ "$last_checkpoint" = "checkpoint2" ]; then
         done
     wait
 
-    for f in $out/consensus/*.bed
+    for f in "$out"/consensus/*.bed
     do
-    if [ -s $f ]; then
+    if [ -s "$f" ]; then
     # The file is not-empty.
-        t=$(basename $f)
+        t=$(basename "$f")
         n=${t%.*}
         echo "computing depth across reps for $n"
-        Rscript $curdir/depth_helper_average.R $f
+        Rscript "$curdir"/depth_helper_average.R "$f"
     fi
     done
 
@@ -1138,7 +1139,7 @@ fi
 if [ "$last_checkpoint" = "checkpoint3" ]; then 
     ##############overlapping begins##############
     # Produce overlap bam files with the provided annotation library folders and store in ~/lap
-    if [ ! -d "$out/lap" ]; then mkdir $out/lap; echo "created path: $out/lap"; fi
+    if [ ! -d "$out/lap" ]; then mkdir "$out"/lap; echo "created path: $out/lap"; fi
 
     # Run a series of command checks to ensure consensusOverlap can run smoothly
     if ! command -v intersectBed > /dev/null; then
@@ -1147,11 +1148,11 @@ if [ "$last_checkpoint" = "checkpoint3" ]; then
     fi
 
     # checks if genomedir is populated with generated annotation files, if not, hamrbox can't run anymore, exit
-    count=`ls -1 $genomedir/*.bed 2>/dev/null | wc -l`
-    if [ $count == 0 ]; then 
-        if [[ ! -z "$generator" ]]; then
+    count=$(ls -1 "$genomedir"/*.bed 2>/dev/null | wc -l)
+    if [ "$count" == 0 ]; then 
+        if [[ -n "$generator" ]]; then
             echo "generating annotations for overlap..."
-            Rscript $generator $annotation
+            Rscript "$generator" "$annotation"
         else
             echo "#########NOTICE###########"
             echo "##########No annotation generator or annotation files found, please check your supplied arguments##########"
@@ -1163,11 +1164,11 @@ if [ "$last_checkpoint" = "checkpoint3" ]; then
     fi
 
     # Overlap with provided libraries for each sample group
-    for smp in $out/consensus/*
+    for smp in "$out"/consensus/*
     do consensusOverlap
     done
 
-    if [ -z "$(ls -A $out/lap)" ]; then
+    if [ -z "$(ls -A "$out"/lap)" ]; then
     echo "No overlapped mods found within any sequencing group. Please see check individual rep for analysis. "
     exit 1
     fi
@@ -1184,33 +1185,33 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
     ##############R analysis begins##############
     echo ""
     echo "###############SMACK portion completed, entering EXTRACT################"
-    echo "$(date '+%d/%m/%Y %H:%M:%S')"
+    date '+%d/%m/%Y %H:%M:%S'
     echo ""
     #######################################begins EXTRACT######################################
     dir=$out
 
     echo "generating long modification table..."
     # collapse all overlapped data into longdf
-    Rscript $curdir/allLapPrep.R \
-        $dir/lap \
-        $dir
+    Rscript "$curdir"/allLapPrep.R \
+        "$dir"/lap \
+        "$dir"
     echo "done"
     echo ""
 
     echo "plotting modification abundance..."
     # overview of modification proportion
-    Rscript $curdir/abundByLap.R \
-        $dir/mod_long.csv \
-        $genomedir \
-        $dir
+    Rscript "$curdir"/abundByLap.R \
+        "$dir"/mod_long.csv \
+        "$genomedir" \
+        "$dir"
     echo "done"
     echo ""
 
     echo "performing modification cluster analysis..."
     # analyze hamr-mediated/true clustering across project
-    Rscript $curdir/clusterAnalysis.R \
-        $dir/mod_long.csv \
-        $dir
+    Rscript "$curdir"/clusterAnalysis.R \
+        "$dir"/mod_long.csv \
+        "$dir"
     echo "done"
     echo ""
 
@@ -1231,73 +1232,73 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
 
     echo "classifying modified RNA subtype..."
     # looking at RNA subtype for mods
-    Rscript $curdir/RNAtype.R \
-        $dir/mod_long.csv
+    Rscript "$curdir"/RNAtype.R \
+        "$dir"/mod_long.csv
     echo "done"
     echo ""
 
-    if [ ! -d "$dir/go" ]; then mkdir $dir/go; echo "created path: $dir/go"; fi
+    if [ ! -d "$dir/go" ]; then mkdir "$dir"/go; echo "created path: $dir/go"; fi
 
-    if [ ! -d "$dir/go/genelists" ]; then mkdir $dir/go/genelists; echo "created path: $dir/go/genelists"; fi
+    if [ ! -d "$dir/go/genelists" ]; then mkdir "$dir"/go/genelists; echo "created path: $dir/go/genelists"; fi
 
-    if [ ! -d "$dir/go/pantherout" ]; then mkdir $dir/go/pantherout; echo "created path: $dir/go/pantherout"; fi
+    if [ ! -d "$dir/go/pantherout" ]; then mkdir "$dir"/go/pantherout; echo "created path: $dir/go/pantherout"; fi
 
-    if [ ! -n "/pantherapi-pyclient" ]; then
+    if [ -z "/pantherapi-pyclient" ]; then
         echo "panther installation not found, skipping go analysis"
     else    
         echo "generating genelist from mod table..."
         # produce gene lists for all GMUCT (for now) groups
-        Rscript $curdir/produceGenelist.R \
-            $dir/mod_long.csv \
-            $dir/go/genelists
+        Rscript "$curdir"/produceGenelist.R \
+            "$dir"/mod_long.csv \
+            "$dir"/go/genelists
 
         # proceed if genelists directory is not empty
-        if [ ! -z "$(ls $dir/go/genelists)" ]; then
+        if [ -n "$(ls "$dir"/go/genelists)" ]; then
             echo "sending each gene list to panther for overrepresentation analysis..."
             # Send each gene list into panther API and generate a overrepresentation result file in another folter
-            for f in $dir/go/genelists/*.txt
+            for f in "$dir"/go/genelists/*.txt
             do
-            n=$(basename $f)
+            n=$(basename "$f")
             echo "$n"
             python /pantherapi-pyclient/pthr_go_annots.py \
                 --service enrich \
                 --params_file /pantherapi-pyclient/params/enrich.json \
-                --seq_id_file $f \
-                > $dir/go/pantherout/$n
+                --seq_id_file "$f" \
+                > "$dir"/go/pantherout/"$n"
             done
 
             echo "producing heatmap..."
             # Run the R script that scavenges through a directory for result files and produce heatmap from it
-            Rscript $curdir/panther2heatmap.R \
-                $dir/go/pantherout \
-                $dir
+            Rscript "$curdir"/panther2heatmap.R \
+                "$dir"/go/pantherout \
+                "$dir"
         fi
     fi
 
     echo "classifying modified RNA subtype..."
     # looking at RNA subtype for mods
-    Rscript $curdir/RNAtype.R \
-        $dir/mod_long.csv
+    Rscript "$curdir"/RNAtype.R \
+        "$dir"/mod_long.csv
     echo "done"
     echo ""
 
-    if [ -e $genomedir/*_CDS.bed ] && [ -e $genomedir/*_fiveUTR.bed ] && [ -e $genomedir/*_threeUTR.bed ]; then
-        c=$(find $genomedir -type f -name "*_CDS.bed")
-        f=$(find $genomedir -type f -name "*_fiveUTR.bed")
-        t=$(find $genomedir -type f -name "*_threeUTR.bed")
+    if [ -e "$genomedir"/*_CDS.bed ] && [ -e "$genomedir"/*_fiveUTR.bed ] && [ -e "$genomedir"/*_threeUTR.bed ]; then
+        c=$(find "$genomedir" -type f -name "*_CDS.bed")
+        f=$(find "$genomedir" -type f -name "*_fiveUTR.bed")
+        t=$(find "$genomedir" -type f -name "*_threeUTR.bed")
         echo "mapping modification regional distribution landscape..."
         # looking at RNA subtype for mods
-        Rscript $curdir/modRegionMapping.R \
-            $dir/mod_long.csv \
-            $f \
-            $c \
-            $t
+        Rscript "$curdir"/modRegionMapping.R \
+            "$dir"/mod_long.csv \
+            "$f" \
+            "$c" \
+            "$t"
         echo "done"
         echo ""
     fi
 
     echo ""
     echo "#################################### HAMRLINC has finished running #######################################"
-    echo "$(date '+%d/%m/%Y %H:%M:%S')"
+    date '+%d/%m/%Y %H:%M:%S'
     echo ""
 fi
