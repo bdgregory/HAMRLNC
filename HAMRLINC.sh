@@ -27,6 +27,7 @@ cat <<'EOF'
     -a	[use TopHat2 instead of STAR]
     -b	[Tophat library choice: fr-unstranded, fr-firststrand, fr-secondstrand]
     -f	[filter]
+    -m	[HAMR model]
     -k  [suppress hamrbox]
     -p  [suppress evolinc_i]
     -u  [suppress featurecount]
@@ -39,7 +40,6 @@ cat <<'EOF'
     -T  </path/to/transposable Elements file> (optional file for evolinc_i)
     -G  </path/to/CAGE RNA file> (optional file for evolinc_i)
     -D  </path/to/known lincRNA file> (optional file for evolinc_i)
-    -m	[HAMR model]
     -h	[help message] 
 
 
@@ -58,8 +58,8 @@ pvalue=1
 fdr=0.05
 evolinc_i_option="M"
 tophatlib="fr-firststrand"
-filter=$curdir/filter_SAM_number_hits.pl
-model=$curdir/euk_trna_mods.Rdata
+filter=$curdir/util/filter_SAM_number_hits.pl
+model=$curdir/util/euk_trna_mods.Rdata
 evolinc_i=true
 featurecount=true
 hamrbox=true
@@ -415,8 +415,14 @@ fastq2hamr () {
 
     #sorts the accepted hits
     echo "[$smpkey] sorting..."
-    samtools sort \
+    # handles tophat or star output
+    if [[ "$tophat" = false ]]; then
+        samtools sort \
         -n "$smpout"/Aligned.sortedByCoord.out.bam \
+        -o "$smpout"/sort_accepted.bam
+    else
+        samtools sort \
+        -n "$smpout"/accepted_hits.bam \
         -o "$smpout"/sort_accepted.bam
     echo "[$smpkey] finished sorting"
     echo ""
@@ -454,6 +460,7 @@ fastq2hamr () {
         echo "############## Entering lincRNA abundance quantification pipeline ##############"
         echo "################################################################"
         date '+%d/%m/%Y %H:%M:%S'
+        if [ ! -d "$out/evolinc_out" ]; then mkdir "$out/evolinc_out"; fi
         # run stringtie accordingly, note PE and SE here is taken care of
         # output is unnamed and stored in each fastq folder
         echo "[$smpkey] producing transcript assembly using stringtie..."
@@ -501,7 +508,7 @@ fastq2hamr () {
                 -u "$annotation" \
                 -r "$annotation" \
                 -n "$threads" \
-                -o "$smpout"/lincRNA
+                -o "$smpout"/"$smpname"_lincRNA
         elif [ "$evolinc_i_option" == "MO" ]; then
             echo "[$smpkey] MO option identified for evolinc"
             evolinc-part-I.sh \
@@ -510,30 +517,42 @@ fastq2hamr () {
                 -u "$annotation" \
                 -r "$annotation" \
                 -n "$threads" \
-                -o "$smpout"/lincRNA \
+                -o "$smpout"/"$smpname"_lincRNA \
                 -b "$blast_file" \
                 -t "$cage_file" \
                 -x "$known_linc"
         fi
 
+        cd $smpout
+        # house keeping for evolinc
+        rm *.loci *.stats *.tracking
+        mv *_lincRNA* "$out/evolinc_out"
+        cd
+
         # run constitutive feature count within evolinc_i (left arm) if the user didn't suppress feacturecount
         if [[ "$featurecount" = true ]]; then
             echo "[$(date '+%d/%m/%Y %H:%M:%S')$smpkey] quantifying lincRNA-based transcript abundance using featurecounts..."
+            if [ ! -d "$out/featurecount_out" ]; then mkdir "$out/featurecount_out"; fi
             if [ "$det" -eq 1 ]; then
                 echo "[$smpkey] running featurecount with $fclib as the -s argument"
                 featureCounts \
                     -T "$threads" \
                     -s $fclib \
                     -a "$smpout"/lincRNA/lincRNA.updated.gtf \
-                    -o "$smpout"/lincRNA_featurecount.txt \
+                    -o "$smpout"/"$smpname"_lincRNA_featurecount.txt \
                     "$smpout"/unique.bam
             else
                 featureCounts \
                     -T "$threads" \
                     -a "$smpout"/lincRNA/lincRNA.updated.gtf \
-                    -o "$smpout"/lincRNA_featurecount.txt \
+                    -o "$smpout"/"$smpname"_lincRNA_featurecount.txt \
                     "$smpout"/unique.bam
             fi
+
+            # housekeeping for feature counts
+            cd "$smpout"
+            mv *_featurecount.txt* "$out/featurecount_out"
+            cd
         fi 
         echo "################################################################"
         echo "############## lincRNA abundance quantification pipeline completed ##############"
@@ -554,21 +573,27 @@ fastq2hamr () {
     # run feature count for normal alignment transcript quantification if user didn't suppress
     if [[ "$featurecount" = true ]]; then
         echo "[$(date '+%d/%m/%Y %H:%M:%S')$smpkey] quantifying regular transcript abundance using featurecounts..."
+        if [ ! -d "$out/featurecount_out" ]; then mkdir "$out/featurecount_out"; fi
         if [ "$det" -eq 1 ]; then
             echo "[$smpkey] running featurecount with $fclib as the -s argument"
             featureCounts \
                 -T "$threads" \
                 -s $fclib \
                 -a "$out"/ref/temp.gtf \
-                -o "$smpout"/alignment_featurecount.txt \
+                -o "$smpout"/"$smpname"_alignment_featurecount.txt \
                 "$smpout"/unique.bam
         else
             featureCounts \
                 -T "$threads" \
                 -a "$out"/ref/temp.gtf \
-                -o "$smpout"/alignment_featurecount.txt \
+                -o "$smpout"/"$smpname"_alignment_featurecount.txt \
                 "$smpout"/unique.bam
         fi
+
+        # housekeeping for regular abundance
+        cd "$smpout"
+        mv *_featurecount.txt* "$out/featurecount_out"
+        cd
     fi
     wait
 
@@ -652,6 +677,9 @@ fastq2hamr () {
         # Move the unique_RG_ordered.bam and unique_RG_ordered.bai to a folder for read depth analysis
         cp "$smpout"/unique_RG_ordered.bam "$out"/pipeline/depth/"$smpname".bam
         cp "$smpout"/unique_RG_ordered.bai "$out"/pipeline/depth/"$smpname".bai
+
+        # delete more intermediate files?
+        
     fi
 }
 
