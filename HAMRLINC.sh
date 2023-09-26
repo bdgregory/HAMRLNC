@@ -1,7 +1,7 @@
 #!/bin/bash
 set -u
 
-# Harry Li, University of Pennsylvania
+# Harry Li, University of Pennsylvania & Chosen Obih, University of Arizona
 
 
 usage () {
@@ -58,8 +58,8 @@ pvalue=1
 fdr=0.05
 evolinc_i_option="M"
 tophatlib="fr-firststrand"
-filter=$curdir/util/filter_SAM_number_hits.pl
-model=$curdir/util/euk_trna_mods.Rdata
+filter=$curdir/filter_SAM_number_hits.pl
+model=$curdir/euk_trna_mods.Rdata
 evolinc_i=true
 featurecount=true
 hamrbox=true
@@ -176,10 +176,7 @@ elif [[ $generator == "ZM" ]]; then
     echo "Model organism detected: Zea mays"
 elif [[ $generator == "OSJ" ]]; then
     generator="/annotationGenerate/annotationGenerateOSJ.R"
-    echo "Model organism detected: Oryza sativa japonica"
-elif [[ $generator == "OSI" ]]; then
-    generator="/annotationGenerate/annotationGenerateOSI.R"
-    echo "Model organism detected: Oryza sativa indica"
+    echo "Model organism detected: Oryza sativa jadocker run --rm -v $(pwd):/working-dir -w /working-dirdica"
 elif [[ $generator == "OSIR64" ]]; then
     generator="/annotationGenerate/annotationGenerateOSIR64.R"
     echo "Model organism detected: Oryza sativa IR64"
@@ -350,11 +347,11 @@ fastq2hamr () {
         if [ "$det" -eq 1 ]; then
             echo "[$smpkey] Performing STAR with a single-end file."
             STAR \
-            --runThreadN 2 \
-            --genomeDir "$out"/ref \
+            --runThreadN "$threads" \
+            --genomeDir "$user_dir"/"$out"/ref/ \
             --readFilesIn "$smp" \
             --sjdbOverhang $overhang \
-            --sjdbGTFfile "$annotation" \
+            --sjdbGTFfile "$user_dir"/"$annotation" \
             --sjdbGTFtagExonParentTranscript Parent \
             --outFilterMultimapNmax 10 \
             --outFilterMismatchNmax $mismatch \
@@ -362,7 +359,7 @@ fastq2hamr () {
         else
             echo "[$smpkey] Performing STAR with a paired-end file."
             STAR \
-            --runThreadN 2 \
+            --runThreadN "$threads" \
             --genomeDir "$out"/ref \
             --readFilesIn "$smp1" "$smp2" \
             --sjdbOverhang $overhang \
@@ -439,6 +436,7 @@ fastq2hamr () {
         -o "$smpout"/unique.bam
     echo "[$smpkey] finished filtering"
     echo ""
+    fi
 
     wait
 
@@ -1053,11 +1051,18 @@ if [ "$last_checkpoint" = "checkpoint1" ]; then
     #############fastq2hamr main begins###############
     # Pipes each fastq down the hamr pipeline, and stores out put in ~/hamr_out
     # Note there's also a hamr_out in ~/pipeline/SRRNUMBER_temp/, but that one's for temp files
+    
+    mkdir trimmed_temp && mv "$hamrin"/*."$suf" trimmed_temp && chmod -R 777 trimmed_temp
+    cd trimmed_temp
+    current_dir=$(pwd)
+    cd ..
+    user_dir=$(pwd)
+
     i=0
     ttop=$((threads/2))
-    for smp in "$hamrin"/*."$suf"
+    for smp in "$current_dir"/*."$suf"
     do ((i=i%ttop)); ((i++==0)) && wait
-    fastq2hamr &
+    fastq2hamr && mv "$trimmed_temp"/*".$suf" "$hamrin"/ && rm -r trimmed_temp &
     done
 
     if [[ "$hamrbox" = false ]]; then

@@ -170,6 +170,8 @@ RUN wget https://github.com/samtools/htslib/releases/download/1.17/htslib-1.17.t
 	make install
 WORKDIR /
 
+RUN apt-get install bc -y
+
 # Setting paths to all the softwares
 ENV PATH /evolinc_docker/TransDecoder-2.0.1/:$PATH
 ENV PATH /evolinc_docker/ncbi-blast-2.4.0+/bin/:$PATH
