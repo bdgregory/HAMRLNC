@@ -48,7 +48,7 @@ EOF
     exit 0
 }
 
-curdir=$(dirname "$0")
+#curdir=$(dirname "$0")
 threads=4
 tophat=false
 quality=30
@@ -58,8 +58,8 @@ pvalue=1
 fdr=0.05
 evolinc_i_option="M"
 tophatlib="fr-firststrand"
-filter=$curdir/filter_SAM_number_hits.pl
-model=$curdir/euk_trna_mods.Rdata
+filter=$util/filter_SAM_number_hits.pl
+model=$util/euk_trna_mods.Rdata
 evolinc_i=true
 featurecount=true
 hamrbox=true
@@ -157,6 +157,14 @@ while getopts ":o:t:c:g:i:z:l:b:e:v:s:n:fmhQCakTGDupEPF:" opt; do
   esac
 done
 
+# reassign genome and annotation files name and include file paths
+user_dir=$(pwd)
+genome="$user_dir"/"$genome"
+annotation="$user_dir"/"$annotation"
+out="$user_dir"/"$out"
+acc="$user_dir"/"$acc"
+csv="$user_dir"/"$csv"
+
 # assigning additional variables
 dumpout=$out/datasets
 mismatch=$((length*6/100))
@@ -176,7 +184,7 @@ elif [[ $generator == "ZM" ]]; then
     echo "Model organism detected: Zea mays"
 elif [[ $generator == "OSJ" ]]; then
     generator="/annotationGenerate/annotationGenerateOSJ.R"
-    echo "Model organism detected: Oryza sativa jadocker run --rm -v $(pwd):/working-dir -w /working-dirdica"
+    echo "Model organism detected: Oryza sativa jadica"
 elif [[ $generator == "OSIR64" ]]; then
     generator="/annotationGenerate/annotationGenerateOSIR64.R"
     echo "Model organism detected: Oryza sativa IR64"
@@ -348,10 +356,10 @@ fastq2hamr () {
             echo "[$smpkey] Performing STAR with a single-end file."
             STAR \
             --runThreadN "$threads" \
-            --genomeDir "$user_dir"/"$out"/ref/ \
+            --genomeDir "$out"/ref/ \
             --readFilesIn "$smp" \
             --sjdbOverhang $overhang \
-            --sjdbGTFfile "$user_dir"/"$annotation" \
+            --sjdbGTFfile "$annotation" \
             --sjdbGTFtagExonParentTranscript Parent \
             --outFilterMultimapNmax 10 \
             --outFilterMismatchNmax $mismatch \
@@ -360,7 +368,7 @@ fastq2hamr () {
             echo "[$smpkey] Performing STAR with a paired-end file."
             STAR \
             --runThreadN "$threads" \
-            --genomeDir "$out"/ref \
+            --genomeDir "$out"/ref/ \
             --readFilesIn "$smp1" "$smp2" \
             --sjdbOverhang $overhang \
             --sjdbGTFfile "$annotation" \
@@ -421,6 +429,7 @@ fastq2hamr () {
         samtools sort \
         -n "$smpout"/accepted_hits.bam \
         -o "$smpout"/sort_accepted.bam
+    fi
     echo "[$smpkey] finished sorting"
     echo ""
 
@@ -436,7 +445,6 @@ fastq2hamr () {
         -o "$smpout"/unique.bam
     echo "[$smpkey] finished filtering"
     echo ""
-    fi
 
     wait
 
@@ -1052,17 +1060,16 @@ if [ "$last_checkpoint" = "checkpoint1" ]; then
     # Pipes each fastq down the hamr pipeline, and stores out put in ~/hamr_out
     # Note there's also a hamr_out in ~/pipeline/SRRNUMBER_temp/, but that one's for temp files
     
-    mkdir trimmed_temp && mv "$hamrin"/*."$suf" trimmed_temp && chmod -R 777 trimmed_temp
-    cd trimmed_temp
-    current_dir=$(pwd)
-    cd ..
-    user_dir=$(pwd)
+    #mkdir trimmed_temp && mv "$hamrin"/*."$suf" trimmed_temp && chmod -R 777 trimmed_temp
+    #cd trimmed_temp
+    #current_dir=$(pwd)
+    #cd ..
 
     i=0
     ttop=$((threads/2))
-    for smp in "$current_dir"/*."$suf"
+    for smp in "$hamrin"/*."$suf"
     do ((i=i%ttop)); ((i++==0)) && wait
-    fastq2hamr && mv "$trimmed_temp"/*".$suf" "$hamrin"/ && rm -r trimmed_temp &
+    fastq2hamr #&& mv "$trimmed_temp"/*".$suf" "$hamrin"/ && rm -r trimmed_temp &
     done
 
     if [[ "$hamrbox" = false ]]; then
@@ -1106,7 +1113,7 @@ if [ "$last_checkpoint" = "checkpoint2" ]; then
 
     echo "Producing consensus file across biological replicates..."
     # Find consensus accross all reps of a given sample group
-    Rscript "$curdir"/findConsensus.R \
+    Rscript "$scripts"/findConsensus.R \
         "$out"/hamr_out \
         "$out"/consensus
     wait
@@ -1155,7 +1162,7 @@ if [ "$last_checkpoint" = "checkpoint2" ]; then
         t=$(basename "$f")
         n=${t%.*}
         echo "computing depth across reps for $n"
-        Rscript "$curdir"/depth_helper_average.R "$f"
+        Rscript "$scripts"/depth_helper_average.R "$f"
     fi
     done
 
@@ -1225,7 +1232,7 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
 
     echo "generating long modification table..."
     # collapse all overlapped data into longdf
-    Rscript "$curdir"/allLapPrep.R \
+    Rscript "$scripts"/allLapPrep.R \
         "$dir"/lap \
         "$dir"
     echo "done"
@@ -1233,7 +1240,7 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
 
     echo "plotting modification abundance..."
     # overview of modification proportion
-    Rscript "$curdir"/abundByLap.R \
+    Rscript "$scripts"/abundByLap.R \
         "$dir"/mod_long.csv \
         "$genomedir" \
         "$dir"
@@ -1242,7 +1249,7 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
 
     echo "performing modification cluster analysis..."
     # analyze hamr-mediated/true clustering across project
-    Rscript "$curdir"/clusterAnalysis.R \
+    Rscript "$scripts"/clusterAnalysis.R \
         "$dir"/mod_long.csv \
         "$dir"
     echo "done"
@@ -1253,7 +1260,7 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
     #     # The csv (in modtbl format) of the known mod you want analyzed in distToKnownMod
     #     antcsv=$4
     #     # analyze hamr-mediated/true clustering across project
-    #     Rscript $curdir/distToKnownMod.R \
+    #     Rscript $scripts/distToKnownMod.R \
     #         $dir/mod_long.csv \
     #         $antcsv
     #     echo "done"
@@ -1265,7 +1272,7 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
 
     echo "classifying modified RNA subtype..."
     # looking at RNA subtype for mods
-    Rscript "$curdir"/RNAtype.R \
+    Rscript "$scripts"/RNAtype.R \
         "$dir"/mod_long.csv
     echo "done"
     echo ""
@@ -1281,7 +1288,7 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
     else    
         echo "generating genelist from mod table..."
         # produce gene lists for all GMUCT (for now) groups
-        Rscript "$curdir"/produceGenelist.R \
+        Rscript "$scripts"/produceGenelist.R \
             "$dir"/mod_long.csv \
             "$dir"/go/genelists
 
@@ -1302,7 +1309,7 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
 
             echo "producing heatmap..."
             # Run the R script that scavenges through a directory for result files and produce heatmap from it
-            Rscript "$curdir"/panther2heatmap.R \
+            Rscript "$scripts"/panther2heatmap.R \
                 "$dir"/go/pantherout \
                 "$dir"
         fi
@@ -1310,7 +1317,7 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
 
     echo "classifying modified RNA subtype..."
     # looking at RNA subtype for mods
-    Rscript "$curdir"/RNAtype.R \
+    Rscript "$scripts"/RNAtype.R \
         "$dir"/mod_long.csv
     echo "done"
     echo ""
@@ -1321,7 +1328,7 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
         t=$(find "$genomedir" -type f -name "*_threeUTR.bed")
         echo "mapping modification regional distribution landscape..."
         # looking at RNA subtype for mods
-        Rscript "$curdir"/modRegionMapping.R \
+        Rscript "$scripts"/modRegionMapping.R \
             "$dir"/mod_long.csv \
             "$f" \
             "$c" \

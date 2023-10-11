@@ -172,6 +172,13 @@ WORKDIR /
 
 RUN apt-get install bc -y
 
+ADD /scripts/*.R /scripts/
+RUN chmod +x /scripts/*.R && cp -r /scripts/ $BINPATH
+ENV scripts /scripts
+ADD util /util/
+RUN chmod +x /util/*.pl && cp -r /util/ $BINPATH
+ENV util /util
+
 # Setting paths to all the softwares
 ENV PATH /evolinc_docker/TransDecoder-2.0.1/:$PATH
 ENV PATH /evolinc_docker/ncbi-blast-2.4.0+/bin/:$PATH
