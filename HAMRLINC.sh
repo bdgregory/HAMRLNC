@@ -28,18 +28,18 @@ cat <<'EOF'
     -b	[Tophat library choice: fr-unstranded, fr-firststrand, fr-secondstrand]
     -f	[filter]
     -m	[HAMR model]
-    -k  [suppress hamrbox]
-    -p  [suppress evolinc_i]
-    -u  [suppress featurecount]
+    -k  [activate hamrbox]
+    -p  [activate evolinc_i]
+    -u  [activate featurecount]
     -v  [evolinc_i_option: M or MO, default=M]
     -Q	[HAMR: minimum qualuty score, default=30]
     -C	[HAMR: minimum coveragem default=50]
     -E	[HAMR: sequencing error, default=0.01]
     -P	[HAMR: maximum p-value, default=1]
     -F	[HAMR: maximum fdr, default=0.05]
-    -T  </path/to/transposable Elements file> (optional file for evolinc_i)
-    -G  </path/to/CAGE RNA file> (optional file for evolinc_i)
-    -D  </path/to/known lincRNA file> (optional file for evolinc_i)
+    -T  <transposable Elements file> (optional file for evolinc_i)
+    -G  <CAGE RNA file> (optional file for evolinc_i)
+    -D  <known lincRNA file> (optional file for evolinc_i)
     -h	[help message] 
 
 
@@ -60,9 +60,9 @@ evolinc_i_option="M"
 tophatlib="fr-firststrand"
 filter=$util/filter_SAM_number_hits.pl
 model=$util/euk_trna_mods.Rdata
-evolinc_i=true
-featurecount=true
-hamrbox=true
+evolinc_i=false
+featurecount=false
+hamrbox=false
 generator=""
 
 #############Grabbing arguments############
@@ -105,13 +105,13 @@ while getopts ":o:t:c:g:i:z:l:b:e:v:s:n:fmhQCakTGDupEPF:" opt; do
     threads=$OPTARG
     ;;
     p)
-    evolinc_i=false
+    evolinc_i=true
     ;;
     k)
-    hamrbox=false
+    hamrbox=true
     ;;
     u)
-    featurecount=false
+    featurecount=true
     ;;
     Q)
     quality=$OPTARG
@@ -164,6 +164,9 @@ annotation="$user_dir"/"$annotation"
 out="$user_dir"/"$out"
 acc="$user_dir"/"$acc"
 csv="$user_dir"/"$csv"
+blast_file="$user_dir"/"$blast_file"
+cage_file="$user_dir"/"$cage_file"
+known_linc="$user_dir"/"$known_linc"
 
 # assigning additional variables
 dumpout=$out/datasets
@@ -1010,7 +1013,7 @@ fi
 
 # check that the user didn't suppress all three programs -- if so, there's no need to run anything
 if [ $evolinc_i = false ] && [ $featurecount = false ] && [ $hamrbox = false ]; then
-    echo "User has suppressed all functionalities. Exiting..."
+    echo "User has not activated any functionalities. Exiting..."
     exit 0
 fi
 
