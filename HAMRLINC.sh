@@ -157,7 +157,7 @@ while getopts ":o:t:c:g:i:z:l:b:e:v:s:n:fmhQCakTGDupEPF:" opt; do
   esac
 done
 
-# reassign genome and annotation files name and include file paths
+# reassign sample input files, genome and annotation files name and include file paths
 user_dir=$(pwd)
 genome="$user_dir"/"$genome"
 annotation="$user_dir"/"$annotation"
@@ -174,19 +174,19 @@ last_checkpoint=""
 
 # Assigning the appropriate annotationGenerate.R 
 if [[ $generator == "AT" ]]; then
-    generator="/annotationGenerate/annotationGenerateAT.R"
+    generator=$annotationGenerate/annotationGenerateAT.R
     echo "Model organism detected: Arabidopsis thaliana"
 elif [[ $generator == "BD" ]]; then
-    generator="/annotationGenerate/annotationGenerateBD.R"
+    generator=$annotationGenerate/annotationGenerateBD.R
     echo "Model organism detected: Brachypodium distachyon"
 elif [[ $generator == "ZM" ]]; then
-    generator="/annotationGenerate/annotationGenerateZM.R"
+    generator=$annotationGenerate/annotationGenerateZM.R
     echo "Model organism detected: Zea mays"
 elif [[ $generator == "OSJ" ]]; then
-    generator="/annotationGenerate/annotationGenerateOSJ.R"
+    generator=$annotationGenerate/annotationGenerateOSJ.R
     echo "Model organism detected: Oryza sativa jadica"
 elif [[ $generator == "OSIR64" ]]; then
-    generator="/annotationGenerate/annotationGenerateOSIR64.R"
+    generator=$annotationGenerate/annotationGenerateOSIR64.R
     echo "Model organism detected: Oryza sativa IR64"
 else
     echo "##################################################"
@@ -666,8 +666,8 @@ fastq2hamr () {
 
         #hamr step, can take ~1hr
         echo "[$smpkey] hamr..."
-        hamr_path=$(which hamr.py)
-        python "$hamr_path" \
+        #hamr_path=$(which hamr.py) 
+        python /HAMR/hamr.py \
             -fe "$smpout"/unique_RG_ordered_splitN.resort.bam "$genome" "$model" "$smpout" $smpname $quality $coverage $err H4 $pvalue $fdr .05
         wait
 

@@ -136,11 +136,14 @@ WORKDIR /
 RUN chmod +x /evolinc_docker/evolinc-part-I.sh && cp /evolinc_docker/evolinc-part-I.sh $BINPATH
 
 ## HAMR (now working under Python 3)
-ENV BINPATH /usr/bin
-RUN git clone https://github.com/harrlol/HAMR && \
-	chmod +x /HAMR/hamr.py && cp /HAMR/hamr.py $BINPATH && \
-	cp -R /HAMR/models /usr/bin/hamr_models
-ENV hamr_model=/usr/bin/hamr_models
+#RUN git clone https://github.com/harrlol/HAMR && \
+#	chmod +x /HAMR/hamr.py && cp /HAMR/hamr.py $BINPATH && \
+#	cp -R /HAMR/models /usr/bin/hamr_models
+#ENV hamr_model=/usr/bin/hamr_models
+
+## HAMR
+RUN git clone https://github.com/chosenobih/HAMR.git && \
+	chmod +x /HAMR/hamr.py && cp /HAMR/hamr.py $BINPATH
 
 # GATK (4.3.0.0)
 RUN wget https://github.com/broadinstitute/gatk/releases/download/4.3.0.0/gatk-4.3.0.0.zip && \
@@ -178,6 +181,9 @@ ENV scripts /scripts
 ADD util /util/
 RUN chmod +x /util/*.pl && cp -r /util/ $BINPATH
 ENV util /util
+ADD annotationGenerate /annotationGenerate/
+RUN chmod +x /annotationGenerate/*.R && cp -r /annotationGenerate/ $BINPATH
+ENV annotationGenerate /annotationGenerate/
 
 # Setting paths to all the softwares
 ENV PATH /evolinc_docker/TransDecoder-2.0.1/:$PATH
