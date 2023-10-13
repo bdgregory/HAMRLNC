@@ -164,10 +164,6 @@ annotation="$user_dir"/"$annotation"
 out="$user_dir"/"$out"
 acc="$user_dir"/"$acc"
 csv="$user_dir"/"$csv"
-# reassign the below only if inputed
-if [ ! -z "$blast_file" ]; then blast_file="$user_dir"/"$blast_file"; fi
-if [ ! -z "$cage_file" ]; then cage_file="$user_dir"/"$cage_file"; fi
-if [ ! -z "$known_file" ]; then known_linc="$user_dir"/"$known_linc"; fi
 
 # assigning additional variables
 dumpout=$out/datasets
@@ -470,6 +466,12 @@ fastq2hamr () {
         echo "############## Entering lincRNA abundance quantification pipeline ##############"
         echo "################################################################"
         date '+%d/%m/%Y %H:%M:%S'
+        
+        # the below should be inputted at this point
+        if [[ ! -z "$blast_file" ]]; then blast_file="$user_dir"/"$blast_file"; else echo "Error: missing blast file!"; exit 1; fi
+        if [[ ! -z "$cage_file" ]]; then cage_file="$user_dir"/"$cage_file"; else echo "Error: missing cage file!"; exit 1; fi
+        if [[ ! -z "$known_file" ]]; then known_linc="$user_dir"/"$known_linc"; else echo "Error: missing known linc file!"; exit 1; fi
+
         if [ ! -d "$out/evolinc_out" ]; then mkdir "$out/evolinc_out"; fi
         # run stringtie accordingly, note PE and SE here is taken care of
         # output is unnamed and stored in each fastq folder
