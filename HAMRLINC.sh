@@ -164,9 +164,10 @@ annotation="$user_dir"/"$annotation"
 out="$user_dir"/"$out"
 acc="$user_dir"/"$acc"
 csv="$user_dir"/"$csv"
-blast_file="$user_dir"/"$blast_file"
-cage_file="$user_dir"/"$cage_file"
-known_linc="$user_dir"/"$known_linc"
+# reassign the below only if inputed
+if [ ! -z "$blast_file" ]; then blast_file="$user_dir"/"$blast_file"; fi
+if [ ! -z "$cage_file" ]; then cage_file="$user_dir"/"$cage_file"; fi
+if [ ! -z "$known_file" ]; then known_linc="$user_dir"/"$known_linc"; fi
 
 # assigning additional variables
 dumpout=$out/datasets
