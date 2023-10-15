@@ -64,6 +64,7 @@ evolinc_i=false
 featurecount=false
 hamrbox=false
 generator=""
+fastq_in=""
 
 #############Grabbing arguments############
 while getopts ":o:t:c:g:i:z:l:b:e:v:s:n:fmdhQCakTGDupEPF:" opt; do
