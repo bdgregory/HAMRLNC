@@ -804,7 +804,7 @@ fqgrabhouse () {
     if [ ! -d "$out/datasets" ]; then mkdir "$out"/datasets; echo "created path: $out/datasets"; fi
 
     # first see whether input folder is provided
-    if [[ -z $fastq_in ]]; then
+    if [[ ! -z $fastq_in ]]; then
         fastq_in="$user_dir"/"$fastq_in"
         echo "Directory $fastq_in is found, assuming raw fastq files are provided..."
         mode=2
