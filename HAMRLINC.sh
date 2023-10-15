@@ -14,8 +14,7 @@ cat <<'EOF'
   ######################################### COMMAND LINE OPTIONS #############################
   REQUIRED:
     -o	<project directory>
-    -t	<SRA accession list.txt or folder of raw fastq files>
-    -c	<filenames for each fastq.csv>
+    -c	<filenames with key and name>
     -g	<reference genome.fa>
     -i  <reference genome annotation.gff3>
     -l	<read length>
@@ -25,6 +24,7 @@ cat <<'EOF'
   OPTIONAL: 
     -n  number of threads (default 4)
     -a	[use TopHat2 instead of STAR]
+    -d  [input a directory of fastq]
     -b	[Tophat library choice: fr-unstranded, fr-firststrand, fr-secondstrand]
     -f	[filter]
     -m	[HAMR model]
@@ -66,13 +66,10 @@ hamrbox=false
 generator=""
 
 #############Grabbing arguments############
-while getopts ":o:t:c:g:i:z:l:b:e:v:s:n:fmhQCakTGDupEPF:" opt; do
+while getopts ":o:t:c:g:i:z:l:b:e:v:s:n:fmdhQCakTGDupEPF:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
-     ;;
-    t)
-    acc=$OPTARG # SRA accession 
      ;;
     c)
     csv=$OPTARG # SRR to filename table
@@ -82,6 +79,9 @@ while getopts ":o:t:c:g:i:z:l:b:e:v:s:n:fmhQCakTGDupEPF:" opt; do
      ;;
     i)
     annotation=$OPTARG # reference genome annotation
+    ;;
+    d)
+    fastq_dir=$OPTARG
     ;;
     l)
     length+=$OPTARG # read length 
@@ -162,7 +162,6 @@ user_dir=$(pwd)
 genome="$user_dir"/"$genome"
 annotation="$user_dir"/"$annotation"
 out="$user_dir"/"$out"
-acc="$user_dir"/"$acc"
 csv="$user_dir"/"$csv"
 
 # assigning additional variables
@@ -690,8 +689,15 @@ fastq2hamr () {
         cp "$smpout"/unique_RG_ordered.bam "$out"/pipeline/depth/"$smpname".bam
         cp "$smpout"/unique_RG_ordered.bai "$out"/pipeline/depth/"$smpname".bai
 
-        # delete more intermediate files?
-        
+        # delete more intermediate files
+        echo "[$smpkey] removing large intermediate files..."
+        rm "$smpout"/sort_accepted.bam
+        rm "$smpout"/unique.bam
+        rm "$smpout"/unique_RG.bam
+        rm "$smpout"/unique_RG_ordered.bam
+        rm "$smpout"/unique_RG_ordered_splitN.bam
+        rm "$smpout"/unique_RG_ordered_splitN.resort.bam
+        echo "[$smpkey] finished cleaning"
     fi
 }
 
@@ -796,21 +802,19 @@ fqgrabhouse () {
 
     if [ ! -d "$out/datasets" ]; then mkdir "$out"/datasets; echo "created path: $out/datasets"; fi
 
-    # first see what input is provided
-    if [[ $acc == *.txt ]]; then
-        echo "SRR accession list provided, using fasterq-dump for .fastq acquisition..."
-
+    # first see whether input folder is provided
+    if [[ -z $fastq_in ]]; then
+        fastq_in="$user_dir"/"$fastq_in"
+        echo "Directory $fastq_in is found, assuming raw fastq files are provided..."
+        mode=2
+    else
         # Create directory to store original fastq files
         if [ ! -d "$out/datasets/raw" ]; then mkdir "$out"/datasets/raw; fi
         echo "You can find your original fastq files at $out/datasets/raw" 
         mode=1
-
-    elif [[ -d $acc ]]; then
-        echo "Directory $acc is found, assuming raw fastq files are provided..."
-        mode=2
-    else
-        echo "Error recognizing input source, exiting..."
-        exit 1
+        # grab txt from csv
+        awk -F "," '{print $1}' $csv > "$user_dir"/accession.txt
+        acc="$user_dir"/accession.txt
     fi
 
     # relocate user-provided inputs
@@ -992,9 +996,6 @@ echo ""
 if [ -z "$out" ]; then 
     echo "output directory not detected, exiting..."
     exit 1
-elif [ -z "$acc" ]; then
-    echo "input SRR or fastq files not detected, exiting..."
-    exit 1
 elif [ -z "$csv" ]; then
     echo "filename dictionary csv not detected, exiting..."
     exit 1
@@ -1042,7 +1043,7 @@ if [ "$last_checkpoint" = "start" ] || [ "$last_checkpoint" = "" ]; then
 
     elif [[ $mode -eq 2 ]]; then
         i=0
-        for fq in "$acc"/*; do
+        for fq in "$fastq_in"/*; do
         ((i=i%threads)); ((i++==0)) && wait
         fqgrab2 &
         done
