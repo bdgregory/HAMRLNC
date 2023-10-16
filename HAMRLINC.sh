@@ -124,7 +124,7 @@ while getopts ":o:c:g:i:z:l:d:b:e:v:s:n:fmhQCakTGDupEPF:" opt; do
     known_linc=$OPTARG
     ;;
     d)
-    fastqin=$OPTARG
+    fastq_in=$OPTARG
     ;;
     C)
     coverage=$OPTARG
