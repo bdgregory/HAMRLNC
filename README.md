@@ -14,7 +14,6 @@
 | :---: | :---: |
 | Required |
 | -o | \<project directory\> <br> where you want your entire hamr project to be |
-| -t | \<SRA accession list.txt\> or \<folder of raw fastq files\> <br> a txt file of all srr accession code to your desired reads or a path containing them |
 | -c | \<filenames for each fastq.csv\> <br> a csv file that corresponds each srr code (or name of fastq file) to your desired nomenclature for each read |
 | -g | \<reference genome.fa> <br> a fasta file of the genome of the model organism |
 | -i | \<reference genome annotation.gff3> <br> a gff3 file of the genome of the model organism, note we require gff3 instead of gtf |
@@ -23,6 +22,7 @@
 | -e | \<genome annotation generator code\> <br> see below for abbreviation code, one code per organism/cultivar |
 | Optional |
 | -n | \[number of threads\] <br> default=4 |
+| -d | \[raw fastq folder\] <br> a path to a folder containing raw fastq files if needed, in such case, -c csv should have each fastq file as key
 | -a | \[use Tophat2 instead of STAR\] <br> default uses STAR |
 | -b | \[Tophat2 library choice: fr-unstranded, fr-firststrand, fr-secondstrand\] <br> default=fr-firststrand |
 | -f | \[filter\] <br> default=filter_SAM_number_hits.pl |
