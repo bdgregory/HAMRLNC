@@ -81,9 +81,6 @@ while getopts ":o:c:g:i:z:l:b:e:v:s:n:fmdhQCakTGDupEPF:" opt; do
     i)
     annotation=$OPTARG # reference genome annotation
     ;;
-    d)
-    fastq_dir=$OPTARG
-    ;;
     l)
     length+=$OPTARG # read length 
      ;;
@@ -125,6 +122,9 @@ while getopts ":o:c:g:i:z:l:b:e:v:s:n:fmdhQCakTGDupEPF:" opt; do
      ;;
     D)
     known_linc=$OPTARG
+    ;;
+    d)
+    fastq_in=$OPTARG
     ;;
     C)
     coverage=$OPTARG
