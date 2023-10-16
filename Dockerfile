@@ -135,15 +135,25 @@ WORKDIR /
 # evolinc-part-I wrapper script
 RUN chmod +x /evolinc_docker/evolinc-part-I.sh && cp /evolinc_docker/evolinc-part-I.sh $BINPATH
 
-## HAMR (now working under Python 3)
-#RUN git clone https://github.com/harrlol/HAMR && \
-#	chmod +x /HAMR/hamr.py && cp /HAMR/hamr.py $BINPATH && \
-#	cp -R /HAMR/models /usr/bin/hamr_models
-#ENV hamr_model=/usr/bin/hamr_models
+# Remove the existing symbolic link (if it exists)
+RUN rm /usr/bin/python
 
-## HAMR
-RUN git clone https://github.com/chosenobih/HAMR.git && \
+# Create a symbolic link to make 'python' refer to 'python3'
+RUN ln -sf /usr/bin/python3 /usr/bin/python
+
+# Update the package list and install necessary packages
+RUN apt-get update && apt-get install -y python3
+
+# Make Python 3 the default Python
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1
+
+## HAMR (python 3 compatible)
+RUN git clone https://github.com/harrlol/HAMR && \
 	chmod +x /HAMR/hamr.py && cp /HAMR/hamr.py $BINPATH
+
+## HAMR (python 2.7 comaptible)
+#RUN git clone https://github.com/chosenobih/HAMR.git && \
+#	chmod +x /HAMR/hamr.py && cp /HAMR/hamr.py $BINPATH
 
 # GATK (4.3.0.0)
 RUN wget https://github.com/broadinstitute/gatk/releases/download/4.3.0.0/gatk-4.3.0.0.zip && \
@@ -156,6 +166,7 @@ RUN apt-get install -y libgdal-dev
 RUN apt-get install -y python3-pip
 RUN pip3 install --upgrade pip
 RUN apt-get install python3-venv -y
+RUN pip3 install requests
 
 # panther
 RUN git clone https://github.com/pantherdb/pantherapi-pyclient.git && \
