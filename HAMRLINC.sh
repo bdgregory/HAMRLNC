@@ -58,8 +58,8 @@ pvalue=1
 fdr=0.05
 evolinc_i_option="M"
 tophatlib="fr-firststrand"
-filter=$util/filter_SAM_number_hits.pl
-model=$util/euk_trna_mods.Rdata
+#filter=$util/filter_SAM_number_hits.pl
+#model=$util/euk_trna_mods.Rdata
 evolinc_i=false
 featurecount=false
 hamrbox=false
@@ -67,7 +67,7 @@ generator=""
 fastq_in=""
 
 #############Grabbing arguments############
-while getopts ":o:c:g:i:z:l:b:e:v:s:n:fmdhQCakTGDupEPF:" opt; do
+while getopts ":o:c:g:i:z:l:d:b:e:v:s:n:fmhQCakTGDupEPF:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -124,7 +124,7 @@ while getopts ":o:c:g:i:z:l:b:e:v:s:n:fmdhQCakTGDupEPF:" opt; do
     known_linc=$OPTARG
     ;;
     d)
-    fastq_in=$OPTARG
+    fastqin=$OPTARG
     ;;
     C)
     coverage=$OPTARG
