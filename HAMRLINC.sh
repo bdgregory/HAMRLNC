@@ -67,7 +67,7 @@ generator=""
 fastq_in=""
 
 #############Grabbing arguments############
-while getopts ":o:t:g:i:z:l:b:e:v:s:n:fmdhQCakTGDupEPF:" opt; do
+while getopts ":o:c:g:i:z:l:b:e:v:s:n:fmdhQCakTGDupEPF:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
