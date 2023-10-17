@@ -58,8 +58,8 @@ pvalue=1
 fdr=0.05
 evolinc_i_option="M"
 tophatlib="fr-firststrand"
-#filter=$util/filter_SAM_number_hits.pl
-#model=$util/euk_trna_mods.Rdata
+filter=$util/filter_SAM_number_hits.pl
+model=$util/euk_trna_mods.Rdata
 evolinc_i=false
 featurecount=false
 hamrbox=false
@@ -247,6 +247,9 @@ fqgrab () {
     echo "[$line] trimming complete, performing fastqc..."
     fastqc "$dumpout"/trimmed/"$line""_trimmed.fq" -o "$dumpout"/fastqc_results
 
+    # remove unneeded raw
+    rm "$dumpout"/raw/"$line"."$suf"
+
   else 
     echo "[$line] performing fastqc on raw file..."
     fastqc "$dumpout"/raw/"$line""_1.$suf" -o "$dumpout"/fastqc_results &
@@ -259,7 +262,12 @@ fqgrab () {
     echo "[$line] trimming complete, performing fastqc..."
     fastqc "$dumpout"/trimmed/"$line""_1_trimmed.fq" -o "$dumpout"/fastqc_results
     fastqc "$dumpout"/trimmed/"$line""_2_trimmed.fq" -o "$dumpout"/fastqc_results
+
+    # remove unneeded raw
+    rm "$dumpout"/raw/"$line""_1.$suf"
+    rm "$dumpout"/raw/"$line""_2.$suf"
   fi
+
   echo "[$(date '+%d/%m/%Y %H:%M:%S')] finished processing $line"
   echo ""
 }
@@ -275,6 +283,8 @@ fqgrab2 () {
 
     echo "[$sname] trimming complete, performing fastqc..."
     fastqc "$dumpout"/trimmed/"$tt""_trimmed.fq" -o "$dumpout"/fastqc_results
+    
+    # choosing not to remove user provided raw fastq
 }
 
 fastq2hamr () {
