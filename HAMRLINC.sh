@@ -19,7 +19,6 @@ cat <<'EOF'
     -i  <reference genome annotation.gff3>
     -l	<read length>
     -s	<genome size in bp >
-    -e	<genome annotation generator>
 
   OPTIONAL: 
     -n  number of threads (default 4)
@@ -58,16 +57,16 @@ pvalue=1
 fdr=0.05
 evolinc_i_option="M"
 tophatlib="fr-firststrand"
-filter=$util/filter_SAM_number_hits.pl
-model=$util/euk_trna_mods.Rdata
+filter="$util"/filter_SAM_number_hits.pl
+model="$util"/euk_trna_mods.Rdata
+generator="$scripts"/annotationGenerateUnified.R
 evolinc_i=false
 featurecount=false
 hamrbox=false
-generator=""
 fastq_in=""
 
 #############Grabbing arguments############
-while getopts ":o:c:g:i:z:l:d:b:e:v:s:n:fmhQCakTGDupEPF:" opt; do
+while getopts ":o:c:g:i:z:l:d:b:v:s:n:fmhQCakTGDupEPF:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -83,9 +82,6 @@ while getopts ":o:c:g:i:z:l:d:b:e:v:s:n:fmhQCakTGDupEPF:" opt; do
     ;;
     l)
     length+=$OPTARG # read length 
-     ;;
-    e)
-    generator=$OPTARG # organism abbreviation for annotationGenerate
     ;;
     s)
     genomelength=$OPTARG # length or size of the genome
@@ -172,28 +168,28 @@ overhang=$((mismatch-1))
 genomedir=$(dirname "$genome")
 last_checkpoint=""
 
-# Assigning the appropriate annotationGenerate.R 
-if [[ $generator == "AT" ]]; then
-    generator=$annotationGenerate/annotationGenerateAT.R
-    echo "Model organism detected: Arabidopsis thaliana"
-elif [[ $generator == "BD" ]]; then
-    generator=$annotationGenerate/annotationGenerateBD.R
-    echo "Model organism detected: Brachypodium distachyon"
-elif [[ $generator == "ZM" ]]; then
-    generator=$annotationGenerate/annotationGenerateZM.R
-    echo "Model organism detected: Zea mays"
-elif [[ $generator == "OSJ" ]]; then
-    generator=$annotationGenerate/annotationGenerateOSJ.R
-    echo "Model organism detected: Oryza sativa jadica"
-elif [[ $generator == "OSIR64" ]]; then
-    generator=$annotationGenerate/annotationGenerateOSIR64.R
-    echo "Model organism detected: Oryza sativa IR64"
-else
-    echo "##################################################"
-    echo "model organism code not recognized, please check your input"
-    echo "HAMRLINC will proceed with limited functionalities"
-    echo "##################################################"
-fi
+# # Assigning the appropriate annotationGenerate.R 
+# if [[ $generator == "AT" ]]; then
+#     generator=$annotationGenerate/annotationGenerateAT.R
+#     echo "Model organism detected: Arabidopsis thaliana"
+# elif [[ $generator == "BD" ]]; then
+#     generator=$annotationGenerate/annotationGenerateBD.R
+#     echo "Model organism detected: Brachypodium distachyon"
+# elif [[ $generator == "ZM" ]]; then
+#     generator=$annotationGenerate/annotationGenerateZM.R
+#     echo "Model organism detected: Zea mays"
+# elif [[ $generator == "OSJ" ]]; then
+#     generator=$annotationGenerate/annotationGenerateOSJ.R
+#     echo "Model organism detected: Oryza sativa jadica"
+# elif [[ $generator == "OSIR64" ]]; then
+#     generator=$annotationGenerate/annotationGenerateOSIR64.R
+#     echo "Model organism detected: Oryza sativa IR64"
+# else
+#     echo "##################################################"
+#     echo "model organism code not recognized, please check your input"
+#     echo "HAMRLINC will proceed with limited functionalities"
+#     echo "##################################################"
+# fi
 
 # designate log file, if exist, clear, and have all stdout written
 logstart=$(date "+%Y.%m.%d-%H.%M.%S")
@@ -1208,7 +1204,7 @@ if [ "$last_checkpoint" = "checkpoint3" ]; then
     # checks if genomedir is populated with generated annotation files, if not, hamrbox can't run anymore, exit
     count=$(ls -1 "$genomedir"/*.bed 2>/dev/null | wc -l)
     if [ "$count" == 0 ]; then 
-        if [[ -n "$generator" ]]; then
+        if [[ -e "$generator" ]]; then
             echo "generating annotations for overlap..."
             Rscript "$generator" "$annotation"
         else
