@@ -19,7 +19,6 @@
 | -i | \<reference genome annotation.gff3> <br> a gff3 file of the genome of the model organism, note we require gff3 instead of gtf |
 | -l | \<read length\> <br> an integer, the read length of this sequencing experiment, if non-unanimous use the shortest length |
 | -s | \<genome size in bp\> <br> an integer, the number of base pairs of the genome of this model organism |
-| -e | \<genome annotation generator code\> <br> see below for abbreviation code, one code per organism/cultivar |
 | Optional |
 | -n | \[number of threads\] <br> default=4 |
 | -d | \[raw fastq folder\] <br> a path to a folder containing raw fastq files if needed, in such case, -c csv should have each fastq file as key
@@ -40,13 +39,3 @@
 | -D | \</path/to/known_lincRNA_file\> <br> Only required under evolinc MO option |
 | -m | \[HAMR model\] <br> default=euk_trna_mods.Rdata |
 | -h | \[help message\]|
-
-## Annotation Generator Code
-| Abbreviation Code | Organism |
-| --- | --- |
-| AT | Arabidopsis thaliana |
-| BD | Brachypodium distachyon |
-| ZM | Zea mays |
-| OSJ | Oryza sativa japonica |
-| OSI | Oryza sativa indica |
-| OSIR64 | Oryza sativa IR64 |
