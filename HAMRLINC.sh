@@ -270,12 +270,12 @@ fqgrab () {
 
 fqgrab2 () {
     sname=$(basename "$fq")
-    tt=${sname%.*} 
+    tt=$(echo "$sname" | cut -d'.' -f1)
     echo "[$sname] performing fastqc on raw file..."
     fastqc "$fq" -o "$dumpout"/fastqc_results &
 
     echo "[$sname] trimming..."
-    trim_galore -o "$dumpout"/trimmed "$fq"
+    trim_galore -o "$dumpout"/trimmed "$fq" --dont_gzip
 
     echo "[$sname] trimming complete, performing fastqc..."
     fastqc "$dumpout"/trimmed/"$tt""_trimmed.fq" -o "$dumpout"/fastqc_results
@@ -284,12 +284,22 @@ fqgrab2 () {
 }
 
 fastq2hamr () {
+    # translates string library prep strandedness into feature count required number
+    if [[ "$tophatlib" = fr-firststrand ]]; then
+        fclib=2
+    elif [[ "$tophatlib" = fr-secondstrand ]]; then
+        fclib=1
+    else 
+        fclib=0
+    fi
+
     smpext=$(basename "$smp")
     smpdir=$(dirname "$smp")
     smpkey="${smpext%.*}"
     smpname=""
     original_ext="${smpext##*.}"
 
+    # always run the below to ensure necessary variables are assigned
     if [[ $smpkey == *_1* ]]; then
         smpkey="${smpkey%_1*}"
         smp1="$smpdir/${smpkey}_1_trimmed.$original_ext"
@@ -351,117 +361,141 @@ fastq2hamr () {
     hamrout=$out/hamr_out
     echo "[$smpkey] You can find the HAMR output file for $smpkey at $hamrout/$smpname.mod.txt" 
 
+    # check if progress.txt exists, if not, create it with 0
+    if [[ ! -e "$smpout"/progress.txt ]]; then
+        echo "0" > "$smpout"/progress.txt
 
-    echo "$(date '+%d/%m/%Y %H:%M:%S') [$smpkey] Begin HAMR pipeline"
-    cd "$smpout" || exit
-    # maps the trimmed reads to provided annotated genome, can take ~1.5hr
+    # determine stage of progress for this sample folder at this run
+    # progress must be none empty so currProg is never empty
+    currProg=$(cat "$smpout"/progress.txt)
+    echo "----------------------------------------------------------"
+    echo "Folder $smpkey is at progress number $currProg for this run"
+    echo "----------------------------------------------------------"
 
-    if [[ "$tophat" = false ]]; then  
-        echo "Using STAR for mapping..."
-        if [ "$det" -eq 1 ]; then
-            echo "[$smpkey] Performing STAR with a single-end file."
-            STAR \
-            --runThreadN "$threads" \
-            --genomeDir "$out"/ref/ \
-            --readFilesIn "$smp" \
-            --sjdbOverhang $overhang \
-            --sjdbGTFfile "$annotation" \
-            --sjdbGTFtagExonParentTranscript Parent \
-            --outFilterMultimapNmax 10 \
-            --outFilterMismatchNmax $mismatch \
-            --outSAMtype BAM SortedByCoordinate
+    echo "$(date '+%d/%m/%Y %H:%M:%S') [$smpkey] Begin preprocessing pipeline"
+
+    # if 0, then either this run failed before mapping completion or this run just started
+    if [[ $currProg == "0" ]]; then
+        cd "$smpout" || exit
+        # maps the trimmed reads to provided annotated genome, can take ~1.5hr
+        echo "--------Entering mapping step--------"
+        if [[ "$tophat" = false ]]; then  
+            echo "Using STAR for mapping..."
+            if [ "$det" -eq 1 ]; then
+                echo "[$smpkey] Performing STAR with a single-end file."
+                STAR \
+                --runThreadN "$threads" \
+                --genomeDir "$out"/ref/ \
+                --readFilesIn "$smp" \
+                --sjdbOverhang $overhang \
+                --sjdbGTFfile "$annotation" \
+                --sjdbGTFtagExonParentTranscript Parent \
+                --outFilterMultimapNmax 10 \
+                --outFilterMismatchNmax $mismatch \
+                --outSAMtype BAM SortedByCoordinate
+            else
+                echo "[$smpkey] Performing STAR with a paired-end file."
+                STAR \
+                --runThreadN "$threads" \
+                --genomeDir "$out"/ref/ \
+                --readFilesIn "$smp1" "$smp2" \
+                --sjdbOverhang $overhang \
+                --sjdbGTFfile "$annotation" \
+                --sjdbGTFtagExonParentTranscript Parent \
+                --outFilterMultimapNmax 10 \
+                --outFilterMismatchNmax $mismatch \
+                --outSAMtype BAM SortedByCoordinate
+            fi
+
         else
-            echo "[$smpkey] Performing STAR with a paired-end file."
-            STAR \
-            --runThreadN "$threads" \
-            --genomeDir "$out"/ref/ \
-            --readFilesIn "$smp1" "$smp2" \
-            --sjdbOverhang $overhang \
-            --sjdbGTFfile "$annotation" \
-            --sjdbGTFtagExonParentTranscript Parent \
-            --outFilterMultimapNmax 10 \
-            --outFilterMismatchNmax $mismatch \
-            --outSAMtype BAM SortedByCoordinate
+            echo "Using TopHat2 for mapping..."
+            # set read distabce based on mistmatch num
+            red=8
+            if [[ $mismatch -gt 8 ]]; then red=$((mismatch +1)); fi
+
+            if [ "$det" -eq 1 ]; then
+                echo "[$smpkey] Performing TopHat2 with a single-end file."
+                tophat2 \
+                    --library-type "$tophatlib" \
+                    --read-mismatches $mismatch \
+                    --read-edit-dist $red \
+                    --max-multihits 10 \
+                    --b2-very-sensitive \
+                    --transcriptome-max-hits 10 \
+                    --no-coverage-search \
+                    -G "$annotation" \
+                    -p "$threads" \
+                    "$out"/btref \
+                    "$smp"
+            else
+            echo "[$smpkey] Performing TopHat2 with a paired-end file."
+                tophat2 \
+                    --library-type "$tophatlib" \
+                    --read-mismatches $mismatch \
+                    --read-edit-dist $red \
+                    --max-multihits 10 \
+                    --b2-very-sensitive \
+                    --transcriptome-max-hits 10 \
+                    --no-coverage-search \
+                    -G "$annotation" \
+                    -p "$threads" \
+                    "$out"/btref \
+                    "$smp1" "$smp2"
+            fi
         fi
+        cd || exit
 
-    else
-        echo "Using TopHat2 for mapping..."
-        # set read distabce based on mistmatch num
-        red=8
-        if [[ $mismatch -gt 8 ]]; then red=$((mismatch +1)); fi
+        # mapping completed without erroring out if this is reached
+        echo "1" > "$smpout"/progress.txt
 
-        if [ "$det" -eq 1 ]; then
-            echo "[$smpkey] Performing TopHat2 with a single-end file."
-            tophat2 \
-                --library-type "$tophatlib" \
-                --read-mismatches $mismatch \
-                --read-edit-dist $red \
-                --max-multihits 10 \
-                --b2-very-sensitive \
-                --transcriptome-max-hits 10 \
-                --no-coverage-search \
-                -G "$annotation" \
-                -p "$threads" \
-                "$out"/btref \
-                "$smp"
+        # update directly for normal progression
+        currProg="1"
+    fi
+
+    wait
+
+    # if 1, then either last run failed before sorting completion or this run just came out of mapping
+    if [[ $currProg == "1" ]]; then
+        #sorts the accepted hits
+        echo "[$smpkey] sorting..."
+        # handles tophat or star output
+        if [[ "$tophat" = false ]]; then
+            samtools sort \
+            -n "$smpout"/Aligned.sortedByCoord.out.bam \
+            -o "$smpout"/sort_accepted.bam
         else
-        echo "[$smpkey] Performing TopHat2 with a paired-end file."
-            tophat2 \
-                --library-type "$tophatlib" \
-                --read-mismatches $mismatch \
-                --read-edit-dist $red \
-                --max-multihits 10 \
-                --b2-very-sensitive \
-                --transcriptome-max-hits 10 \
-                --no-coverage-search \
-                -G "$annotation" \
-                -p "$threads" \
-                "$out"/btref \
-                "$smp1" "$smp2"
+            samtools sort \
+            -n "$smpout"/accepted_hits.bam \
+            -o "$smpout"/sort_accepted.bam
         fi
+        echo "[$smpkey] finished sorting"
+        echo ""
+
+        # sorting completed without erroring out if this is reached
+        echo "2" > "$smpout"/progress.txt
+        currProg="2"
     fi
-    cd || exit
 
     wait
 
-    #sorts the accepted hits
-    echo "[$smpkey] sorting..."
-    # handles tophat or star output
-    if [[ "$tophat" = false ]]; then
-        samtools sort \
-        -n "$smpout"/Aligned.sortedByCoord.out.bam \
-        -o "$smpout"/sort_accepted.bam
-    else
-        samtools sort \
-        -n "$smpout"/accepted_hits.bam \
-        -o "$smpout"/sort_accepted.bam
+    if [[ $currProg == "2" ]]; then
+        #filter the accepted hits by uniqueness
+        echo "[$smpkey] filter unique..."
+        samtools view \
+            -h "$smpout"/sort_accepted.bam \
+            | perl "$filter" 1 \
+            | samtools view -bS - \
+            | samtools sort \
+            -o "$smpout"/unique.bam
+        echo "[$smpkey] finished filtering"
+        echo ""
+
+        # filtering unique completed without erroring out if this is reached
+        echo "3" > "$smpout"/progress.txt
+        currProg="3"
     fi
-    echo "[$smpkey] finished sorting"
-    echo ""
 
     wait
-
-    #filter the accepted hits by uniqueness
-    echo "[$smpkey] filter unique..."
-    samtools view \
-        -h "$smpout"/sort_accepted.bam \
-        | perl "$filter" 1 \
-        | samtools view -bS - \
-        | samtools sort \
-        -o "$smpout"/unique.bam
-    echo "[$smpkey] finished filtering"
-    echo ""
-
-    wait
-
-    # translates string library prep strandedness into feature count required number
-    if [[ "$tophatlib" = fr-firststrand ]]; then
-        fclib=2
-    elif [[ "$tophatlib" = fr-secondstrand ]]; then
-        fclib=1
-    else 
-        fclib=0
-    fi
 
     ###############################################
     ########evolinc_i logic here (left arm)###########
@@ -481,64 +515,88 @@ fastq2hamr () {
         if [ ! -d "$out/evolinc_out" ]; then mkdir "$out/evolinc_out"; fi
         # run stringtie accordingly, note PE and SE here is taken care of
         # output is unnamed and stored in each fastq folder
-        echo "[$smpkey] producing transcript assembly using stringtie..."
-        if [[ "$tophatlib" = fr-firststrand ]]; then
-            echo "[$smpkey] running stringtie with --rf"
-            stringtie \
-                "$smpout"/unique.bam \
-                -o "$smpout"/transcriptAssembly.gtf \
-                -G "$annotation" \
-                -p "$threads" \
-                --rf
-        elif [[ "$tophatlib" = fr-secondstrand ]]; then
-            echo "[$smpkey] running stringtie with --fr"
-            stringtie \
-                "$smpout"/unique.bam \
-                -o "$smpout"/transcriptAssembly.gtf \
-                -G "$annotation" \
-                -p "$threads" \
-                --fr
-        else
-            echo "[$smpkey] running stringtie assuming an unstranded library"
-            stringtie \
-                "$smpout"/unique.bam \
-                -o "$smpout/"transcriptAssembly.gtf \
-                -G "$annotation" \
-                -p "$threads"
+
+        # check if evoprog.txt exists, if not, create it with 0
+        if [[ ! -e "$smpout"/evoprog.txt ]]; then
+        echo "a" > "$smpout"/evoprog.txt
+
+        # determine stage of progress for this sample folder at this run
+        # progress must be none empty so currProg is never empty
+        currEvoProg=$(cat "$smpout"/evoprog.txt)
+
+        if [[ $currEvoProg == "a" ]]; then
+            echo "[$smpkey] producing transcript assembly using stringtie..."
+            if [[ "$tophatlib" = fr-firststrand ]]; then
+                echo "[$smpkey] running stringtie with --rf"
+                stringtie \
+                    "$smpout"/unique.bam \
+                    -o "$smpout"/transcriptAssembly.gtf \
+                    -G "$annotation" \
+                    -p "$threads" \
+                    --rf
+            elif [[ "$tophatlib" = fr-secondstrand ]]; then
+                echo "[$smpkey] running stringtie with --fr"
+                stringtie \
+                    "$smpout"/unique.bam \
+                    -o "$smpout"/transcriptAssembly.gtf \
+                    -G "$annotation" \
+                    -p "$threads" \
+                    --fr
+            else
+                echo "[$smpkey] running stringtie assuming an unstranded library"
+                stringtie \
+                    "$smpout"/unique.bam \
+                    -o "$smpout/"transcriptAssembly.gtf \
+                    -G "$annotation" \
+                    -p "$threads"
+            fi
+
+            echo "b" > "$smpout"/currEvoProgress.txt
+            currEvoProg="b"
         fi
 
-        # next run cuff compare
-        echo "[$smpkey] merging assemblies using cuffcompare..."
-        cuffcompare \
-            "$smpout"/transcriptAssembly.gtf \
-            -r "$annotation" \
-            -s "$genome" \
-            -T \
-            -o "$smpout"/cuffed
+        if [[ $currEvoProg == "b" ]]; then
+            # next run cuff compare
+            echo "[$smpkey] merging assemblies using cuffcompare..."
+            cuffcompare \
+                "$smpout"/transcriptAssembly.gtf \
+                -r "$annotation" \
+                -s "$genome" \
+                -T \
+                -o "$smpout"/cuffed
+            fi
+            echo "c" > "$smpout"/currEvoProgress.txt
+            currEvoProg="c"
+        fi
 
-        # run evolinc
-        echo "[$smpkey] annotating lincRNA using Evolinc-i..."
-        if [ "$evolinc_i_option" == "M" ]; then
-            echo "[$smpkey] M option identified for evolinc"
-            evolinc-part-I.sh \
-                -c "$smpout"/cuffed.combined.gtf \
-                -g "$genome" \
-                -u "$annotation" \
-                -r "$annotation" \
-                -n "$threads" \
-                -o "$smpout"/"$smpname"_lincRNA
-        elif [ "$evolinc_i_option" == "MO" ]; then
-            echo "[$smpkey] MO option identified for evolinc"
-            evolinc-part-I.sh \
-                -c "$smpout"/cuffed.combined.gtf \
-                -g "$genome" \
-                -u "$annotation" \
-                -r "$annotation" \
-                -n "$threads" \
-                -o "$smpout"/"$smpname"_lincRNA \
-                -b "$blast_file" \
-                -t "$cage_file" \
-                -x "$known_linc"
+
+        if [[ $currEvoProg == "c" ]]; then
+            # run evolinc
+            echo "[$smpkey] annotating lincRNA using Evolinc-i..."
+            if [ "$evolinc_i_option" == "M" ]; then
+                echo "[$smpkey] M option identified for evolinc"
+                evolinc-part-I.sh \
+                    -c "$smpout"/cuffed.combined.gtf \
+                    -g "$genome" \
+                    -u "$annotation" \
+                    -r "$annotation" \
+                    -n "$threads" \
+                    -o "$smpout"/"$smpname"_lincRNA
+            elif [ "$evolinc_i_option" == "MO" ]; then
+                echo "[$smpkey] MO option identified for evolinc"
+                evolinc-part-I.sh \
+                    -c "$smpout"/cuffed.combined.gtf \
+                    -g "$genome" \
+                    -u "$annotation" \
+                    -r "$annotation" \
+                    -n "$threads" \
+                    -o "$smpout"/"$smpname"_lincRNA \
+                    -b "$blast_file" \
+                    -t "$cage_file" \
+                    -x "$known_linc"
+            fi
+            echo "f" > "$smpout"/currEvoProgress.txt
+            currEvoProg="f"
         fi
 
         cd $smpout
@@ -621,7 +679,9 @@ fastq2hamr () {
     # run below only if hamrbox is true
     if [[ "$hamrbox" = false ]]; then
         echo "[$(date '+%d/%m/%Y %H:%M:%S')] hamrbox functionality suppressed, $smpkey analysis completed."
-    else
+        exit 0
+
+    if [[ $currProg == "3" ]]; then
         #adds read groups using picard, note the RG arguments are disregarded here
         echo "[$smpkey] adding/replacing read groups..."
         gatk AddOrReplaceReadGroups \
@@ -635,8 +695,14 @@ fastq2hamr () {
         echo "[$smpkey] finished adding/replacing read groups"
         echo ""
 
-        wait
+        # RG finished without exiting
+        echo "4" > "$smpout"/progress.txt
+        currProg="4"
+    fi 
 
+    wait
+
+    if [[ $currProg == "4" ]]; then
         #reorder the reads using picard
         echo "[$smpkey] reordering..."
         echo "$genome"
@@ -650,8 +716,14 @@ fastq2hamr () {
         echo "[$smpkey] finished reordering"
         echo ""
 
-        wait
+        # ordering finished without exiting
+        echo "5" > "$smpout"/progress.txt
+        currProg="5"
+    fi 
 
+    wait
+
+    if [[ $currProg == "5" ]]; then
         #splitting and cigarring the reads, using genome analysis tool kit
         #note can alter arguments to allow cigar reads 
         echo "[$smpkey] getting split and cigar reads..."
@@ -663,8 +735,14 @@ fastq2hamr () {
         echo "[$smpkey] finished splitting N cigarring"
         echo ""
 
-        wait
+        # cigaring and spliting finished without exiting
+        echo "6" > "$smpout"/progress.txt
+        currProg="6"
+    fi 
 
+    wait
+
+    if [[ $currProg == "6" ]]; then
         #final resorting using picard
         echo "[$smpkey] resorting..."
         gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" SortSam \
@@ -674,8 +752,14 @@ fastq2hamr () {
         echo "[$smpkey] finished resorting"
         echo ""
 
-        wait
+        # cigaring and spliting finished without exiting
+        echo "7" > "$smpout"/progress.txt
+        currProg="7"
+    fi 
 
+    wait
+
+    if [[ $currProg == "7" ]]; then
         #hamr step, can take ~1hr
         echo "[$smpkey] hamr..."
         #hamr_path=$(which hamr.py) 
@@ -691,10 +775,15 @@ fastq2hamr () {
         # HAMR needs separate folders to store temp for each sample, so we move at the end
             cp "$smpout"/"${smpname}".mods.txt "$hamrout"
         fi
+        echo "8" > "$smpout"/progress.txt
+        currProg="8"
+    fi
 
+    if [[ $currProg == "8" ]]; then
         # Move the unique_RG_ordered.bam and unique_RG_ordered.bai to a folder for read depth analysis
         cp "$smpout"/unique_RG_ordered.bam "$out"/pipeline/depth/"$smpname".bam
         cp "$smpout"/unique_RG_ordered.bai "$out"/pipeline/depth/"$smpname".bai
+
 
         # delete more intermediate files
         echo "[$smpkey] removing large intermediate files..."
@@ -705,6 +794,8 @@ fastq2hamr () {
         rm "$smpout"/unique_RG_ordered_splitN.bam
         rm "$smpout"/unique_RG_ordered_splitN.resort.bam
         echo "[$smpkey] finished cleaning"
+        
+        echo "9" > "$smpout"/progress.txt
     fi
 }
 
