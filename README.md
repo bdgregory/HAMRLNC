@@ -29,15 +29,15 @@
 | -p | \[suppress lincRNA identification (inner right arm)\] |
 | -u | \[suppress regular featurecount (outer right arm)\] |
 | -v | \[evolinc option: M or MO\] <br> default=M |
-| -Q | \[HAMR: minimum qualuty score\] <br> default=30 |
-| -C | \[HAMR: minimum coverage\] <br> default=50 |
-| -E | \[HAMR: sequencing error\] <br> default=0.01 |
-| -P | \[HAMR: maximum p-value\] <br> default=1 |
-| -F | \[HAMR: maximum FDR\] <br> default=0.05 |
-| -O | \[Panther: organism taxon ID\] <br> default="9606" |
-| -A | \[Panther: annotation dataset\] <br> default="GO:0008150" |
-| -Y | \[Panther: test type\] <br> default="FISHER" |
-| -R | \[Panther: correction type\] <br> default="FDR" |
+| -Q | \[HAMR minimum qualuty score: 0-40\] <br> default=30 |
+| -C | \[HAMR minimum coverage: 0-\infty\] <br> default=50 |
+| -E | \[HAMR sequencing error: 0-1\] <br> default=0.01 |
+| -P | \[HAMR maximum p-value: 0-1\] <br> default=1 |
+| -F | \[HAMR maximum FDR: 0-1\] <br> default=0.05 |
+| -O | \[Panther [organism taxon ID](http://pantherdb.org/services/oai/pantherdb/supportedgenomes)\] <br> default="9606" |
+| -A | \[Panther [annotation dataset](http://pantherdb.org/services/oai/pantherdb/supportedannotdatasets)\] <br> default="GO:0008150" |
+| -Y | \[Panther test type: FISHER or BINOMIAL\] <br> default="FISHER" |
+| -R | \[Panther correction type: FDR, BONFERRONI, or NONE\] <br> default="FDR" |
 | -T | \</path/to/transposable_elements_file\> <br> Only required under evolinc MO option |
 | -G | \</path/to/CAGE_RNA_file\> <br> Only required under evolinc MO option |
 | -D | \</path/to/known_lincRNA_file\> <br> Only required under evolinc MO option |
