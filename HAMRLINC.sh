@@ -1267,7 +1267,7 @@ if [ "$last_checkpoint" = "checkpoint2" ]; then
         t=$(basename "$f")
         n=${t%.*}
         echo "computing depth across reps for $n"
-        Rscript "$scripts"/depth_helper_average.R "$f"
+        Rscript "$scripts"/depthHelperAverage.R "$f"
     fi
     done
 
@@ -1339,7 +1339,7 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
 
     echo "generating long modification table..."
     # collapse all overlapped data into longdf
-    Rscript "$scripts"/allLapPrep.R \
+    Rscript "$scripts"/contacenate4R.R \
         "$dir"/lap \
         "$dir"
     echo "done"
@@ -1347,7 +1347,7 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
 
     echo "plotting modification abundance per sample group..."
     # overview of modification proportion
-    Rscript "$scripts"/abundByGroup.R \
+    Rscript "$scripts"/countPerGroup.R \
         "$dir"/mod_long.csv \
         "$genomedir" \
         "$dir"
@@ -1356,7 +1356,7 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
 
     echo "plotting modification abundance per mod type..."
     # overview of modification proportion
-    Rscript "$scripts"/abundByLap.R \
+    Rscript "$scripts"/countPerMod.R \
         "$dir"/mod_long.csv \
         "$genomedir" \
         "$dir"
