@@ -18,7 +18,7 @@ cat <<'EOF'
     -g	<reference genome.fa>
     -i  <reference genome annotation.gff3>
     -l	<read length>
-    -s	<genome size in bp >
+    -s	<genome size in bp>
 
   OPTIONAL: 
     -n  number of threads (default 4)
@@ -36,6 +36,10 @@ cat <<'EOF'
     -E	[HAMR: sequencing error, default=0.01]
     -P	[HAMR: maximum p-value, default=1]
     -F	[HAMR: maximum fdr, default=0.05]
+    -O  [Panther: organism taxon ID, default 9606]
+    -A  [Panther: annotation data set, default GO:0008150]
+    -Y  [Panther: test type, default FISHER]
+    -R  [Panther: correction type, default FDR]
     -T  <transposable Elements file> (optional file for evolinc_i)
     -G  <CAGE RNA file> (optional file for evolinc_i)
     -D  <known lincRNA file> (optional file for evolinc_i)
@@ -59,14 +63,19 @@ evolinc_i_option="M"
 tophatlib="fr-firststrand"
 filter="$util"/filter_SAM_number_hits.pl
 model="$util"/euk_trna_mods.Rdata
+json="$util"/panther_params.json
 generator="$scripts"/annotationGenerateUnified.R
 evolinc_i=false
 featurecount=false
 hamrbox=false
 fastq_in=""
+porg=""
+pterm=""
+ptest=""
+pcorrect=""
 
 #############Grabbing arguments############
-while getopts ":o:c:g:i:z:l:d:b:v:s:n:fmhQCakTGDupEPF:" opt; do
+while getopts ":o:c:g:i:z:l:d:b:v:s:n:fmhQCakTGDOAYRupEPF:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -118,6 +127,18 @@ while getopts ":o:c:g:i:z:l:d:b:v:s:n:fmhQCakTGDupEPF:" opt; do
      ;;
     D)
     known_linc=$OPTARG
+    ;;
+    O)
+    porg=$OPTARG
+    ;;
+    A)
+    pterm=$OPTARG
+    ;;
+    Y)
+    ptest=$OPTARG
+    ;;
+    R)
+    pcorrect=$OPTARG
     ;;
     d)
     fastq_in=$OPTARG
@@ -1408,6 +1429,38 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
             "$dir"/mod_long.csv \
             "$dir"/go/genelists
 
+        echo "editing panther param file with user input..."
+        # edit params/enrich.json with user's input
+        cd $util
+        if [[ ! -z $porg ]]; then
+            mv panther_params.json temp.json
+            jq --arg jq_in $porg -r '.organism |= $jq_in' temp.json > panther_params.json
+            rm temp.json
+
+            mv panther_params.json temp.json
+            jq --arg jq_in $porg -r '.refOrganism |= $jq_in' temp.json > panther_params.json
+            rm temp.json
+        fi
+
+        if [[ ! -z $pterm ]]; then
+            mv panther_params.json temp.json
+            jq --arg jq_in $pterm -r '.annotDataSet |= $jq_in' temp.json > panther_params.json
+            rm temp.json
+        fi
+
+        if [[ ! -z $ptest ]]; then
+            mv panther_params.json temp.json
+            jq --arg jq_in $ptest -r '.enrichmentTestType |= $jq_in' temp.json > panther_params.json
+            rm temp.json
+        fi
+
+        if [[ ! -z $pcorrect ]]; then
+            mv panther_params.json temp.json
+            jq --arg jq_in $pcorrect -r '.correction |= $jq_in' temp.json > panther_params.json
+            rm temp.json
+        fi
+        cd
+
         # proceed if genelists directory is not empty
         if [ -n "$(ls "$dir"/go/genelists)" ]; then
             echo "sending each gene list to panther for overrepresentation analysis..."
@@ -1418,7 +1471,7 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
             echo "$n"
             python /pantherapi-pyclient/pthr_go_annots.py \
                 --service enrich \
-                --params_file /pantherapi-pyclient/params/enrich.json \
+                --params_file $json \
                 --seq_id_file "$f" \
                 > "$dir"/go/pantherout/"$n"
             done
