@@ -30,7 +30,7 @@
 | -u | \[suppress regular featurecount (outer right arm)\] |
 | -v | \[evolinc option: M or MO\] <br> default=M |
 | -Q | \[HAMR minimum qualuty score: 0-40\] <br> default=30 |
-| -C | \[HAMR minimum coverage: 0-\infty\] <br> default=50 |
+| -C | \[HAMR minimum coverage: 0-∞\] <br> default=50 |
 | -E | \[HAMR sequencing error: 0-1\] <br> default=0.01 |
 | -P | \[HAMR maximum p-value: 0-1\] <br> default=1 |
 | -F | \[HAMR maximum FDR: 0-1\] <br> default=0.05 |
