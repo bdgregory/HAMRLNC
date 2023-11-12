@@ -95,6 +95,8 @@ RUN wget -O- https://github.com/bedops/bedops/releases/download/v2.4.16/bedops_l
 RUN curl -L http://cpanmin.us | perl - App::cpanminus
 RUN cpanm URI/Escape.pm
 
+# jq
+RUN apt-get install jq
 
 # R libraries
 RUN apt-get update && apt-get upgrade -y && \
