@@ -90,5 +90,5 @@ if (is.null(go)){
   p <- pheatmap(mt, legend_breaks = c(1, 2, 3, 4, max(mt)),
                 main = "", legend_labels = c("1", "2", "3", "4", "-log10(P-value)\n"),
                 legend = TRUE, cluster_cols = FALSE)
-  save_pheatmap_pdf(p, paste0(out, "/GOheatmap_mod.pdf"), width = 10, height = 8)
+  save_pheatmap_pdf(p, paste0(out, "/GOheatmap_mod.png"), width = 10, height = 8)
 }

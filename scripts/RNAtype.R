@@ -41,4 +41,4 @@ tb%>%
   ylab("Raw Mod Count")+
   scale_fill_manual(values=cbPalette)
 
-ggsave(paste0(dir,"/RNAsubtype.pdf"), width = 10, height = 8, units = "in")
+ggsave(paste0(dir,"/RNAsubtype.png"), width = 10, height = 8, units = "in")

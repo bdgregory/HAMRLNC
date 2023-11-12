@@ -11,7 +11,6 @@ args=commandArgs(trailingOnly=TRUE)
 
 
 # below assumes only primary kept
-
 fetchhelper <- function(ref,s,p,g,str) {
   # these conditions ensure no duplication will arise 
   filter(ref, ref$V1 == s & ref$V2 <= p & ref$V3 >= p & grepl(g, ref$V5, fixed = TRUE) & ref$V7 == str)
@@ -93,7 +92,7 @@ if (!is.null(frame)) {
     scale_x_discrete(labels = abbreviate)
   
   suppressWarnings(print(p1))
-  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_bar.pdf"), width = 10, height = 8, units = "in"))
+  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_bar.png"), width = 10, height = 8, units = "in"))
   
   # creates the rel pos gene map
   p2 <- frame%>%
@@ -112,7 +111,7 @@ if (!is.null(frame)) {
     scale_color_manual(values=cbPalette)
   
   suppressWarnings(print(p2))
-  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_map_sep.pdf"), width = 10, height = 8, units = "in"))
+  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_map_sep.png"), width = 10, height = 8, units = "in"))
   
   p3 <- frame%>%
     ggplot(aes(p.norm))+
@@ -130,7 +129,7 @@ if (!is.null(frame)) {
     scale_color_manual(values=cbPalette)
   
   suppressWarnings(print(p3))
-  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_map_tot.pdf"), width = 10, height = 8, units = "in"))
+  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_map_tot.png"), width = 10, height = 8, units = "in"))
 } else {
   cat("No region information can be extracted. Exiting... \n")
 }
