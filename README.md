@@ -34,6 +34,10 @@
 | -E | \[HAMR: sequencing error\] <br> default=0.01 |
 | -P | \[HAMR: maximum p-value\] <br> default=1 |
 | -F | \[HAMR: maximum FDR\] <br> default=0.05 |
+| -O | \[Panther: organism taxon ID\] <br> default="9606" |
+| -A | \[Panther: annotation dataset\] <br> default="GO:0008150" |
+| -Y | \[Panther: test type\] <br> default="FISHER" |
+| -R | \[Panther: correction type\] <br> default="FDR" |
 | -T | \</path/to/transposable_elements_file\> <br> Only required under evolinc MO option |
 | -G | \</path/to/CAGE_RNA_file\> <br> Only required under evolinc MO option |
 | -D | \</path/to/known_lincRNA_file\> <br> Only required under evolinc MO option |
