@@ -1333,7 +1333,9 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
     date '+%d/%m/%Y %H:%M:%S'
     echo ""
     #######################################begins EXTRACT######################################
-    dir=$out
+    if [ ! -d "$out/results" ]; then mkdir "$out"/results; echo "created path: $out/results"; fi
+    dir="$out/results"
+
 
     echo "generating long modification table..."
     # collapse all overlapped data into longdf
@@ -1343,7 +1345,16 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
     echo "done"
     echo ""
 
-    echo "plotting modification abundance..."
+    echo "plotting modification abundance per sample group..."
+    # overview of modification proportion
+    Rscript "$scripts"/abundByGroup.R \
+        "$dir"/mod_long.csv \
+        "$genomedir" \
+        "$dir"
+    echo "done"
+    echo ""
+
+    echo "plotting modification abundance per mod type..."
     # overview of modification proportion
     Rscript "$scripts"/abundByLap.R \
         "$dir"/mod_long.csv \
