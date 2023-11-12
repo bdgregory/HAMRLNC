@@ -121,7 +121,8 @@ gff <- gffRead(fpath)
 allFeatures <- rownames(table(gff$feature))
 
 # for testing
-# gff <- gffRead("/Users/harrlol/Desktop/gff3/Actinidia_chinensis.Red5_PS1_1.69.0.57.gff3")
+# gff <- gffRead("/Users/harrlol/Downloads/Sorghum_bicolor.Sorghum_bicolor_NCBIv3.57.gff3")
+# fname <- "/Users/harrlol/Desktop"
 
 
 # Note ncRNA_gene and gene are both only gene, 
