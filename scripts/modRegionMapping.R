@@ -9,7 +9,6 @@ cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
 
 args=commandArgs(trailingOnly=TRUE)
 
-
 # below assumes only primary kept
 fetchhelper <- function(ref,s,p,g,str) {
   # these conditions ensure no duplication will arise 
@@ -28,49 +27,51 @@ frame <- NULL
 for (m in unique(df$mod)) {
   # proceed by mod
   a <- df%>%filter(lap_type=="gene"&mod==m)
-  for (i in 1:nrow(a)) {
-    # extract info from ith row of a
-    g <- a[i,]$gene
-    p <- a[i,]$pos
-    s <- a[i,]$seq
-    str <- a[i,]$strand
-    smp <- paste(a[i,]$genotype, a[i,]$seq_tech, sep="_")
-    
-    # initialize empty fetch results
-    t.mock <- data.frame()
-    c.mock <- data.frame()
-    # assign actual fetch to five prime
-    f.mock <- fetchhelper(fiveU,s,p,g,str)
-    drow <- NULL
-    # if a mod matched, proceed to obtain rel pos, and avoid running fetchhelper again 
-    if (nrow(f.mock) > 0) {
-      p.norm <- (p - f.mock$V2)/(f.mock$V3 - f.mock$V2)*1000
-      region <- "5UTR"
-      smp.grp <- smp
-      # records mod type, rel position, and region
-      drow <- data.frame(m, p.norm, region, smp.grp)
-      # if nothing matched, run cds fetch and assign, repeat process
-    } else {c.mock <- fetchhelper(cds,s,p,g,str)}
-    if (nrow(c.mock) > 0) {
-      # here we add 1000 to move the rel pos into the relative CDS region
-      p.norm <- ((p - c.mock$V2)/(c.mock$V3 - c.mock$V2)*1000)+1000
-      region <- "CDS"
-      smp.grp <- smp
-      drow <- data.frame(m, p.norm, region, smp.grp)
-    } else {t.mock <- fetchhelper(threeU,s,p,g,str)}
-    if (nrow(t.mock) > 0) {
-      p.norm <- ((p - t.mock$V2)/(t.mock$V3 - t.mock$V2)*1000)+2000
-      region <- "3UTR"
-      smp.grp <- smp
-      drow <- data.frame(m, p.norm, region, smp.grp)
-    }
-    if (!is.null(drow)){
-      frame <- rbind(frame, drow)
-    }
-    # tests to see if any mod is double counted due to overlap of regions (solved upon keepprimary)
-    if (nrow(t.mock)>0&nrow(f.mock)>0 | nrow(t.mock)>0&nrow(c.mock)>0 | nrow(f.mock)>0&nrow(c.mock)>0 | nrow(t.mock)>0&nrow(f.mock)>0&nrow(c.mock)>0) {
-      cat(g)
-      cat("\n")
+  if (nrow(a)>0) {
+    for (i in 1:nrow(a)) {
+      # extract info from ith row of a
+      g <- a[i,]$gene
+      p <- a[i,]$pos
+      s <- a[i,]$seq
+      str <- a[i,]$strand
+      smp <- paste(a[i,]$genotype, a[i,]$seq_tech, sep="_")
+      
+      # initialize empty fetch results
+      t.mock <- data.frame()
+      c.mock <- data.frame()
+      # assign actual fetch to five prime
+      f.mock <- fetchhelper(fiveU,s,p,g,str)
+      drow <- NULL
+      # if a mod matched, proceed to obtain rel pos, and avoid running fetchhelper again 
+      if (nrow(f.mock) > 0) {
+        p.norm <- (p - f.mock$V2)/(f.mock$V3 - f.mock$V2)*1000
+        region <- "5UTR"
+        smp.grp <- smp
+        # records mod type, rel position, and region
+        drow <- data.frame(m, p.norm, region, smp.grp)
+        # if nothing matched, run cds fetch and assign, repeat process
+      } else {c.mock <- fetchhelper(cds,s,p,g,str)}
+      if (nrow(c.mock) > 0) {
+        # here we add 1000 to move the rel pos into the relative CDS region
+        p.norm <- ((p - c.mock$V2)/(c.mock$V3 - c.mock$V2)*1000)+1000
+        region <- "CDS"
+        smp.grp <- smp
+        drow <- data.frame(m, p.norm, region, smp.grp)
+      } else {t.mock <- fetchhelper(threeU,s,p,g,str)}
+      if (nrow(t.mock) > 0) {
+        p.norm <- ((p - t.mock$V2)/(t.mock$V3 - t.mock$V2)*1000)+2000
+        region <- "3UTR"
+        smp.grp <- smp
+        drow <- data.frame(m, p.norm, region, smp.grp)
+      }
+      if (!is.null(drow)){
+        frame <- rbind(frame, drow)
+      }
+      # tests to see if any mod is double counted due to overlap of regions (solved upon keepprimary)
+      if (nrow(t.mock)>0&nrow(f.mock)>0 | nrow(t.mock)>0&nrow(c.mock)>0 | nrow(f.mock)>0&nrow(c.mock)>0 | nrow(t.mock)>0&nrow(f.mock)>0&nrow(c.mock)>0) {
+        cat(g)
+        cat("\n")
+      }
     }
   }
 }
