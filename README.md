@@ -34,7 +34,7 @@
 | -E | \[HAMR sequencing error: 0-1\] <br> default=0.01 |
 | -P | \[HAMR maximum p-value: 0-1\] <br> default=1 |
 | -F | \[HAMR maximum FDR: 0-1\] <br> default=0.05 |
-| -O | \[Panther [organism taxon ID](http://pantherdb.org/services/oai/pantherdb/supportedgenomes)\] <br> default="9606" |
+| -O | \[Panther [organism taxon ID](http://pantherdb.org/services/oai/pantherdb/supportedgenomes)\] <br> default="3702" |
 | -A | \[Panther [annotation dataset](http://pantherdb.org/services/oai/pantherdb/supportedannotdatasets)\] <br> default="GO:0008150" |
 | -Y | \[Panther test type: FISHER or BINOMIAL\] <br> default="FISHER" |
 | -R | \[Panther correction type: FDR, BONFERRONI, or NONE\] <br> default="FDR" |
