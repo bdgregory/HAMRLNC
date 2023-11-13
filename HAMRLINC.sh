@@ -1358,16 +1358,18 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
     echo ""
     #######################################begins EXTRACT######################################
     if [ ! -d "$out/results" ]; then mkdir "$out"/results; echo "created path: $out/results"; fi
-    dir="$out/results"
 
 
     echo "generating long modification table..."
     # collapse all overlapped data into longdf
     Rscript "$scripts"/contacenate4R.R \
         "$dir"/lap \
-        "$dir"
+        "$dir/results"
     echo "done"
     echo ""
+
+    # note mod_long.csv is now in dir/results, update
+    dir="$out/results"
 
     echo "plotting modification abundance per sample group..."
     # overview of modification proportion
