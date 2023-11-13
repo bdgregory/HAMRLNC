@@ -949,13 +949,6 @@ fqgrabhouse () {
         #annotation="$out/ref/$(basename $annotation)"
     fi
 
-    if [ ! -d "$out/fileprep" ]; then 
-        mkdir "$out/fileprep"
-        echo "created path: $out/fileprep"
-        #cp $acc "$out/fileprep"
-        #cp $csv "$out/fileprep"
-    fi
-
     # Create directory to store trimmed fastq files
     if [ ! -d "$out/datasets/trimmed" ]; then mkdir "$out"/datasets/trimmed; fi
     echo "You can find your trimmed fastq files at $out/datasets/trimmed"
