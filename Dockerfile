@@ -95,9 +95,6 @@ RUN wget -O- https://github.com/bedops/bedops/releases/download/v2.4.16/bedops_l
 RUN curl -L http://cpanmin.us | perl - App::cpanminus
 RUN cpanm URI/Escape.pm
 
-# jq
-RUN apt-get install jq
-
 # R libraries
 RUN apt-get update && apt-get upgrade -y && \
 	apt-get -y install ca-certificates software-properties-common gnupg2 gnupg1 gnupg && \
@@ -170,6 +167,9 @@ RUN pip3 install --upgrade pip
 RUN apt-get install python3-venv -y
 RUN pip3 install requests
 
+# jq
+RUN apt-get install -y jq
+
 # panther
 RUN git clone https://github.com/pantherdb/pantherapi-pyclient.git && \
     cd pantherapi-pyclient && \
@@ -194,9 +194,6 @@ ENV scripts /scripts
 ADD util /util/
 RUN chmod +x /util/*.pl && cp -r /util/ $BINPATH
 ENV util /util
-ADD annotationGenerate /annotationGenerate/
-RUN chmod +x /annotationGenerate/*.R && cp -r /annotationGenerate/ $BINPATH
-ENV annotationGenerate /annotationGenerate/
 
 # Setting paths to all the softwares
 ENV PATH /evolinc_docker/TransDecoder-2.0.1/:$PATH

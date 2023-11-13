@@ -818,6 +818,8 @@ fastq2hamr () {
         
         echo "9" > "$smpout"/progress.txt
     fi
+    fi
+    fi
 }
 
 consensusOverlap () {
