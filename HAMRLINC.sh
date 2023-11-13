@@ -540,7 +540,7 @@ fastq2hamr () {
         # check if evoprog.txt exists, if not, create it with 0
         if [[ ! -e "$smpout"/evoprog.txt ]]; then
         echo "a" > "$smpout"/evoprog.txt
-
+        fi
         # determine stage of progress for this sample folder at this run
         # progress must be none empty so currProg is never empty
         currEvoProg=$(cat "$smpout"/evoprog.txt)
@@ -585,7 +585,7 @@ fastq2hamr () {
                 -s "$genome" \
                 -T \
                 -o "$smpout"/cuffed
-            fi
+                
             echo "c" > "$smpout"/currEvoProgress.txt
             currEvoProg="c"
         fi
@@ -655,17 +655,18 @@ fastq2hamr () {
         echo "############## lincRNA abundance quantification pipeline completed ##############"
         echo "################################################################"
     fi
-
     wait
 
     ###############################################
     ########regular feature count logic here (right arm)###########
     ############################################### 
     # first create gtf file from gff3 file
-    gffread \
-        "$annotation" \
-        -T \
-        -o "$out"/ref/temp.gtf
+    if [[ "$featurecount" = true ]]; then
+        gffread \
+            "$annotation" \
+            -T \
+            -o "$out"/ref/temp.gtf
+    fi    
 
     # run feature count for normal alignment transcript quantification if user didn't suppress
     if [[ "$featurecount" = true ]]; then
@@ -698,27 +699,27 @@ fastq2hamr () {
     ########original continuation of fastq2hamr here###########
     ############################################### 
     # run below only if hamrbox is true
-    if [[ "$hamrbox" = false ]]; then
-        echo "[$(date '+%d/%m/%Y %H:%M:%S')] hamrbox functionality suppressed, $smpkey analysis completed."
-        exit 0
-
     if [[ $currProg == "3" ]]; then
-        #adds read groups using picard, note the RG arguments are disregarded here
-        echo "[$smpkey] adding/replacing read groups..."
-        gatk AddOrReplaceReadGroups \
-            I="$smpout"/unique.bam \
-            O="$smpout"/unique_RG.bam \
-            RGID=1 \
-            RGLB=xxx \
-            RGPL=illumina_100se \
-            RGPU=HWI-ST1395:97:d29b4acxx:8 \
-            RGSM=sample
-        echo "[$smpkey] finished adding/replacing read groups"
-        echo ""
+        if [[ "$hamrbox" = false ]]; then
+            echo "[$(date '+%d/%m/%Y %H:%M:%S')] hamrbox functionality suppressed, $smpkey analysis completed."
+            exit 0
+        else
+            #adds read groups using picard, note the RG arguments are disregarded here
+            echo "[$smpkey] adding/replacing read groups..."
+            gatk AddOrReplaceReadGroups \
+                I="$smpout"/unique.bam \
+                O="$smpout"/unique_RG.bam \
+                RGID=1 \
+                RGLB=xxx \
+                RGPL=illumina_100se \
+                RGPU=HWI-ST1395:97:d29b4acxx:8 \
+                RGSM=sample
+            echo "[$smpkey] finished adding/replacing read groups"
+            echo ""
 
-        # RG finished without exiting
-        echo "4" > "$smpout"/progress.txt
-        currProg="4"
+            # RG finished without exiting
+            echo "4" > "$smpout"/progress.txt
+            currProg="4"
     fi 
 
     wait
