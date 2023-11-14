@@ -26,13 +26,12 @@ save_pheatmap_pdf <- function(x, filename, width=7, height=7) {
 #initialize heatmap data container
 go <- NULL
 
-dir <- "/Users/harrlol/Desktop/pantherout"
-
 # Assign all txt files in target dir in a vector
 file_names <- list.files(dir, pattern = ".txt", full.names = TRUE)
 
 # Loop through each txt
 for (fdir in file_names){
+  cat("hi")
   # extracting file name info
   fname <- basename(fdir)
   finfo <- unlist(strsplit(tools::file_path_sans_ext(fname), split = "_", fixed=TRUE))
@@ -44,7 +43,6 @@ for (fdir in file_names){
     clean_names() 
   # separated processing steps ensure that if any row-reducing step returns empty, an error is not raised
   if (nrow(a1)<1) {next}
-  
   # keep only p value < 1 
   a2 <- a1%>%filter(raw_p_value < 1)
   
