@@ -6,7 +6,7 @@
 ## Overview
 - HAMRLINC is a multipurpose toolbox that expedites the analysis pipeline of two algorithms: [HAMR](https://github.com/GregoryLab/HAMR) and [Evolinc](https://github.com/Evolinc/Evolinc-I/tree/master). The former was developed by [Paul Ryvkin et al](https://rnajournal.cshlp.org/content/19/12/1684), and the latter by [Andrew D.L. Nelson et al](https://www.frontiersin.org/articles/10.3389/fgene.2017.00052/full). HAMRLINC aims to make the original methods more accessible by automating the tedious pre-processing steps, and expand on their functionalities with its built-in post-processing steps, allowing users to perform RNA modification prediction with intuitive output formats.
 - HAMRLINC is high-throughput and performs RNA-modification analysis and long intergenic non-coding RNAs(lincRNA) annotation at a bioproject scale. HAMRLINC performs constitutive trimming of acquired reads using Trim-Galore, and makes use of STAR (Tophat option available) as the default aligning tool; mapped reads are pre-processed using selected methods from GATK and samtools.
-- HAMRLINC is optimized for partial parallel processing, and modularization. Specifying a larger thread count where hardware permits will greatly increase the efficiency of a run. If only partial functionality is needed (e.g. Only analyzing modified ribonucleotides), users can implement flags to supress unneeded function modules. See below for more details. 
+- HAMRLINC is optimized for partial parallel processing, and modularization. Specifying a larger thread count where hardware permits will greatly increase the efficiency of a run. If only partial functionality is needed (e.g. Only analyzing modified ribonucleotides), users can implement flags to activate  function modules desired. See below for more details. 
 
 ## Command Line Arguments and Description
 
@@ -25,9 +25,9 @@
 | -a | \[use Tophat2 instead of STAR\] <br> default uses STAR |
 | -b | \[Tophat2 library choice: fr-unstranded, fr-firststrand, fr-secondstrand\] <br> default=fr-firststrand |
 | -f | \[filter\] <br> default=filter_SAM_number_hits.pl |
-| -k | \[suppress modification analysis (left arm)\] |
-| -p | \[suppress lincRNA identification (inner right arm)\] |
-| -u | \[suppress regular featurecount (outer right arm)\] |
+| -k | \[activate modification analysis (left arm)\] |
+| -p | \[activate lincRNA identification (inner right arm)\] |
+| -u | \[activate regular featurecount (outer right arm)\] |
 | -v | \[evolinc option: M or MO\] <br> default=M |
 | -Q | \[HAMR minimum qualuty score: 0-40\] <br> default=30 |
 | -C | \[HAMR minimum coverage: 0-∞\] <br> default=50 |
