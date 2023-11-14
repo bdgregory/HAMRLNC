@@ -1356,8 +1356,8 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
     echo "generating long modification table..."
     # collapse all overlapped data into longdf
     Rscript "$scripts"/concatenate4R.R \
-        "$dir"/lap \
-        "$dir/results"
+        "$out"/lap \
+        "$out/results"
     echo "done"
     echo ""
 
