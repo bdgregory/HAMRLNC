@@ -12,7 +12,10 @@ args=commandArgs(trailingOnly=TRUE)
 # below assumes only primary kept
 fetchhelper <- function(ref,s,p,g,str) {
   # these conditions ensure no duplication will arise 
-  filter(ref, ref$V1 == s & ref$V2 <= p & ref$V3 >= p & grepl(g, ref$V5, fixed = TRUE) & ref$V7 == str)
+  out <- ref%>%
+    filter(V1 == s & V2 <= p & V3 >= p & grepl(g, V5, fixed = TRUE) & V7 == str)
+  
+  return(out)
 }
 
 df <- fread(args[1])
@@ -20,6 +23,14 @@ dir <- dirname(args[1])
 fiveU <- data.frame(fread(args[2]))
 cds <- data.frame(fread(args[3]))
 threeU <- data.frame(fread(args[4]))
+
+#### debug #####
+# df <- fread("/Users/harrlol/Desktop/results/mod_long.csv")
+# dir <- dirname("/Users/harrlol/Desktop/results/mod_long.csv")
+# fiveU <- data.frame(fread("/Users/harrlol/Desktop/bed_files/Arabidopsis_thaliana.TAIR10.57_fiveUTR.bed"))
+# cds <- data.frame(fread("/Users/harrlol/Desktop/bed_files/Arabidopsis_thaliana.TAIR10.57_CDS.bed"))
+# threeU <- data.frame(fread("/Users/harrlol/Desktop/bed_files/Arabidopsis_thaliana.TAIR10.57_threeUTR.bed"))
+#### debug #####
 
 # initialize mod frame
 frame <- NULL

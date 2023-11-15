@@ -31,7 +31,6 @@ file_names <- list.files(dir, pattern = ".txt", full.names = TRUE)
 
 # Loop through each txt
 for (fdir in file_names){
-  cat("hi")
   # extracting file name info
   fname <- basename(fdir)
   finfo <- unlist(strsplit(tools::file_path_sans_ext(fname), split = "_", fixed=TRUE))
