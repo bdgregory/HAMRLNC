@@ -13,7 +13,7 @@ args=commandArgs(trailingOnly=TRUE)
 fetchhelper <- function(ref,s,p,g,str) {
   # these conditions ensure no duplication will arise 
   out <- ref%>%
-    filter(V1 == s & V2 <= p & V3 >= p & grepl(g, V5, fixed = TRUE) & V7 == str)
+    filter(`V1`==s & `V2`<=p & `V3`>=p & grepl(g,`V5`,fixed = TRUE) & `V7`==str)
   
   return(out)
 }

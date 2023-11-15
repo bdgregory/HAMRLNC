@@ -14,14 +14,19 @@ dir <- args[1]
 out <- args[2]
 
 # source: https://stackoverflow.com/questions/43051525/how-to-draw-pheatmap-plot-to-screen-and-also-save-to-file
-save_pheatmap_pdf <- function(x, filename, width=7, height=7) {
+save_pheatmap_png <- function(x, filename, width=7, height=7) {
   stopifnot(!missing(x))
   stopifnot(!missing(filename))
-  pdf(filename, width=width, height=height)
+  png(filename, width=width, height=height, units="in", res=1200)
   grid::grid.newpage()
   grid::grid.draw(x$gtable)
   invisible(dev.off())
 }
+
+##### debug ######
+# dir <- "/Users/harrlol/Desktop/results/go/pantherout"
+# out <- "/Users/harrlol/Desktop/results"
+##### debug ######
 
 #initialize heatmap data container
 go <- NULL
@@ -40,24 +45,36 @@ for (fdir in file_names){
   # wrangling the data in each panther result, prep for joining
   a1 <- read_delim(fdir, skip=2, col_names = T, show_col_types = FALSE) %>%
     clean_names() 
+  
   # separated processing steps ensure that if any row-reducing step returns empty, an error is not raised
   if (nrow(a1)<1) {next}
+  
   # keep only p value < 1 
-  a2 <- a1%>%filter(raw_p_value < 1)
+  a2 <- a1%>%filter(raw_p_value < 0.05)
+  
+  a2%>%arrange(desc(raw_p_value))
   
   if (nrow(a2)<1) {next}
   
+  # keep only fdr < 0.05
+  a3 <- a2%>%filter(fdr<0.05)
+  
+  a3%>%arrange(desc(fdr))
+  
+  if (nrow(a3)<1) {next}
+  
   # transform data to log10 (non-reducing)
-  a3 <- a2%>%mutate(neglog_p_value = -log10(raw_p_value))
+  a4 <- a3%>%mutate(neglog_p_value = -log10(raw_p_value))
   
   # drop unclassified if present
-  if ("unclassified" %in% tolower(a3$term_label)){
-    a4 <- a3[-grep("unclassified", tolower(a3$term_label)),]
+  if ("unclassified" %in% tolower(a4$term_label)){
+    a5 <- a4[-grep("unclassified", tolower(a4$term_label)),]
   }
-  if (nrow(a4)<1) {next}
+  
+  if (nrow(a5)<1) {next}
   
   # convert output table into heatmap vector of just GO term + neglog p value
-  hmap.v <- a4%>%
+  hmap.v <- a5%>%
     mutate(ontology=paste(go_term,term_label, sep=" "))%>%
     select(ontology,neglog_p_value)
   
@@ -83,9 +100,19 @@ if (is.null(go)){
   row.names(d) <- d$ontology
   mt <- as.matrix(d[-1])
   
+  # legend labeling
+  blue.pos <- round(min(mt)) + 1 # prevent out of bound
+  blue.text <- round(min(mt))
+  half.pos <- round(mean(mt))
+  half.text <- round(mean(mt))
+  red.pos <- round(max(mt)) - 1 # prevent out of bound / space for title
+  red.text <- round(max(mt))
+  title.pos <- max(mt)
+  
   #plot heatmap
-  p <- pheatmap(mt, legend_breaks = c(1, 2, 3, 4, max(mt)),
-                main = "", legend_labels = c("1", "2", "3", "4", "-log10(P-value)\n"),
+  p <- pheatmap(mt, legend_breaks = c(blue.pos, half.pos, red.pos, max(mt)),
+                main = "", legend_labels = c(blue.text, half.text, 
+                                             red.text, "-log10(P-value)\n"),
                 legend = TRUE, cluster_cols = FALSE)
-  save_pheatmap_pdf(p, paste0(out, "/GOheatmap_mod.png"), width = 10, height = 8)
+  save_pheatmap_png(p, paste0(out, "/GOheatmap_mod.png"), width = 10, height = 8)
 }
