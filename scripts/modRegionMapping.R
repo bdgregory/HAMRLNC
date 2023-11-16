@@ -49,11 +49,11 @@ for (m in unique(df$mod)) {
       t.mock <- data.frame()
       c.mock <- data.frame()
       # assign actual fetch to five prime
-      f.t <- fiveU[fiveU[,1]==s,]
-      f.te <- f.t[f.t[,2]<=p,]
-      f.tem <- f.te[f.te[,3]>=p,]
-      f.temp <- f.tem[grepl(g,f.tem[,5],fixed = TRUE),]
-      f.mock <- f.temp[f.temp[,7]==str,]
+      f.t <- slice(fiveU,which(fiveU[1]==s))
+      f.te <- slice(f.t,which(f.t[2]<=p))
+      f.tem <- f.te[f.te[3]>=p,]
+      f.temp <- f.tem[grepl(g,f.tem[5],fixed = TRUE),]
+      f.mock <- f.temp[f.temp[7]==str,]
       #f.mock <- filter(fiveU, V1==s & V2<=p & V3>=p & grepl(g,V5,fixed = TRUE) & V7==str)
       drow <- NULL
       # if a mod matched, proceed to obtain rel pos, and avoid running fetchhelper again 
@@ -65,11 +65,11 @@ for (m in unique(df$mod)) {
         drow <- data.frame(m, p.norm, region, smp.grp)
         # if nothing matched, run cds fetch and assign, repeat process
       } else {
-        c.t <- cds[cds[,1]==s,]
-        c.te <- c.t[c.t[,2]<=p,]
-        c.tem <- c.te[c.te[,3]>=p,]
-        c.temp <- c.tem[grepl(g,c.tem[,5],fixed = TRUE),]
-        c.mock <- c.temp[c.temp[,7]==str,]
+        c.t <- cds[cds[1]==s,]
+        c.te <- c.t[c.t[2]<=p,]
+        c.tem <- c.te[c.te[3]>=p,]
+        c.temp <- c.tem[grepl(g,c.tem[5],fixed = TRUE),]
+        c.mock <- c.temp[c.temp[7]==str,]
         }
       if (nrow(c.mock) > 0) {
         # here we add 1000 to move the rel pos into the relative CDS region
@@ -78,11 +78,11 @@ for (m in unique(df$mod)) {
         smp.grp <- smp
         drow <- data.frame(m, p.norm, region, smp.grp)
       } else {
-        t.t <- threeU[threeU[,1]==s,]
-        t.te <- t.t[t.t[,2]<=p,]
-        t.tem <- t.te[t.te[,3]>=p,]
-        t.temp <- t.tem[grepl(g,t.tem[,5],fixed = TRUE),]
-        t.mock <- t.temp[t.temp[,7]==str,]
+        t.t <- threeU[threeU[1]==s,]
+        t.te <- t.t[t.t[2]<=p,]
+        t.tem <- t.te[t.te[3]>=p,]
+        t.temp <- t.tem[grepl(g,t.tem[5],fixed = TRUE),]
+        t.mock <- t.temp[t.temp[7]==str,]
         }
       if (nrow(t.mock) > 0) {
         p.norm <- ((p - t.mock$V2)/(t.mock$V3 - t.mock$V2)*1000)+2000
