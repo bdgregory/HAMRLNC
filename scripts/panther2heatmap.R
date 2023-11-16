@@ -68,13 +68,13 @@ for (fdir in file_names){
   
   # drop unclassified if present
   if ("unclassified" %in% tolower(a4$term_label)){
-    a5 <- a4[-grep("unclassified", tolower(a4$term_label)),]
+    a4 <- a4[-grep("unclassified", tolower(a4$term_label)),]
   }
   
-  if (nrow(a5)<1) {next}
+  if (nrow(a4)<1) {next}
   
   # convert output table into heatmap vector of just GO term + neglog p value
-  hmap.v <- a5%>%
+  hmap.v <- a4%>%
     mutate(ontology=paste(go_term,term_label, sep=" "))%>%
     select(ontology,neglog_p_value)
   
