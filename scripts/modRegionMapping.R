@@ -50,7 +50,7 @@ for (m in unique(df$mod)) {
       c.mock <- data.frame()
       # assign actual fetch to five prime
       f.t <- slice(fiveU,which(fiveU[1]==s))
-      f.te <- slice(f.t,which(f.t[,2]<=p))
+      f.te <- slice(f.t,which(f.t[2]<=p))
       f.tem <- slice(f.te, which(f.te[3]>=p))
       f.temp <- f.tem[grepl(g,f.tem[5],fixed = TRUE),]
       f.mock <- f.temp[f.temp[7]==str,]
