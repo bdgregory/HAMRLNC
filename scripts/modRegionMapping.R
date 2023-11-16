@@ -9,37 +9,35 @@ cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
 
 args=commandArgs(trailingOnly=TRUE)
 
-# below assumes only primary kept
-fetchhelper <- function(ref,s,p,g,str) {
-  # these conditions ensure no duplication will arise 
-  out <- ref%>%
-    filter(`V1`==s & `V2`<=p & `V3`>=p & grepl(g,`V5`,fixed = TRUE) & `V7`==str)
-  
-  return(out)
-}
-
-df <- fread(args[1])
+df <- data.frame(fread(args[1]))
 dir <- dirname(args[1])
 fiveU <- data.frame(fread(args[2]))
 cds <- data.frame(fread(args[3]))
 threeU <- data.frame(fread(args[4]))
 
 #### debug #####
-# df <- fread("/Users/harrlol/Desktop/results/mod_long.csv")
+# df <- data.frame(fread("/Users/harrlol/Desktop/results/mod_long.csv"))
 # dir <- dirname("/Users/harrlol/Desktop/results/mod_long.csv")
 # fiveU <- data.frame(fread("/Users/harrlol/Desktop/bed_files/Arabidopsis_thaliana.TAIR10.57_fiveUTR.bed"))
 # cds <- data.frame(fread("/Users/harrlol/Desktop/bed_files/Arabidopsis_thaliana.TAIR10.57_CDS.bed"))
 # threeU <- data.frame(fread("/Users/harrlol/Desktop/bed_files/Arabidopsis_thaliana.TAIR10.57_threeUTR.bed"))
 #### debug #####
 
+cat(typeof(df), sep = "\n")
+cat(typeof(fiveU), sep = "\n")
+cat(typeof(cds), sep = "\n")
+cat(typeof(threeU), sep = "\n")
+
 # initialize mod frame
 frame <- NULL
 # loop through all possible mod 
 for (m in unique(df$mod)) {
+  cat(m, sep = "\n")
   # proceed by mod
   a <- df%>%filter(lap_type=="gene"&mod==m)
   if (nrow(a)>0) {
     for (i in 1:nrow(a)) {
+      cat(i, sep="\n")
       # extract info from ith row of a
       g <- a[i,]$gene
       p <- a[i,]$pos
@@ -51,7 +49,12 @@ for (m in unique(df$mod)) {
       t.mock <- data.frame()
       c.mock <- data.frame()
       # assign actual fetch to five prime
-      f.mock <- fetchhelper(fiveU,s,p,g,str)
+      f.t <- fiveU[fiveU[1]==s,]
+      f.te <- f.t[f.t[2]<=p,]
+      f.tem <- f.te[f.te[3]>=p,]
+      f.temp <- f.tem[grepl(g,f.tem[5],fixed = TRUE),]
+      f.mock <- f.temp[f.temp[7]==str,]
+      #f.mock <- filter(fiveU, V1==s & V2<=p & V3>=p & grepl(g,V5,fixed = TRUE) & V7==str)
       drow <- NULL
       # if a mod matched, proceed to obtain rel pos, and avoid running fetchhelper again 
       if (nrow(f.mock) > 0) {
@@ -61,14 +64,26 @@ for (m in unique(df$mod)) {
         # records mod type, rel position, and region
         drow <- data.frame(m, p.norm, region, smp.grp)
         # if nothing matched, run cds fetch and assign, repeat process
-      } else {c.mock <- fetchhelper(cds,s,p,g,str)}
+      } else {
+        c.t <- cds[cds[1]==s,]
+        c.te <- c.t[c.t[2]<=p,]
+        c.tem <- c.te[c.te[3]>=p,]
+        c.temp <- c.tem[grepl(g,c.tem[5],fixed = TRUE),]
+        c.mock <- c.temp[c.temp[7]==str,]
+        }
       if (nrow(c.mock) > 0) {
         # here we add 1000 to move the rel pos into the relative CDS region
         p.norm <- ((p - c.mock$V2)/(c.mock$V3 - c.mock$V2)*1000)+1000
         region <- "CDS"
         smp.grp <- smp
         drow <- data.frame(m, p.norm, region, smp.grp)
-      } else {t.mock <- fetchhelper(threeU,s,p,g,str)}
+      } else {
+        t.t <- threeU[threeU[1]==s,]
+        t.te <- t.t[t.t[2]<=p,]
+        t.tem <- t.te[t.te[3]>=p,]
+        t.temp <- t.tem[grepl(g,t.tem[5],fixed = TRUE),]
+        t.mock <- t.temp[t.temp[7]==str,]
+        }
       if (nrow(t.mock) > 0) {
         p.norm <- ((p - t.mock$V2)/(t.mock$V3 - t.mock$V2)*1000)+2000
         region <- "3UTR"
