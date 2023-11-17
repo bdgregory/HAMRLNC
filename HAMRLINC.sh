@@ -406,7 +406,7 @@ fastq2hamr () {
                 echo "[$smpkey] Performing STAR with a single-end file."
                 STAR \
                 --runThreadN "$threads" \
-                --genomeDir "$out"/ref/ \
+                --genomeDir "$out"/STARref/ \
                 --readFilesIn "$smp" \
                 --sjdbOverhang $overhang \
                 --sjdbGTFfile "$annotation" \
@@ -418,7 +418,7 @@ fastq2hamr () {
                 echo "[$smpkey] Performing STAR with a paired-end file."
                 STAR \
                 --runThreadN "$threads" \
-                --genomeDir "$out"/ref/ \
+                --genomeDir "$out"/STARref/ \
                 --readFilesIn "$smp1" "$smp2" \
                 --sjdbOverhang $overhang \
                 --sjdbGTFfile "$annotation" \
@@ -665,7 +665,7 @@ fastq2hamr () {
         gffread \
             "$annotation" \
             -T \
-            -o "$out"/ref/temp.gtf
+            -o "$out"/temp.gtf
     fi    
 
     # run feature count for normal alignment transcript quantification if user didn't suppress
@@ -677,13 +677,13 @@ fastq2hamr () {
             featureCounts \
                 -T "$threads" \
                 -s $fclib \
-                -a "$out"/ref/temp.gtf \
+                -a "$out"/temp.gtf \
                 -o "$smpout"/"$smpname"_alignment_featurecount.txt \
                 "$smpout"/unique.bam
         else
             featureCounts \
                 -T "$threads" \
-                -a "$out"/ref/temp.gtf \
+                -a "$out"/temp.gtf \
                 -o "$smpout"/"$smpname"_alignment_featurecount.txt \
                 "$smpout"/unique.bam
         fi
@@ -833,9 +833,9 @@ consensusOverlap () {
     echo "consensus file prefix: $smpname"
     echo ""
 
-    count=$(ls -1 "$genomedir"/*_CDS.bed 2>/dev/null | wc -l)
+    count=$(ls -1 "$out"/annotBeds/*_CDS.bed 2>/dev/null | wc -l)
     if [ "$count" != 0 ]; then 
-        cds=$(find "$genomedir" -maxdepth 1 -name "*_CDS.bed")
+        cds=$(find "$out"/annotBeds -maxdepth 1 -name "*_CDS.bed")
         #overlap with cds
         intersectBed \
             -a "$cds" \
@@ -845,9 +845,9 @@ consensusOverlap () {
         echo "finished finding overlap with CDS library"
     fi
 
-    count=$(ls -1 "$genomedir"/*_fiveUTR.bed 2>/dev/null | wc -l)
+    count=$(ls -1 "$out"/annotBeds/*_fiveUTR.bed 2>/dev/null | wc -l)
     if [ "$count" != 0 ]; then 
-        fiveutr=$(find "$genomedir" -maxdepth 1 -name "*_fiveUTR.bed")
+        fiveutr=$(find "$out"/annotBeds -maxdepth 1 -name "*_fiveUTR.bed")
         #overlap with 5utr
         intersectBed \
             -a "$fiveutr" \
@@ -857,9 +857,9 @@ consensusOverlap () {
         echo "finished finding overlap with 5UTR library"
     fi
 
-    count=$(ls -1 "$genomedir"/*_threeUTR.bed 2>/dev/null | wc -l)
+    count=$(ls -1 "$out"/annotBeds/*_threeUTR.bed 2>/dev/null | wc -l)
     if [ "$count" != 0  ]; then 
-        threeutr=$(find "$genomedir" -maxdepth 1 -name "*_threeUTR.bed")
+        threeutr=$(find "$out"/annotBeds -maxdepth 1 -name "*_threeUTR.bed")
         #overlap with 3utr
         intersectBed \
             -a "$threeutr" \
@@ -869,9 +869,9 @@ consensusOverlap () {
         echo "finished finding overlap with 3UTR library"
     fi
 
-    count=$(ls -1 "$genomedir"/*_gene.bed 2>/dev/null | wc -l)
+    count=$(ls -1 "$out"/annotBeds/*_gene.bed 2>/dev/null | wc -l)
     if [ "$count" != 0 ]; then 
-        gene=$(find "$genomedir" -maxdepth 1 -name "*_gene.bed")
+        gene=$(find "$out"/annotBeds -maxdepth 1 -name "*_gene.bed")
         #overlap with gene
         intersectBed \
             -a "$gene" \
@@ -881,9 +881,9 @@ consensusOverlap () {
         echo "finished finding overlap with gene library"
     fi
 
-    count=$(ls -1 "$genomedir"/*_primarymRNA.bed 2>/dev/null | wc -l)
+    count=$(ls -1 "$out"/annotBeds/*_primarymRNA.bed 2>/dev/null | wc -l)
     if [ "$count" != 0 ]; then 
-        mrna=$(find "$genomedir" -maxdepth 1 -name "*_primarymRNA.bed")
+        mrna=$(find "$out"/annotBeds -maxdepth 1 -name "*_primarymRNA.bed")
         #overlap with mrna
         intersectBed \
             -a "$mrna" \
@@ -893,9 +893,9 @@ consensusOverlap () {
         echo "finished finding overlap with primary mRNA library"
     fi
 
-    count=$(ls -1 "$genomedir"/*_exon.bed 2>/dev/null | wc -l)
+    count=$(ls -1 "$out"/annotBeds/*_exon.bed 2>/dev/null | wc -l)
     if [ "$count" != 0 ]; then 
-        exon=$(find "$genomedir" -maxdepth 1 -name "*_exon.bed")
+        exon=$(find "$out"/annotBeds -maxdepth 1 -name "*_exon.bed")
         #overlap with exon
         intersectBed \
             -a "$exon" \
@@ -905,9 +905,9 @@ consensusOverlap () {
         echo "finished finding overlap with exon library"
     fi
 
-    count=$(ls -1 "$genomedir"/*_ncRNA.bed 2>/dev/null | wc -l)
+    count=$(ls -1 "$out"/annotBeds/*_ncRNA.bed 2>/dev/null | wc -l)
     if [ "$count" != 0 ]; then 
-        nc=$(find "$genomedir" -maxdepth 1 -name "*_ncRNA.bed")
+        nc=$(find "$out"/annotBeds -maxdepth 1 -name "*_ncRNA.bed")
         #overlap with nc rna
         intersectBed \
             -a "$nc" \
@@ -939,14 +939,13 @@ fqgrabhouse () {
         acc="$user_dir"/accession.txt
     fi
 
-    # relocate user-provided inputs
-    if [ ! -d "$out/ref" ]; then 
-        mkdir "$out/ref"
-        echo "created path: $out/ref"
-        #cp $genome "$out/ref"
-        #genome="$out/ref/$(basename $genome)"
-        #cp $annotation "$out/ref"
-        #annotation="$out/ref/$(basename $annotation)"
+    if [ ! -d "$out/filein" ]; then 
+        mkdir "$out/filein"
+        echo "created path: $out/filein"
+        # keeps a reference for the user inputted required files
+        cp $genome "$out/filein"
+        cp $annotation "$out/filein"
+        cp $csv "$out/filein"
     fi
 
     # Create directory to store trimmed fastq files
@@ -1024,7 +1023,7 @@ fastq2hamrhouse () {
     # Check which mapping software, and check for index
     if [[ "$tophat" = false ]]; then  
     # Check if indexed files already present for STAR
-        if [ -e "$out/ref/SAindex" ]; then
+        if [ -e "$out/STARref/SAindex" ]; then
             echo "STAR Genome Directory with indexed genome detected, skipping STAR indexing"
         else
             # Now, do the indexing step
@@ -1036,7 +1035,7 @@ fastq2hamrhouse () {
             STAR \
                 --runThreadN $threads \
                 --runMode genomeGenerate \
-                --genomeDir "$out"/ref \
+                --genomeDir "$out"/STARref \
                 --genomeFastaFiles "$genome" \
                 --sjdbGTFfile "$annotation" \
                 --sjdbGTFtagExonParentTranscript Parent \
@@ -1300,7 +1299,7 @@ fi
 # run overlap when checkpoint agrees
 if [ "$last_checkpoint" = "checkpoint3" ]; then 
     ##############overlapping begins##############
-    # Produce overlap bam files with the provided annotation library folders and store in ~/lap
+    # Produce overlap bam files with the provided annotation library folder and store in ~/lap
     if [ ! -d "$out/lap" ]; then mkdir "$out"/lap; echo "created path: $out/lap"; fi
 
     # Run a series of command checks to ensure consensusOverlap can run smoothly
@@ -1309,12 +1308,16 @@ if [ "$last_checkpoint" = "checkpoint3" ]; then
         exit 1
     fi
 
+    # annot bed target directory
+    if [ ! -d "$out/annotBeds" ]; then mkdir "$out"/annotBeds; echo "created path: $out/annotBeds"; fi
+
     # checks if genomedir is populated with generated annotation files, if not, hamrbox can't run anymore, exit
-    count=$(ls -1 "$genomedir"/*.bed 2>/dev/null | wc -l)
+    count=$(ls -1 "$out/annotBeds"/*.bed 2>/dev/null | wc -l)
     if [ "$count" == 0 ]; then 
         if [[ -e "$generator" ]]; then
             echo "generating annotations for overlap..."
-            Rscript "$generator" "$annotation"
+            # 11/17 redirect annotation generate output to out/annotBeds, second arg added
+            Rscript "$generator" "$annotation" "$out/annotBeds"
         else
             echo "#########NOTICE###########"
             echo "##########No annotation generator or annotation files found, please check your supplied arguments##########"
@@ -1368,7 +1371,7 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
     # overview of modification proportion
     Rscript "$scripts"/countPerGroup.R \
         "$dir"/mod_long.csv \
-        "$genomedir" \
+        "$out"/annotBeds \
         "$dir"
     echo "done"
     echo ""
@@ -1377,7 +1380,7 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
     # overview of modification proportion
     Rscript "$scripts"/countPerMod.R \
         "$dir"/mod_long.csv \
-        "$genomedir" \
+        "$out"/annotBeds \
         "$dir"
     echo "done"
     echo ""
@@ -1489,10 +1492,10 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
     echo "done"
     echo ""
 
-    if [ -e "$genomedir"/*_CDS.bed ] && [ -e "$genomedir"/*_fiveUTR.bed ] && [ -e "$genomedir"/*_threeUTR.bed ]; then
-        c=$(find "$genomedir" -type f -name "*_CDS.bed")
-        f=$(find "$genomedir" -type f -name "*_fiveUTR.bed")
-        t=$(find "$genomedir" -type f -name "*_threeUTR.bed")
+    if [ -e "$out"/annotBeds/*_CDS.bed ] && [ -e "$out"/annotBeds/*_fiveUTR.bed ] && [ -e "$out"/annotBeds/*_threeUTR.bed ]; then
+        c=$(find "$out"/annotBeds -type f -name "*_CDS.bed")
+        f=$(find "$out"/annotBeds -type f -name "*_fiveUTR.bed")
+        t=$(find "$out"/annotBeds -type f -name "*_threeUTR.bed")
         echo "mapping modification regional distribution landscape..."
         echo "Using $c for cds annotation, $f for 5UTR annotation, and $t for 3UTR annotation"
         # improved region mapping
