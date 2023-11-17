@@ -33,12 +33,16 @@ suppressWarnings(for (i in (1:nrow(g))) {
 })
 
 # Creating ggplot of RNA subtype visualization
-tb%>%
-  ggplot(aes(x=group, y=count))+
-  geom_col(aes(fill=bio), position = "stack")+
-  labs(title="HAMR Predicted Modification Broken Down by RNA Subtype", fill="Subtypes")+
-  xlab("Sample Group")+
-  ylab("Raw Mod Count")+
-  scale_fill_manual(values=cbPalette)
+subviz <- function(indf) {
+  indf%>%
+    ggplot(aes(x=group, y=count))+
+    geom_col(aes(fill=bio), position = "stack")+
+    labs(title="HAMR Predicted Modification Broken Down by RNA Subtype", fill="Subtypes")+
+    xlab("Sample Group")+
+    ylab("Raw Mod Count")+
+    scale_fill_manual(values=cbPalette)
+}
 
+# trying to eliminate pdf
+subviz(tb)
 ggsave(paste0(dir,"/RNAsubtype.png"), width = 10, height = 8, units = "in")
