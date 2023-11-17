@@ -1408,13 +1408,6 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
     #     echo ""
     # fi
 
-    echo "classifying modified RNA subtype..."
-    # looking at RNA subtype for mods
-    Rscript "$scripts"/RNAtype.R \
-        "$dir"/mod_long.csv
-    echo "done"
-    echo ""
-
     if [ ! -d "$dir/go" ]; then mkdir "$dir"/go; echo "created path: $dir/go"; fi
 
     if [ ! -d "$dir/go/genelists" ]; then mkdir "$dir"/go/genelists; echo "created path: $dir/go/genelists"; fi
