@@ -12,6 +12,10 @@ args=commandArgs(trailingOnly=TRUE)
 df <- fread(args[1])
 dir <- dirname(args[1])
 
+# debugging
+# df <- fread("/Users/harrlol/Desktop/HAMRLINC_test/test_short/results/mod_long.csv")
+# dir <- dirname("/Users/harrlol/Desktop/HAMRLINC_test/test_short/results/mod_long.csv")
+
 a <- unique(df$genotype)
 b <- unique(df$seq_tech)
 g <- expand.grid(a,b)
@@ -44,5 +48,6 @@ subviz <- function(indf) {
 }
 
 # trying to eliminate pdf
+pdf(NULL)
 subviz(tb)
 ggsave(paste0(dir,"/RNAsubtype.png"), width = 10, height = 8, units = "in")
