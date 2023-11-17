@@ -117,7 +117,7 @@ tryPrimary <- function(gffframe, type) {
 # some variables
 # fpath and fname is functionally reversed but oh well
 fpath <- args[1]
-fname <- basename(fpath)
+fname <- tools::file_path_sans_ext(basename(fpath))
 outdir <- args[2]
 gff <- gffRead(fpath)
 allFeatures <- rownames(table(gff$feature))
