@@ -117,7 +117,8 @@ tryPrimary <- function(gffframe, type) {
 # some variables
 # fpath and fname is functionally reversed but oh well
 fpath <- args[1]
-fname <- args[2]
+fname <- basename(fpath)
+outdir <- args[2]
 gff <- gffRead(fpath)
 allFeatures <- rownames(table(gff$feature))
 
@@ -139,7 +140,7 @@ if ("ncRNA_gene" %in% allFeatures) {
     na.omit()
   ncrna <- ncrna[!duplicated(ncrna$Name),]
   
-  write.table(ncrna, paste(fname, "_ncRNA.bed", sep=""), sep='\t', row.names=F, col.names=F, quote=F)
+  write.table(ncrna, paste(outdir,"/", fname, "_ncRNA.bed", sep=""), sep='\t', row.names=F, col.names=F, quote=F)
 } else {
   cat("ncRNA information not available, skipping...")
 }
@@ -153,7 +154,7 @@ if ("gene" %in% allFeatures) {
     mutate(Name=sapply(strsplit(ID, ":"), function(l) l[2])) %>%
     select(c('seqname','start','end','bio','Name','score','strand'))
   
-  write.table(gene, paste(fname, "_gene.bed", sep=""), sep='\t', row.names=F, col.names=F, quote=F)
+  write.table(gene, paste(outdir,"/", fname, "_gene.bed", sep=""), sep='\t', row.names=F, col.names=F, quote=F)
 } else {
   cat("gene information not available, skipping...")
 }
@@ -166,7 +167,7 @@ if ("mRNA" %in% allFeatures) {
   mRNA <- subset(gff, gff$feature == target)
   mRNA <- tryPrimary(mRNA, target)
   
-  write.table(mRNA, paste(fname, "_primarymRNA.bed", sep=""), sep='\t', row.names=F, col.names=F, quote=F)
+  write.table(mRNA, paste(outdir,"/", fname, "_primarymRNA.bed", sep=""), sep='\t', row.names=F, col.names=F, quote=F)
   } else {
   cat("mRNA information not available, skipping... \n")
   }
@@ -199,7 +200,7 @@ if ("exon" %in% allFeatures) {
   exon <- subset(gff, gff$feature == target) 
   exon <- tryPrimary(exon, target)
   
-  write.table(exon, paste(fname, "_exon.bed", sep=""), sep='\t', row.names=F, col.names=F, quote=F)
+  write.table(exon, paste(outdir,"/", fname, "_exon.bed", sep=""), sep='\t', row.names=F, col.names=F, quote=F)
 } else {
   cat("exon information not available, skipping...")
 }
@@ -211,7 +212,7 @@ if ("CDS" %in% allFeatures) {
   cds <- subset(gff, feature == target)
   cds <- tryPrimary(cds, target)
   
-  write.table(cds, paste(fname, "_CDS.bed", sep=""), sep='\t', row.names=F, col.names=F, quote=F)
+  write.table(cds, paste(outdir,"/", fname, "_CDS.bed", sep=""), sep='\t', row.names=F, col.names=F, quote=F)
 } else {
   cat("CDS information not available, skipping...")
 }
@@ -223,7 +224,7 @@ if ("five_prime_UTR" %in% allFeatures) {
   utr_5 <- subset(gff, feature == target)
   utr_5 <- tryPrimary(utr_5, target)
   
-  write.table(utr_5, paste(fname, "_fiveUTR.bed", sep=""), sep='\t', row.names=F, col.names=F, quote=F)
+  write.table(utr_5, paste(outdir,"/", fname, "_fiveUTR.bed", sep=""), sep='\t', row.names=F, col.names=F, quote=F)
 } else {
   cat("5' UTR information not available, skipping...")
 }
@@ -235,7 +236,7 @@ if ("three_prime_UTR" %in% allFeatures) {
   utr_3 <- subset(gff, feature == target)
   utr_3 <- tryPrimary(utr_3, target)
   
-  write.table(utr_3, paste(fname, "_threeUTR.bed", sep=""), sep='\t', row.names=F, col.names=F, quote=F)
+  write.table(utr_3, paste(outdir,"/", fname, "_threeUTR.bed", sep=""), sep='\t', row.names=F, col.names=F, quote=F)
 } else {
   cat("3' UTR information not available, skipping...")
 }
