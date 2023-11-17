@@ -1484,6 +1484,8 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
                 "$dir"
         fi
     fi
+    echo "done"
+    echo ""
 
     echo "classifying modified RNA subtype..."
     # looking at RNA subtype for mods
@@ -1497,7 +1499,6 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
         f=$(find "$out"/annotBeds -type f -name "*_fiveUTR.bed")
         t=$(find "$out"/annotBeds -type f -name "*_threeUTR.bed")
         echo "mapping modification regional distribution landscape..."
-        echo "Using $c for cds annotation, $f for 5UTR annotation, and $t for 3UTR annotation"
         # improved region mapping
         Rscript "$scripts"/modRegionMapping.R \
             "$dir"/mod_long.csv \
