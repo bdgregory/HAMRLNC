@@ -1494,7 +1494,8 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
         f=$(find "$genomedir" -type f -name "*_fiveUTR.bed")
         t=$(find "$genomedir" -type f -name "*_threeUTR.bed")
         echo "mapping modification regional distribution landscape..."
-        # looking at RNA subtype for mods
+        echo "Using $c for cds annotation, $f for 5UTR annotation, and $t for 3UTR annotation"
+        # improved region mapping
         Rscript "$scripts"/modRegionMapping.R \
             "$dir"/mod_long.csv \
             "$f" \
