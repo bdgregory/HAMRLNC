@@ -406,7 +406,7 @@ fastq2hamr () {
                 echo "[$smpkey] Performing STAR with a single-end file."
                 STAR \
                 --runThreadN "$threads" \
-                --genomeDir "$out"/STARref/ \
+                --genomeDir "$out"/STARref \
                 --readFilesIn "$smp" \
                 --sjdbOverhang $overhang \
                 --sjdbGTFfile "$annotation" \
@@ -418,7 +418,7 @@ fastq2hamr () {
                 echo "[$smpkey] Performing STAR with a paired-end file."
                 STAR \
                 --runThreadN "$threads" \
-                --genomeDir "$out"/STARref/ \
+                --genomeDir "$out"/STARref \
                 --readFilesIn "$smp1" "$smp2" \
                 --sjdbOverhang $overhang \
                 --sjdbGTFfile "$annotation" \
