@@ -32,7 +32,7 @@ cat <<'EOF'
     -u  [activate featurecount]
     -v  [evolinc_i_option: M or MO, default=M]
     -Q	[HAMR: minimum qualuty score, default=30]
-    -C	[HAMR: minimum coveragem default=50]
+    -C	[HAMR: minimum coverage default=10]
     -E	[HAMR: sequencing error, default=0.01]
     -P	[HAMR: maximum p-value, default=1]
     -F	[HAMR: maximum fdr, default=0.05]
@@ -55,7 +55,7 @@ EOF
 threads=4
 tophat=false
 quality=30
-coverage=50
+coverage=10
 err=0.01
 pvalue=1
 fdr=0.05
@@ -75,7 +75,7 @@ ptest=""
 pcorrect=""
 
 #############Grabbing arguments############
-while getopts ":o:c:g:i:z:l:d:b:v:s:n:fmhQCakTGDOAYRupEPF:" opt; do
+while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQCakTGDupEPF:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -501,7 +501,7 @@ fastq2hamr () {
 
     if [[ $currProg == "2" ]]; then
         #filter the accepted hits by uniqueness
-        echo "[$smpkey] filter unique..."
+        echo "[$smpkey] filtering uniquely mapped reads..."
         samtools view \
             -h "$smpout"/sort_accepted.bam \
             | perl "$filter" 1 \
@@ -720,6 +720,7 @@ fastq2hamr () {
             # RG finished without exiting
             echo "4" > "$smpout"/progress.txt
             currProg="4"
+            fi
     fi 
 
     wait
@@ -818,7 +819,6 @@ fastq2hamr () {
         echo "[$smpkey] finished cleaning"
         
         echo "9" > "$smpout"/progress.txt
-    fi
     fi
     fi
 }
@@ -1354,7 +1354,7 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
     echo ""
     #######################################begins EXTRACT######################################
     if [ ! -d "$out/results" ]; then mkdir "$out"/results; echo "created path: $out/results"; fi
-
+    dir="$out/results"
 
     echo "generating long modification table..."
     # collapse all overlapped data into longdf
@@ -1365,7 +1365,6 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
     echo ""
 
     # note mod_long.csv is now in dir/results, update
-    dir="$out/results"
 
     echo "plotting modification abundance per sample group..."
     # overview of modification proportion
