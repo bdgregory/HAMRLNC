@@ -44,13 +44,12 @@
 | -m | \[HAMR model\] <br> default=euk_trna_mods.Rdata |
 | -h | \[help message\]|
 
-Required dependencies
---------------------
-1. Linux-based computer, server, or cluster.
-2. [Docker](https://docs.docker.com/engine/install/)
-
 Running HAMRLINC
 -----------------------
+
+### Required dependencies
+1. Linux-based computer, server, or cluster.
+2. [Docker](https://docs.docker.com/engine/install/)
 
 ```
 #pull HAMRLINC docker image:  
