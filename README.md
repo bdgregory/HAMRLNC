@@ -13,7 +13,7 @@
 | Command | Description |
 | :---: | :---: |
 | Required |
-| -o | \<project directory\> <br> where you want your entire hamr project to be |
+| -o | \<pipeline output directory\> <br> name of the directory where you would like your hamrlinc run to be |
 | -c | \<filenames for each fastq.csv\> <br> a csv file that corresponds each srr code (or name of fastq file) to your desired nomenclature for each read |
 | -g | \<reference genome.fa> <br> a fasta file of the genome of the model organism |
 | -i | \<reference genome annotation.gff3> <br> a gff3 file of the genome of the model organism, note we require gff3 instead of gtf |
