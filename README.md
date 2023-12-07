@@ -75,6 +75,10 @@ gunzip Arabidopsis_thaliana.TAIR10.57.gff3.gz
 docker run --rm -v $(pwd):/working-dir -w /working-dir chosenobih/hamrlinc:v0.3 -o hamrlinc_test -c /demo/PRJNA478205.csv -g Arabidopsis_thaliana.TAIR10.dna.toplevel.fa -i Arabidopsis_thaliana.TAIR10.57.gff3 -l 50 -s 135000000 -n 8 -k
 ```
 
+Running HAMRLINC as an application on CyVerse's Discovery Environment
+---------------------------------------------------------------------
+HAMRLINC has been integrated as an app on [CyVerse's Discovery Environment (DE)](https://de.cyverse.org/), and it is available for use by researchers. Search for “HAMRLINC" and then select the 1.0.0 version. A short tutorial on how to run the app is available at this [CyVerse wiki](https://cyverse.atlassian.net/wiki/spaces/DEapps/pages/1819639809/HAMRLINC+v1.0). CyVerse's DE provides an easy-to-use graphic user interphase for running several Life Sciences computational pipelines.
+
 Step-by-step walkthrough
 ------------------------
 For more detailed documentation and step-by-step tutorial for running HAMRLINC using docker, please visit [HAMRLINC Documentation page](https://chosenobih.github.io/hamrlinc_docs/)
