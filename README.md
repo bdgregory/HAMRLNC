@@ -50,6 +50,7 @@ Running HAMRLINC
 ### Required dependencies
 1. Linux-based computer, server, or cluster.
 2. [Docker](https://docs.docker.com/engine/install/)
+3. Minimum memory of 32 GB and minimum disk space of 120 GB. 
 
 ```
 #pull HAMRLINC docker image:  
