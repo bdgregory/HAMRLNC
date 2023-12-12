@@ -2,6 +2,7 @@ library(ggplot2, warn.conflicts = FALSE)
 library(dplyr, warn.conflicts = FALSE)
 library(data.table, warn.conflicts = FALSE)
 library(stringr, warn.conflicts = FALSE)
+library(envalysis, warn.conflicts = FALSE)
 options(dplyr.summarise.inform = FALSE)
 options(ggplot2.geom_density.inform = FALSE)
 
@@ -44,10 +45,12 @@ subviz <- function(indf) {
     labs(title="HAMR Predicted Modification Broken Down by RNA Subtype", fill="Subtypes")+
     xlab("Sample Group")+
     ylab("Raw Mod Count")+
-    scale_fill_manual(values=cbPalette)
+    scale_fill_manual(values=cbPalette)+
+    theme_bw()+
+    theme(text = element_text(size=15))
 }
 
 # trying to eliminate pdf
 pdf(NULL)
 subviz(tb)
-ggsave(paste0(dir,"/RNAsubtype.png"), width = 10, height = 8, units = "in")
+ggsave(paste0(dir,"/RNAsubtype.png"), width = 12, height = 8, units = "in")

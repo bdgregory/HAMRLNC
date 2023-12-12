@@ -3,6 +3,7 @@ library(tidyr, warn.conflicts = FALSE)
 library(dplyr, warn.conflicts = FALSE)
 library(reshape2, warn.conflicts = FALSE)
 library(ggplot2, warn.conflicts = FALSE)
+library(envalysis, warn.conflicts = FALSE)
 options(ggplot2.geom_density.inform = FALSE)
 options(dplyr.summarise.inform = FALSE)
 cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
@@ -98,13 +99,14 @@ if (!is.null(frame)) {
     xlab("Modification Type")+
     ylab("Count")+
     theme_bw()+
+    theme(text = element_text(size=15))
     guides(fill=guide_legend(title="Region"))+
     scale_fill_manual(values=cbPalette)+
     facet_wrap(~smp.grp)+
     scale_x_discrete(labels = abbreviate)
   
   suppressWarnings(print(p1))
-  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_bar.png"), width = 10, height = 8, units = "in"))
+  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_bar.png"), width = 12, height = 8, units = "in"))
   
   # creates the rel pos gene map
   p2 <- frame%>%
@@ -117,13 +119,14 @@ if (!is.null(frame)) {
          caption = paste("Each 5'UTR, CDS, 3'UTR region is normalized out of 1000 \n for each transcript with a modification predicted. \n" ,
                          "5'UTR: 0-1000 | CDS: 1000-2000 | 3'UTR: 2000-3000"))+
     theme_bw()+
+    theme(text = element_text(size=15))
     xlab("Gene Position")+
     ylab("Density")+
     guides(color=guide_legend(title="Modification Type"))+
     scale_color_manual(values=cbPalette)
   
   suppressWarnings(print(p2))
-  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_map_sep.png"), width = 10, height = 8, units = "in"))
+  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_map_sep.png"), width = 12, height = 8, units = "in"))
   
   p3 <- frame%>%
     ggplot(aes(p.norm))+
@@ -135,13 +138,14 @@ if (!is.null(frame)) {
          caption = paste("Each 5'UTR, CDS, 3'UTR region is normalized out of 1000 \n for each transcript with a modification predicted. \n" ,
                          "5'UTR: 0-1000 | CDS: 1000-2000 | 3'UTR: 2000-3000"))+
     theme_bw()+
+    theme(text = element_text(size=15))
     xlab("Gene Position")+
     ylab("Density")+
     guides(color=guide_legend(title="Modification Type"))+
     scale_color_manual(values=cbPalette)
   
   suppressWarnings(print(p3))
-  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_map_tot.png"), width = 10, height = 8, units = "in"))
+  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_map_tot.png"), width = 12, height = 8, units = "in"))
 } else {
   cat("No region information can be extracted. Exiting... \n")
 }
