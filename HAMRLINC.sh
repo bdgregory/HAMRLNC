@@ -328,16 +328,24 @@ fastq2hamr () {
         # Paired end recognized
         det=0
         echo "$smpext is a part of a paired-end sequencing file"
+        echo ""
     elif [[ $smpkey == *_2* ]]; then
         # If _2 is in the filename, this file was processed along with its corresponding _1 so we skip
         echo "$smpext has already been processed with its _1 counter part. Skipped."
         echo ""
+        ################
+        echo "current sample is $smp"
+        ###############
         exit 1
     else
         det=1
         echo "$smpext is a single-end sequencing file"
         echo ""
     fi
+
+    ###########################
+    echo "$smp proceeded from _2 check 1"
+    ###########################
 
     # Read the CSV file into a DataFrame
     mapfile -t names < <(awk -F, '{ print $1 }' "$csv")
@@ -353,15 +361,26 @@ fastq2hamr () {
         smpkey="${smpkey%_trimmed*}"
     fi
 
+    ###########################
+    echo "$smp proceeded from _2 check 2"
+    ###########################
+
     # Retrieve the translated value
     if [[ ${dictionary[$smpkey]+_} ]]; then
         smpname="${dictionary[$smpkey]}"
         smpname="${smpname//$'\r'}"
         echo "[$smpkey] Sample group name found: $smpname"
     else
+        ###########################
+        echo "$smp broke into csv reading" 
+        ##########################
         echo "[$smpkey] Could not locate sample group name, exiting..."
         exit 1
     fi
+
+    #############################
+    echo "$smp still going" 
+    ############################
 
     # Reassign / declare pipeline file directory
     if [ ! -d "$out/pipeline/$smpkey""_temp" ]; then
