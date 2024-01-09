@@ -195,10 +195,6 @@ ADD util /util/
 RUN chmod +x /util/*.pl && cp -r /util/ $BINPATH
 ENV util /util
 
-ADD exechamr /hamr.py
-RUN chmod +x /hamr.py
-ENV exechamr /hamr.py
-
 # Setting paths to all the softwares
 ENV PATH /evolinc_docker/TransDecoder-2.0.1/:$PATH
 ENV PATH /evolinc_docker/ncbi-blast-2.4.0+/bin/:$PATH
