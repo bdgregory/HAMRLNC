@@ -43,6 +43,7 @@ cat <<'EOF'
     -T  <transposable Elements file> (optional file for evolinc_i)
     -G  <CAGE RNA file> (optional file for evolinc_i)
     -D  <known lincRNA file> (optional file for evolinc_i)
+    -S  [optional path for hamr.py]
     -h	[help message] 
 
 
@@ -68,6 +69,7 @@ generator="$scripts"/annotationGenerateUnified.R
 evolinc_i=false
 featurecount=false
 hamrbox=false
+exechamr="/HAMR/hamr.py"
 fastq_in=""
 porg=""
 pterm=""
@@ -75,7 +77,7 @@ ptest=""
 pcorrect=""
 
 #############Grabbing arguments############
-while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQCakTGDupEPF:" opt; do
+while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQCakTGDupEPSF:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -157,6 +159,9 @@ while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQCakTGDupEPF:" opt; do
     ;;
     P)
     pvalue=$OPTARG
+    ;;
+    S)
+    exechamr=$OPTARG
     ;;
     F)
     fdr=$OPTARG
@@ -776,7 +781,7 @@ fastq2hamr () {
         #hamr step, can take ~1hr
         echo "[$smpkey] hamr..."
         #hamr_path=$(which hamr.py) 
-        python /HAMR/hamr.py \
+        python $exechamr \
             -fe "$smpout"/unique_RG_ordered_splitN.resort.bam "$genome" "$model" "$smpout" $smpname $quality $coverage $err H4 $pvalue $fdr .05
         wait
 
