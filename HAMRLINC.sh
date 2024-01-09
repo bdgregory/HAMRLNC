@@ -77,7 +77,7 @@ ptest=""
 pcorrect=""
 
 #############Grabbing arguments############
-while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQCakTGDupEPSF:" opt; do
+while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQCakTGDupEPS:F:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
