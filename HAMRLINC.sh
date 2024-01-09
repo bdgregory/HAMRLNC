@@ -161,7 +161,7 @@ while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQCakTGDupEPSF:" opt; do
     pvalue=$OPTARG
     ;;
     S)
-    exechamr=$OPTARG
+    exechamr="$OPTARG"
     ;;
     F)
     fdr=$OPTARG
