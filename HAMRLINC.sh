@@ -314,35 +314,6 @@ fastq2hamr () {
         fclib=0
     fi
 
-    smpext=$(basename "$smp")
-    smpdir=$(dirname "$smp")
-    smpkey="${smpext%.*}"
-    smpname=""
-    original_ext="${smpext##*.}"
-
-    # always run the below to ensure necessary variables are assigned
-    if [[ $smpkey == *_1* ]]; then
-        smpkey="${smpkey%_1*}"
-        smp1="$smpdir/${smpkey}_1_trimmed.$original_ext"
-        smp2="$smpdir/${smpkey}_2_trimmed.$original_ext"
-        # Paired end recognized
-        det=0
-        echo "$smpext is a part of a paired-end sequencing file"
-        echo ""
-    elif [[ $smpkey == *_2* ]]; then
-        # If _2 is in the filename, this file was processed along with its corresponding _1 so we skip
-        echo "$smpext has already been processed with its _1 counter part. Skipped."
-        echo ""
-        ################
-        echo "current sample is $smp"
-        ###############
-        exit 1
-    else
-        det=1
-        echo "$smpext is a single-end sequencing file"
-        echo ""
-    fi
-
     ###########################
     echo "$smp proceeded from _2 check 1"
     ###########################
@@ -1208,8 +1179,33 @@ if [ "$last_checkpoint" = "checkpoint1" ]; then
     i=0
     ttop=$((threads/2))
     for smp in "$hamrin"/*."$suf"
-    do ((i=i%ttop)); ((i++==0)) && wait
-    fastq2hamr #&& mv "$trimmed_temp"/*".$suf" "$hamrin"/ && rm -r trimmed_temp &
+    do ((i=i%ttop)); ((i++==0)) && wait   
+        smpext=$(basename "$smp")
+        smpdir=$(dirname "$smp")
+        smpkey="${smpext%.*}"
+        smpname=""
+        original_ext="${smpext##*.}"
+
+        # always run the below to ensure necessary variables are assigned
+        if [[ $smpkey == *_1* ]]; then
+            smpkey="${smpkey%_1*}"
+            smp1="$smpdir/${smpkey}_1_trimmed.$original_ext"
+            smp2="$smpdir/${smpkey}_2_trimmed.$original_ext"
+            # Paired end recognized
+            det=0
+            echo "$smpext is a part of a paired-end sequencing file"
+            echo ""
+            fastq2hamr
+        elif [[ $smpkey == *_2* ]]; then
+            # If _2 is in the filename, this file was processed along with its corresponding _1 so we skip
+            echo "$smpext has already been processed with its _1 counter part. Skipped."
+            echo ""
+        else
+            det=1
+            echo "$smpext is a single-end sequencing file"
+            echo ""
+            fastq2hamr
+        fi
     done
 
     if [[ "$hamrbox" = false ]]; then
