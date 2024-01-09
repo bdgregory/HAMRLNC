@@ -43,6 +43,7 @@
 | -D | \</path/to/known_lincRNA_file\> <br> Only required under evolinc MO option |
 | -m | \[HAMR model\] <br> default=euk_trna_mods.Rdata |
 | -h | \[help message\]|
+| -S | \[path to hamr.py for internal testing and server usage\] <br> default=/HAMR/hamr.py |
 
 Running HAMRLINC
 -----------------------
