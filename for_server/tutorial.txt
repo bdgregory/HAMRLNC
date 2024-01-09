@@ -1,0 +1,51 @@
+# instruction for server usage HAMRLINC tryout
+# the below applies to a server @cloud-compute.com (pseudo domain)
+# with the username smolbiologist (pseudo name)
+
+# the below two steps need to be executed as your computer user (not logged into ssh)
+# move the yml file from your local computer to the server
+scp /dir/to/hamrlinc.yml smolbiologist@cloud-compute.com:/smolbiologist   # you will be asked to type in password for your server account
+# move the csv file from your local computer to the server
+scp /dir/to/PRJNA478205.csv smolbiologist@cloud-compute.com:/smolbiologist
+
+# everything below here needs to be executed from ssh 
+# create a local conda environment
+cd /smolbiologist
+conda env create -f hamrlinc.yml      # this will take ~10min
+conda activate hamrlinc
+cd
+
+# create a working directory for this tryout project
+mkdir /smolbiologist/tryout
+
+# clone the github repo to your folder
+cd /smolbiologist
+git clone https://github.com/harrlol/HAMRLINC.git
+git clone https://github.com/harrlol/HAMR.git
+wget https://github.com/broadinstitute/gatk/releases/download/4.3.0.0/gatk-4.3.0.0.zip
+unzip gatk-4.3.0.0.zip
+cd
+
+# download genome and annotation files to your working directory
+wget https://ftp.ensemblgenomes.ebi.ac.uk/pub/plants/release-57/fasta/arabidopsis_thaliana/dna/Arabidopsis_thaliana.TAIR10.dna.toplevel.fa.gz -P /smolbiologist/tryout
+gunzip /smolbiologist/tryout/Arabidopsis_thaliana.TAIR10.dna.toplevel.fa.gz
+wget https://ftp.ensemblgenomes.ebi.ac.uk/pub/plants/release-57/gff3/arabidopsis_thaliana/Arabidopsis_thaliana.TAIR10.57.gff3.gz -P /smolbiologist/tryout
+gunzip /smolbiologist/tryout/Arabidopsis_thaliana.TAIR10.57.gff3.gz
+
+# run the below to initialize environment for hamrlinc
+export util="/smolbiologist/HAMRLINC/util"
+export scripts="/smolbiologist/HAMRLINC/scripts"
+export PATH="/smolbiologist/gatk-4.3.0.0/:$PATH"
+
+# call hamrlinc
+cd /smolbiologist/tryout
+/smolbiologist/HAMRLINC/HAMRLINC.sh \
+    -o test \
+    -c PRJNA478205.csv \
+    -g Arabidopsis_thaliana.TAIR10.dna.toplevel.fa \
+    -i Arabidopsis_thaliana.TAIR10.57.gff3 \
+    -l 50 -s 135000000 -n 10 -k \
+    -S /smolbiologist/HAMR/hamr.py
+
+# the run should take upwards of 5 hours, 1 hour should suffice
+# the output (png files) should be in your tryout folder
