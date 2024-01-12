@@ -118,9 +118,11 @@ if (!is.null(frame)) {
          caption = paste("Each 5'UTR, CDS, 3'UTR region is normalized out of 1000 \n for each transcript with a modification predicted. \n" ,
                          "5'UTR: 0-1000 | CDS: 1000-2000 | 3'UTR: 2000-3000"))+
     theme_bw()+
-    theme(text = element_text(size=15))
+    theme(text = element_text(size=15),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank(),
+          axis.title.y = element_blank())+
     xlab("Gene Position")+
-    ylab("Density")+
     guides(color=guide_legend(title="Modification Type"))+
     scale_color_manual(values=cbPalette)
   
@@ -137,9 +139,11 @@ if (!is.null(frame)) {
          caption = paste("Each 5'UTR, CDS, 3'UTR region is normalized out of 1000 \n for each transcript with a modification predicted. \n" ,
                          "5'UTR: 0-1000 | CDS: 1000-2000 | 3'UTR: 2000-3000"))+
     theme_bw()+
-    theme(text = element_text(size=15))
+    theme(text = element_text(size=15),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank(),
+          axis.title.y = element_blank())+
     xlab("Gene Position")+
-    ylab("Density")+
     guides(color=guide_legend(title="Modification Type"))+
     scale_color_manual(values=cbPalette)
   
