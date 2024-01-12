@@ -23,7 +23,7 @@ Read the [doc](https://chosenobih.github.io/hamrlinc_docs/Tutorial/) for detaile
 | -s | \<genome size in bp\> <br> an integer, the number of base pairs of the genome of this model organism |
 | Optional |
 | -n | \[number of threads\] <br> default=4 |
-| -d | \[raw fastq folder\] <br> a path to a folder containing raw fastq files if needed, in such case, -c csv should have each fastq file as key
+| -d | \[raw fastq folder\] <br> a path to a folder containing raw fastq files if needed
 | -a | \[use Tophat2 instead of STAR\] <br> default uses STAR |
 | -b | \[Tophat2 library choice: fr-unstranded, fr-firststrand, fr-secondstrand\] <br> default=fr-firststrand |
 | -x | \[Genome index directory for tophat2 by user input]\ <br> default=None|
