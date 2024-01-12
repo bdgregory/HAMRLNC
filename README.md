@@ -47,7 +47,7 @@ Read the [doc](https://chosenobih.github.io/hamrlinc_docs/Tutorial/) for detaile
 | -m | \[HAMR model\] <br> default=euk_trna_mods.Rdata |
 | -h | \[help message\]|
 | -S | \[path to hamr.py for internal testing and server usage\] <br> default=/HAMR/hamr.py |
-| -H | \[path to pthr_go_annots.py for internal testing and server usage\] <br> default=/HAMR/hamr.py |
+| -H | \[path to pthr_go_annots.py for internal testing and server usage\] <br> default=/pantherapi-pyclient/pthr_go_annots.py |
 
 Running HAMRLINC
 -----------------------
