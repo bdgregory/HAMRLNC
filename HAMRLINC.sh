@@ -37,7 +37,7 @@ cat <<'EOF'
     -E	[HAMR: sequencing error, default=0.01]
     -P	[HAMR: maximum p-value, default=1]
     -F	[HAMR: maximum fdr, default=0.05]
-    -O  [Panther: organism taxon ID, default 9606]
+    -O  [Panther: organism taxon ID, default 3702]
     -A  [Panther: annotation data set, default GO:0008150]
     -Y  [Panther: test type, default FISHER]
     -R  [Panther: correction type, default FDR]
@@ -71,6 +71,7 @@ evolinc_i=false
 featurecount=false
 hamrbox=false
 exechamr="/HAMR/hamr.py"
+execpthr="/pantherapi-pyclient/pthr_go_annots.py"
 tophatref=""
 fastq_in=""
 porg=""
@@ -79,7 +80,7 @@ ptest=""
 pcorrect=""
 
 #############Grabbing arguments############
-while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CakTGDupEPS:F:" opt; do
+while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CakTGH:DupEPS:F:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -167,6 +168,9 @@ while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CakTGDupEPS:F:" opt; do
     ;;
     S)
     exechamr="$OPTARG"
+    ;;
+    H)
+    execpthr="$OPTARG"
     ;;
     F)
     fdr=$OPTARG
@@ -1492,7 +1496,7 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
             do
             n=$(basename "$f")
             echo "$n"
-            python /pantherapi-pyclient/pthr_go_annots.py \
+            python $execpthr \
                 --service enrich \
                 --params_file $json \
                 --seq_id_file "$f" \
