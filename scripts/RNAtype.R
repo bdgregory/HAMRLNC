@@ -2,7 +2,6 @@ library(ggplot2, warn.conflicts = FALSE)
 library(dplyr, warn.conflicts = FALSE)
 library(data.table, warn.conflicts = FALSE)
 library(stringr, warn.conflicts = FALSE)
-library(envalysis, warn.conflicts = FALSE)
 options(dplyr.summarise.inform = FALSE)
 options(ggplot2.geom_density.inform = FALSE)
 
