@@ -23,6 +23,7 @@ cat <<'EOF'
   OPTIONAL: 
     -n  number of threads (default 4)
     -a	[use TopHat2 instead of STAR]
+    -x  [Genome index directory for tophat2 by user input]
     -d  [input a directory of fastq]
     -b	[Tophat library choice: fr-unstranded, fr-firststrand, fr-secondstrand]
     -f	[filter]
@@ -70,6 +71,7 @@ evolinc_i=false
 featurecount=false
 hamrbox=false
 exechamr="/HAMR/hamr.py"
+tophatref=""
 fastq_in=""
 porg=""
 pterm=""
@@ -77,7 +79,7 @@ ptest=""
 pcorrect=""
 
 #############Grabbing arguments############
-while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQCakTGDupEPS:F:" opt; do
+while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CakTGDupEPS:F:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -150,6 +152,9 @@ while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQCakTGDupEPS:F:" opt; do
     ;;
     b)
     tophatlib=$OPTARG
+    ;;
+    x)
+    tophatref=$OPTARG
     ;;
     E)
     err=$OPTARG
@@ -523,16 +528,19 @@ fastq2hamr () {
         echo "################################################################"
         date '+%d/%m/%Y %H:%M:%S'
         
-        # the below should be inputted at this point
-        if [[ ! -z "$blast_file" ]]; then blast_file="$user_dir"/"$blast_file"; else echo "Error: missing blast file!"; exit 1; fi
-        if [[ ! -z "$cage_file" ]]; then cage_file="$user_dir"/"$cage_file"; else echo "Error: missing cage file!"; exit 1; fi
-        if [[ ! -z "$known_file" ]]; then known_linc="$user_dir"/"$known_linc"; else echo "Error: missing known linc file!"; exit 1; fi
+        # MO mode requires these 3 files
+        if [ "$evolinc_i_option" == "MO" ]; then
+            echo "chekcing for input files needed for evolinc under MO mode"
+            if [[ ! -z "$blast_file" ]]; then blast_file="$user_dir"/"$blast_file"; else echo "Error: missing blast file!"; exit 1; fi
+            if [[ ! -z "$cage_file" ]]; then cage_file="$user_dir"/"$cage_file"; else echo "Error: missing cage file!"; exit 1; fi
+            if [[ ! -z "$known_file" ]]; then known_linc="$user_dir"/"$known_linc"; else echo "Error: missing known linc file!"; exit 1; fi
+        fi
 
         if [ ! -d "$out/evolinc_out" ]; then mkdir "$out/evolinc_out"; fi
         # run stringtie accordingly, note PE and SE here is taken care of
         # output is unnamed and stored in each fastq folder
 
-        # check if evoprog.txt exists, if not, create it with 0
+        # check if evoprog.txt exists, if not, create it with a
         if [[ ! -e "$smpout"/evoprog.txt ]]; then
         echo "a" > "$smpout"/evoprog.txt
         fi
@@ -802,7 +810,6 @@ fastq2hamr () {
         cp "$smpout"/unique_RG_ordered.bam "$out"/pipeline/depth/"$smpname".bam
         cp "$smpout"/unique_RG_ordered.bai "$out"/pipeline/depth/"$smpname".bai
 
-
         # delete more intermediate files
         echo "[$smpkey] removing large intermediate files..."
         rm "$smpout"/sort_accepted.bam
@@ -1038,9 +1045,12 @@ fastq2hamrhouse () {
                 --genomeSAindexNbases $sain
         fi
     else
+        # check for user input
+        if [[ ! $tophatref = "" ]]; then
+            echo "user input for tophat index detected, skipping bowtie index generation"
         # Check if bowtie index directory is already present
-        if [ -e "$out/btref" ]; then
-            echo "bowtie indexed directory detected, skipping generating bowtie index"
+        elif [ -e "$out/btref" ]; then
+            echo "existing bowtie indexed directory detected, skipping bowtie index generation"
         else
         # If not, first check if ref folder is present, if not then make
             if [ ! -d "$out/btref" ]; then mkdir "$out/btref"; echo "created path: $out/btref"; fi
