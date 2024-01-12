@@ -32,8 +32,8 @@ allLapPrep <- function(in_dir) {
     # Obtain the sequencing technique (mRNA seq, GMUCT, NAD, etc.)
     seq_tech <- finfo[length(finfo) - 1]
     
-    # Obtain the genotype of the sample group
-    genotype <- paste(setdiff(finfo, c(lap_type, seq_tech)), collapse = "_")
+    # Obtain the sample group ()
+    sample_group <- paste(setdiff(finfo, c(lap_type, seq_tech)), collapse = "_")
     
     # Set file path for testing and reading
     fpath <- file.path(in_dir, file_name)
@@ -57,7 +57,7 @@ allLapPrep <- function(in_dir) {
           }
       # in any case, the to add will take the below variables from bed
       to_add <- to_add%>%
-        mutate(genotype=genotype) %>%
+        mutate(sample_group=sample_group) %>%
         mutate(seq_tech=seq_tech) %>%
         mutate(lap_type=lap_type) %>%
         mutate(bio=bio)

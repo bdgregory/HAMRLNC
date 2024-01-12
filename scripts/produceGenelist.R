@@ -8,9 +8,9 @@ args=commandArgs(trailingOnly=TRUE)
 df <- fread(args[1])
 seqlist <- unique(df$seq_tech)
 
-for (g in unique(df$genotype)) {
+for (g in unique(df$sample_group)) {
   for (s in seqlist) {
-    gl <- unique(filter(df, genotype == g & seq_tech == s)$gene)
+    gl <- unique(filter(df, sample_group == g & seq_tech == s)$gene)
     if (length(gl)>3){
       name <- paste(g,s,sep="_")
       write(gl, paste0(args[2],"/",name,".txt"))

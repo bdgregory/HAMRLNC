@@ -14,10 +14,10 @@ abundByGroup <- function(ldf, lib) {
   longdf <- fread(ldf, stringsAsFactors = TRUE)
   longdf%>%
     filter(lap_type==lib)%>%
-    group_by(genotype, seq_tech, .drop = FALSE)%>%
+    group_by(sample_group, seq_tech, .drop = FALSE)%>%
     summarise(amount=n())%>%
-    melt(id.vars = c("genotype", "seq_tech"))%>%
-    ggplot(aes(x=genotype, y=value))+
+    melt(id.vars = c("sample_group", "seq_tech"))%>%
+    ggplot(aes(x=sample_group, y=value))+
     geom_bar(stat = "identity", position = "dodge")+
     labs(title=paste0("Total Abundance of HAMR Predicted Modifications in ", lib, " by Sample Groups"))+
     scale_x_discrete(drop=FALSE, guide = guide_axis(n.dodge=2))+

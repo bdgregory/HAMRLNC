@@ -18,12 +18,12 @@ clusterSummary <- function(df) {
   # Find the position deviation of each mod type on each transcript for each sample group
   out <- df%>%
     filter(lap_type==det)%>%
-    group_by(genotype, seq_tech, gene, mod)%>%
+    group_by(sample_group, seq_tech, gene, mod)%>%
     summarise(loc = sd(pos))
   
-  # Take out all the single mods, and contacenate genotype and seq_tech into a single string
+  # Take out all the single mods, and contacenate sample_group and seq_tech into a single string
   out <- out[which(!is.na(out$loc)),]%>%
-    mutate(sample_group = paste0(genotype,"_", seq_tech))%>%
+    mutate(sample_group = paste0(sample_group,"_", seq_tech))%>%
     ungroup()%>%
     select(sample_group, gene, mod, loc)
   

@@ -40,7 +40,7 @@ for (fdir in file_names){
   fname <- basename(fdir)
   finfo <- unlist(strsplit(tools::file_path_sans_ext(fname), split = "_", fixed=TRUE))
   seq_tech <- finfo[length(finfo)]
-  genotype <- paste(setdiff(finfo[1:length(finfo)-1], c(seq_tech)), collapse = "_")
+  sample_group <- paste(setdiff(finfo[1:length(finfo)-1], c(seq_tech)), collapse = "_")
   
   # wrangling the data in each panther result, prep for joining
   a1 <- read_delim(fdir, skip=2, col_names = T, show_col_types = FALSE) %>%
@@ -79,7 +79,7 @@ for (fdir in file_names){
     select(ontology,neglog_p_value)
   
   # get sample name and assign as col name
-  actualname <- paste(genotype, seq_tech, sep = "_")
+  actualname <- paste(sample_group, seq_tech, sep = "_")
   colnames(hmap.v) <- c("ontology", actualname)
   
   # join go

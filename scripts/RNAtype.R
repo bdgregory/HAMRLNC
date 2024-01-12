@@ -16,7 +16,7 @@ dir <- dirname(args[1])
 # df <- fread("/Users/harrlol/Desktop/HAMRLINC_test/test_short/results/mod_long.csv")
 # dir <- dirname("/Users/harrlol/Desktop/HAMRLINC_test/test_short/results/mod_long.csv")
 
-a <- unique(df$genotype)
+a <- unique(df$sample_group)
 b <- unique(df$seq_tech)
 g <- expand.grid(a,b)
 
@@ -24,7 +24,7 @@ tb <- NULL
 suppressWarnings(for (i in (1:nrow(g))) {
   # Create Data
   d <- df%>%
-    filter(genotype == g[i,1] & seq_tech == g[i,2] & lap_type %in% c("ncRNA", "gene"))%>%
+    filter(sample_group == g[i,1] & seq_tech == g[i,2] & lap_type %in% c("ncRNA", "gene"))%>%
     group_by(bio)%>%
     summarize(count=n())%>%
     mutate(group=paste(g[i,1], g[i,2], sep="_"))

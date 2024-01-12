@@ -68,10 +68,10 @@ mRNALapReform <- function (modtbl) {
     summarize(gene = strsplit(as.character(gene),".", fixed = TRUE)[[1]][1])
 }
 
-refRelation <- function(df, type, tech, geno, ref) {
+refRelation <- function(df, type, tech, smp, ref) {
   # Pull out the relative lap type info
   temp <- df%>%
-    filter(lap_type==type&seq_tech==tech&genotype==geno)
+    filter(lap_type==type&seq_tech==tech&sample_group==smp)
     # If mRNA, gene name needs to be renamed
     if (type == "mRNA") {
       temp <- mRNALapReform(temp)
@@ -97,13 +97,13 @@ refRelation <- function(df, type, tech, geno, ref) {
 
 dir <- dirname(args[1])
 
-a <- unique(longdf$genotype)
+a <- unique(longdf$sample_group)
 b <- unique(longdf$seq_tech)
 g <- expand.grid(a,b)
 
 for (i in (1:nrow(g))) {
-  # only proceed if there are at least 1 observation for this geno+seq combo
-  if (nrow(filter(longdf, genotype == g[i,1] & seq_tech == g[i,2]))>0) {
+  # only proceed if there are at least 1 observation for this smp+seq combo
+  if (nrow(filter(longdf, sample_group == g[i,1] & seq_tech == g[i,2]))>0) {
     refRelation(longdf, "gene", g[i,2], g[i,1], ref)
     ggsave(paste(dir,"/dist_to_ant_", g[i,1], "_", g[i,2], ".png", sep=""), width = 10, height = 8, units = "in")
   }

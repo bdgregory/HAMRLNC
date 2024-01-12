@@ -45,7 +45,7 @@ for (m in unique(df$mod)) {
       p <- a[i,]$pos
       s <- a[i,]$seq
       str <- a[i,]$strand
-      smp <- paste(a[i,]$genotype, a[i,]$seq_tech, sep="_")
+      smp <- paste(a[i,]$sample_group, a[i,]$seq_tech, sep="_")
       
       # initialize empty fetch results
       t.mock <- data.frame()

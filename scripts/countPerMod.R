@@ -14,10 +14,10 @@ abundByLap1 <- function(ldf, lib) {
   longdf <- fread(ldf, stringsAsFactors = TRUE)
   longdf%>%
     filter(lap_type==lib)%>%
-    group_by(genotype, seq_tech, mod, .drop = FALSE)%>%
+    group_by(sample_group, seq_tech, mod, .drop = FALSE)%>%
     summarise(amount=n())%>%
-    melt(id.vars = c("genotype", "seq_tech","mod"))%>%
-    ggplot(aes(x=genotype, y=value, fill=mod))+
+    melt(id.vars = c("sample_group", "seq_tech","mod"))%>%
+    ggplot(aes(x=sample_group, y=value, fill=mod))+
     geom_bar(stat = "identity", position = "dodge")+
     labs(title=paste0("Abundance of HAMR Predicted Modifications in ", lib, " by Sample Groups"))+
     scale_x_discrete(drop=FALSE, guide = guide_axis(n.dodge=2))+
@@ -33,10 +33,10 @@ abundByLap1 <- function(ldf, lib) {
 #   longdf <- fread(ldf, stringsAsFactors = TRUE)
 #   longdf%>%
 #     filter(lap_type==lib)%>%
-#     group_by(genotype, seq_tech, mod, .drop = FALSE)%>%
+#     group_by(sample_group, seq_tech, mod, .drop = FALSE)%>%
 #     summarise(amount=n())%>%
-#     melt(id.vars = c("genotype", "seq_tech","mod"))%>%
-#     ggplot(aes(x=mod, y=value, fill=genotype))+
+#     melt(id.vars = c("sample_group", "seq_tech","mod"))%>%
+#     ggplot(aes(x=mod, y=value, fill=sample_group))+
 #     geom_bar(stat = "identity", position = "dodge")+
 #     labs(title=paste0("Abundance of HAMR Predicted Modifications in ", lib, " by Mod Type"))+
 #     scale_x_discrete(drop=FALSE, guide = guide_axis(n.dodge=2))+
