@@ -24,6 +24,7 @@
 | -d | \[raw fastq folder\] <br> a path to a folder containing raw fastq files if needed, in such case, -c csv should have each fastq file as key
 | -a | \[use Tophat2 instead of STAR\] <br> default uses STAR |
 | -b | \[Tophat2 library choice: fr-unstranded, fr-firststrand, fr-secondstrand\] <br> default=fr-firststrand |
+| -x | \[Genome index for tophat2 by user input]\ <br> default=None|
 | -f | \[filter\] <br> default=filter_SAM_number_hits.pl |
 | -k | \[activate modification analysis (left arm)\] |
 | -p | \[activate lincRNA identification (inner right arm)\] |
