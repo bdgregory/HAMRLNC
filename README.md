@@ -10,6 +10,8 @@
 
 ## Command Line Arguments and Description
 
+Read the [doc](https://chosenobih.github.io/hamrlinc_docs/) for detailed descriptions on selected flags.
+
 | Command | Description |
 | :---: | :---: |
 | Required |
