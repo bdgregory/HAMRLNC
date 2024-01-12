@@ -22,6 +22,7 @@ mkdir /smolbiologist/tryout
 cd /smolbiologist
 git clone https://github.com/harrlol/HAMRLINC.git
 git clone https://github.com/harrlol/HAMR.git
+git clone https://github.com/pantherdb/pantherapi-pyclient.git
 wget https://github.com/broadinstitute/gatk/releases/download/4.3.0.0/gatk-4.3.0.0.zip
 unzip gatk-4.3.0.0.zip
 cd
@@ -45,7 +46,8 @@ cd /smolbiologist/tryout
     -g Arabidopsis_thaliana.TAIR10.dna.toplevel.fa \
     -i Arabidopsis_thaliana.TAIR10.57.gff3 \
     -l 50 -s 135000000 -n 10 -k \
-    -S /smolbiologist/HAMR/hamr.py
+    -S /smolbiologist/HAMR/hamr.py \
+    -H /smolbiologist/pantherapi-pyclient/pthr_go_annots.py
 
 # the run should take upwards of 5 hours, 1 hour should suffice
 # the output (png files) should be in your tryout folder
