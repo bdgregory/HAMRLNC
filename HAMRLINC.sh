@@ -394,7 +394,7 @@ fastq2hamr () {
             if [ "$det" -eq 1 ]; then
                 echo "[$smpkey] Performing STAR with a single-end file."
                 STAR \
-                --runThreadN "$threads" \
+                --runThreadN 2 \
                 --genomeDir "$out"/STARref \
                 --readFilesIn "$smp" \
                 --sjdbOverhang $overhang \
@@ -406,7 +406,7 @@ fastq2hamr () {
             else
                 echo "[$smpkey] Performing STAR with a paired-end file."
                 STAR \
-                --runThreadN "$threads" \
+                --runThreadN 2 \
                 --genomeDir "$out"/STARref \
                 --readFilesIn "$smp1" "$smp2" \
                 --sjdbOverhang $overhang \
@@ -434,7 +434,7 @@ fastq2hamr () {
                     --transcriptome-max-hits 10 \
                     --no-coverage-search \
                     -G "$annotation" \
-                    -p "$threads" \
+                    -p 2 \
                     "$out"/btref \
                     "$smp"
             else
@@ -448,7 +448,7 @@ fastq2hamr () {
                     --transcriptome-max-hits 10 \
                     --no-coverage-search \
                     -G "$annotation" \
-                    -p "$threads" \
+                    -p 2 \
                     "$out"/btref \
                     "$smp1" "$smp2"
             fi
@@ -545,7 +545,7 @@ fastq2hamr () {
                     "$smpout"/unique.bam \
                     -o "$smpout"/transcriptAssembly.gtf \
                     -G "$annotation" \
-                    -p "$threads" \
+                    -p 2 \
                     --rf
             elif [[ "$tophatlib" = fr-secondstrand ]]; then
                 echo "[$smpkey] running stringtie with --fr"
@@ -553,7 +553,7 @@ fastq2hamr () {
                     "$smpout"/unique.bam \
                     -o "$smpout"/transcriptAssembly.gtf \
                     -G "$annotation" \
-                    -p "$threads" \
+                    -p 2 \
                     --fr
             else
                 echo "[$smpkey] running stringtie assuming an unstranded library"
@@ -561,7 +561,7 @@ fastq2hamr () {
                     "$smpout"/unique.bam \
                     -o "$smpout/"transcriptAssembly.gtf \
                     -G "$annotation" \
-                    -p "$threads"
+                    -p 2
             fi
 
             echo "b" > "$smpout"/currEvoProgress.txt
@@ -593,7 +593,7 @@ fastq2hamr () {
                     -g "$genome" \
                     -u "$annotation" \
                     -r "$annotation" \
-                    -n "$threads" \
+                    -n 2 \
                     -o "$smpout"/"$smpname"_lincRNA
             elif [ "$evolinc_i_option" == "MO" ]; then
                 echo "[$smpkey] MO option identified for evolinc"
@@ -602,7 +602,7 @@ fastq2hamr () {
                     -g "$genome" \
                     -u "$annotation" \
                     -r "$annotation" \
-                    -n "$threads" \
+                    -n 2 \
                     -o "$smpout"/"$smpname"_lincRNA \
                     -b "$blast_file" \
                     -t "$cage_file" \
@@ -625,14 +625,14 @@ fastq2hamr () {
             if [ "$det" -eq 1 ]; then
                 echo "[$smpkey] running featurecount with $fclib as the -s argument"
                 featureCounts \
-                    -T "$threads" \
+                    -T 2 \
                     -s $fclib \
                     -a "$smpout"/lincRNA/lincRNA.updated.gtf \
                     -o "$smpout"/"$smpname"_lincRNA_featurecount.txt \
                     "$smpout"/unique.bam
             else
                 featureCounts \
-                    -T "$threads" \
+                    -T 2 \
                     -a "$smpout"/lincRNA/lincRNA.updated.gtf \
                     -o "$smpout"/"$smpname"_lincRNA_featurecount.txt \
                     "$smpout"/unique.bam
@@ -667,14 +667,14 @@ fastq2hamr () {
         if [ "$det" -eq 1 ]; then
             echo "[$smpkey] running featurecount with $fclib as the -s argument"
             featureCounts \
-                -T "$threads" \
+                -T 2 \
                 -s $fclib \
                 -a "$out"/temp.gtf \
                 -o "$smpout"/"$smpname"_alignment_featurecount.txt \
                 "$smpout"/unique.bam
         else
             featureCounts \
-                -T "$threads" \
+                -T 2 \
                 -a "$out"/temp.gtf \
                 -o "$smpout"/"$smpname"_alignment_featurecount.txt \
                 "$smpout"/unique.bam
