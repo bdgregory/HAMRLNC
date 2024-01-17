@@ -57,7 +57,6 @@ RUN conda config --add channels conda-forge && \
 
 # Conda packages
 RUN conda install cutadapt==1.9.1 -c bioconda -y && \
-	conda install sra-tools==3.0.5 -c bioconda -y && \
 	conda install trim-galore==0.6.10 -c bioconda -y && \
 	conda install bedtools==2.31.0 -c bioconda -y && \
 	conda install samtools==1.17 -c bioconda -y && \
@@ -97,11 +96,11 @@ RUN cpanm URI/Escape.pm
 
 # R libraries
 RUN apt-get update && apt-get upgrade -y && \
-	apt-get -y install ca-certificates software-properties-common gnupg2 gnupg1 gnupg && \
-	#apt-key adv --keyserver hkp://pgp.mit.edu --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9 && \
-	apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9 && \
-	add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/" && \
-	apt-get install -y r-base && \
+    apt-get -y install ca-certificates software-properties-common gnupg2 gnupg1 gnupg && \
+    gpg --batch --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9 && \
+    gpg --export E298A3A825C0D65DFD57CBB651716619E084DAB9 | apt-key add - && \
+    add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/" && \
+    apt-get install -y r-base && \
 	Rscript -e 'install.packages("openssl", dependencies = TRUE,  repos="http://cran.rstudio.com/")' && \
 	Rscript -e 'install.packages("splitstackshape", dependencies = TRUE, repos="http://cran.rstudio.com/");' && \
 	Rscript -e 'install.packages("dplyr", dependencies = TRUE, repos="http://cran.rstudio.com/");' && \
@@ -114,7 +113,8 @@ RUN apt-get update && apt-get upgrade -y && \
     Rscript -e 'install.packages("reshape2", dependencies = TRUE, repos="http://cran.rstudio.com/");' && \
     Rscript -e 'install.packages("stringr", dependencies = TRUE, repos="http://cran.rstudio.com/");' && \
     Rscript -e 'install.packages("viridislite", dependencies = TRUE, repos="http://cran.rstudio.com/");' && \
-	Rscript -e 'install.packages("getopt", dependencies = TRUE, repos="http://cran.rstudio.com/");'
+	Rscript -e 'install.packages("getopt", dependencies = TRUE, repos="http://cran.rstudio.com/");' && \
+	Rscript -e "install.packages('envalysis', dependencies=TRUE, repos='http://cran.rstudio.com/')"
 
 # Uniprot database
 ADD https://github.com/iPlantCollaborativeOpenSource/docker-builds/releases/download/evolinc-I/uniprot_sprot.dmnd.gz /evolinc_docker/
@@ -186,6 +186,11 @@ RUN wget https://github.com/samtools/htslib/releases/download/1.17/htslib-1.17.t
 	make install
 WORKDIR /
 
+RUN wget https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/3.0.10/sratoolkit.3.0.10-ubuntu64.tar.gz && \
+	tar -vxzf sratoolkit.3.0.10-ubuntu64.tar.gz
+
+#RUN conda install sra-tools==3.0.5 -c bioconda -y && \
+
 RUN apt-get install bc -y
 
 ADD /scripts/*.R /scripts/
@@ -204,9 +209,10 @@ ENV PATH /evolinc_docker/:$PATH
 ENV PATH /usr/bin/:$PATH
 ENV PATH /HAMR/hamr.py:$PATH
 ENV PATH /HAMR/:$PATH
+ENV PATH /sratoolkit.3.0.10-ubuntu64/bin:$PATH
 
 # Caching the sra data
-RUN vdb-config --root -s /repository/user/cache-disabled="true"
+#RUN vdb-config --root -s /repository/user/cache-disabled="true"
 
 # HAMRLINC wrapper script
 ADD HAMRLINC.sh $BINPATH
