@@ -25,7 +25,7 @@ abundByLap1 <- function(ldf, lib) {
     facet_wrap(~seq_tech)+
     scale_fill_manual(values=cbPalette)+
     theme_bw()+
-    theme(text = element_text(size=15))
+    theme(text = element_text(size=18))
 }
 
 ## not used 
@@ -44,7 +44,7 @@ abundByLap1 <- function(ldf, lib) {
 #     facet_wrap(~seq_tech)+
 #     scale_fill_manual(values=cbPalette)+
 #     theme_bw()+
-#     theme(text = element_text(size=15))
+#     theme(text = element_text(size=18))
 # }
 
 # Takes in the directory where all annotation beds are located

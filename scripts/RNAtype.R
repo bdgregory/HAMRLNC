@@ -46,7 +46,7 @@ subviz <- function(indf) {
     ylab("Raw Mod Count")+
     scale_fill_manual(values=cbPalette)+
     theme_bw()+
-    theme(text = element_text(size=15))
+    theme(text = element_text(size=18))
 }
 
 # trying to eliminate pdf
