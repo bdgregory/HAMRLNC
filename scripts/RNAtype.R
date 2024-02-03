@@ -41,12 +41,14 @@ subviz <- function(indf) {
   indf%>%
     ggplot(aes(x=group, y=count))+
     geom_col(aes(fill=bio), position = "stack")+
-    labs(title="HAMR Predicted Modification Broken Down by RNA Subtype", fill="Subtypes")+
+    labs(title="HAMR Predicted Modification Broken Down by RNA Subtype", fill="RNA Type")+
     xlab("Sample Group")+
-    ylab("Raw Mod Count")+
+    ylab("Counts of Modifications Predicted")+
     scale_fill_manual(values=cbPalette)+
     theme_bw()+
-    theme(text = element_text(size=18))
+    theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+    theme(text = element_text(size=20))
 }
 
 # trying to eliminate pdf

@@ -111,7 +111,7 @@ if (is.null(go)){
   
   #plot heatmap
   p <- pheatmap(mt, legend_breaks = c(blue.pos, half.pos, red.pos, max(mt)),
-                main = "", legend_labels = c(blue.text, half.text, 
+                main = "Gene Ontology Enrichment Analysis of Modified Transcripts", legend_labels = c(blue.text, half.text, 
                                              red.text, "-log10(P-value)\n"),
                 legend = TRUE, cluster_cols = FALSE)
   save_pheatmap_png(p, paste0(out, "/GOheatmap_mod.png"), width = 10, height = 8)

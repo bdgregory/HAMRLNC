@@ -96,10 +96,12 @@ if (!is.null(frame)) {
     geom_col(position = "stack", aes(fill = region))+
     labs(title="Modification Distribution in Gene Regions", caption="(Modification types maybe abbreviated for clarity)")+
     xlab("Modification Type")+
-    ylab("Count")+
+    ylab("Counts of Modifications Predicted")+
+    guides(fill=guide_legend(title="RNA Region"))+
     theme_bw()+
-    theme(text = element_text(size=18))
-    guides(fill=guide_legend(title="Region"))+
+    theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+    theme(text = element_text(size=20))
     scale_fill_manual(values=cbPalette)+
     facet_wrap(~smp.grp)+
     scale_x_discrete(labels = abbreviate)
@@ -118,7 +120,9 @@ if (!is.null(frame)) {
          caption = paste("Each 5'UTR, CDS, 3'UTR region is normalized out of 1000 \n for each transcript with a modification predicted. \n" ,
                          "5'UTR: 0-1000 | CDS: 1000-2000 | 3'UTR: 2000-3000"))+
     theme_bw()+
-    theme(text = element_text(size=18),
+    theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+    theme(text = element_text(size=20),
           axis.text.y = element_blank(),
           axis.ticks.y = element_blank(),
           axis.title.y = element_blank())+
@@ -139,7 +143,9 @@ if (!is.null(frame)) {
          caption = paste("Each 5'UTR, CDS, 3'UTR region is normalized out of 1000 \n for each transcript with a modification predicted. \n" ,
                          "5'UTR: 0-1000 | CDS: 1000-2000 | 3'UTR: 2000-3000"))+
     theme_bw()+
-    theme(text = element_text(size=18),
+    theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+    theme(text = element_text(size=20),
           axis.text.y = element_blank(),
           axis.ticks.y = element_blank(),
           axis.title.y = element_blank())+
