@@ -101,7 +101,7 @@ if (!is.null(frame)) {
     theme_bw()+
     theme(panel.border = element_blank(), panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
-    theme(text = element_text(size=20))
+    theme(text = element_text(size=20))+
     scale_fill_manual(values=cbPalette)+
     facet_wrap(~smp.grp)+
     scale_x_discrete(labels = abbreviate)
