@@ -22,10 +22,10 @@ cat <<'EOF'
 
   OPTIONAL: 
     -n  number of threads (default 4)
-    -a	[use TopHat2 instead of STAR]
-    -x  [Genome index directory for tophat2 by user input]
+    -a	[use HISAT2 instead of STAR]
+    -x  [Genome index directory for HISAT2 by user input]
     -d  [input a directory of fastq]
-    -b	[Tophat library choice: fr-unstranded, fr-firststrand, fr-secondstrand]
+    -b	[HISAT library choice: single: F or R, paired: FR or RF, unstranded: leave unspecified]
     -f	[filter]
     -m	[HAMR model]
     -k  [activate hamrbox]
@@ -55,14 +55,14 @@ EOF
 
 #curdir=$(dirname "$0")
 threads=4
-tophat=false
+hisat=false
 quality=30
 coverage=10
 err=0.01
 pvalue=1
 fdr=0.05
 evolinc_i_option="M"
-tophatlib="fr-firststrand"
+hisatlib="R"
 filter="$util"/filter_SAM_number_hits.pl
 model="$util"/euk_trna_mods.Rdata
 json="$util"/panther_params.json
@@ -72,7 +72,7 @@ featurecount=false
 hamrbox=false
 exechamr="/HAMR/hamr.py"
 execpthr="/pantherapi-pyclient/pthr_go_annots.py"
-tophatref=""
+hisatref=""
 fastq_in=""
 porg=""
 pterm=""
@@ -152,16 +152,16 @@ while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CakTGH:DupEPS:F:" opt; do
     coverage=$OPTARG
     ;;
     b)
-    tophatlib=$OPTARG
+    hisatlib=$OPTARG
     ;;
     x)
-    tophatref=$OPTARG
+    hisatref=$OPTARG
     ;;
     E)
     err=$OPTARG
     ;;
     a)
-    tophat=true
+    hisat=true
     ;;
     P)
     pvalue=$OPTARG
@@ -320,9 +320,13 @@ fqgrab2 () {
 
 fastq2hamr () {
     # translates string library prep strandedness into feature count required number
-    if [[ "$tophatlib" = fr-firststrand ]]; then
+    if [[ "$hisatlib" = R ]]; then
         fclib=2
-    elif [[ "$tophatlib" = fr-secondstrand ]]; then
+    elif [[ "$hisatlib" = F ]]; then
+        fclib=1
+    elif [[ "$hisatlib" = RF ]]; then
+        fclib=2
+    elif [[ "$hisatlib" = FR ]]; then
         fclib=1
     else 
         fclib=0
@@ -389,7 +393,7 @@ fastq2hamr () {
         cd "$smpout" || exit
         # maps the trimmed reads to provided annotated genome, can take ~1.5hr
         echo "--------Entering mapping step--------"
-        if [[ "$tophat" = false ]]; then  
+        if [[ "$hisat" = false ]]; then  
             echo "Using STAR for mapping..."
             if [ "$det" -eq 1 ]; then
                 echo "[$smpkey] Performing STAR with a single-end file."
@@ -418,39 +422,50 @@ fastq2hamr () {
             fi
 
         else
-            echo "Using TopHat2 for mapping..."
+            echo "Using HISAT2 for mapping..."
             # set read distabce based on mistmatch num
             red=8
             if [[ $mismatch -gt 8 ]]; then red=$((mismatch +1)); fi
 
             if [ "$det" -eq 1 ]; then
-                echo "[$smpkey] Performing TopHat2 with a single-end file."
-                tophat2 \
-                    --library-type "$tophatlib" \
-                    --read-mismatches $mismatch \
-                    --read-edit-dist $red \
-                    --max-multihits 10 \
-                    --b2-very-sensitive \
-                    --transcriptome-max-hits 10 \
-                    --no-coverage-search \
-                    -G "$annotation" \
+                echo "[$smpkey] Performing HISAT2 with a single-end file."
+                hisat2 \
+                    --rna-strandness "$hisatlib" \
+                    --mp $mismatch,$mismatch \
+                    --rdg $red,$red \
+                    --rfg $red,$red \
+                    --no-discordant \
+                    --no-mixed \
+                    -k 10 \
+                    --very-sensitive \
+                    --no-temp-splicesite \
+                    --no-spliced-alignment \
+                    -x "$out"/hsref/genome \
+                    -U "$smp" \
                     -p 2 \
-                    "$out"/btref \
-                    "$smp"
+                    --dta-cufflinks \
+                    -S output.sam \
+                    --summary-file hisat2_summary.txt
             else
-            echo "[$smpkey] Performing TopHat2 with a paired-end file."
-                tophat2 \
-                    --library-type "$tophatlib" \
-                    --read-mismatches $mismatch \
-                    --read-edit-dist $red \
-                    --max-multihits 10 \
-                    --b2-very-sensitive \
-                    --transcriptome-max-hits 10 \
-                    --no-coverage-search \
-                    -G "$annotation" \
+            echo "[$smpkey] Performing HISAT2 with a paired-end file."
+                hisat2 \
+                    --rna-strandness "$hisatlib" \
+                    --mp $mismatch,$mismatch \
+                    --rdg $red,$red \
+                    --rfg $red,$red \
+                    --no-discordant \
+                    --no-mixed \
+                    -k 10 \
+                    --very-sensitive \
+                    --no-temp-splicesite \
+                    --no-spliced-alignment \
+                    -x "$out"/hsref/genome \
+                    -1 "$smp"_1.fq \
+                    -2 "$smp"_2.fq \
                     -p 2 \
-                    "$out"/btref \
-                    "$smp1" "$smp2"
+                    --dta-cufflinks \
+                    -S output.sam \
+                    --summary-file hisat2_summary.txt
             fi
         fi
         cd || exit
@@ -468,14 +483,15 @@ fastq2hamr () {
     if [[ $currProg == "1" ]]; then
         #sorts the accepted hits
         echo "[$smpkey] sorting..."
-        # handles tophat or star output
-        if [[ "$tophat" = false ]]; then
+        # handles HISAT or star output
+        if [[ "$hisat" = false ]]; then
             samtools sort \
             -n "$smpout"/Aligned.sortedByCoord.out.bam \
             -o "$smpout"/sort_accepted.bam
         else
+            samtools view -bS output.sam > output.bam
             samtools sort \
-            -n "$smpout"/accepted_hits.bam \
+            -n "$smpout"/output.bam \
             -o "$smpout"/sort_accepted.bam
         fi
         echo "[$smpkey] finished sorting"
@@ -539,7 +555,7 @@ fastq2hamr () {
 
         if [[ $currEvoProg == "a" ]]; then
             echo "[$smpkey] producing transcript assembly using stringtie..."
-            if [[ "$tophatlib" = fr-firststrand ]]; then
+            if [[ "$fclib" = 2 ]]; then
                 echo "[$smpkey] running stringtie with --rf"
                 stringtie \
                     "$smpout"/unique.bam \
@@ -547,7 +563,7 @@ fastq2hamr () {
                     -G "$annotation" \
                     -p 2 \
                     --rf
-            elif [[ "$tophatlib" = fr-secondstrand ]]; then
+            elif [[ "$fclib" = 1 ]]; then
                 echo "[$smpkey] running stringtie with --fr"
                 stringtie \
                     "$smpout"/unique.bam \
@@ -827,6 +843,12 @@ parallelwrapf2h () {
         smp2="$smpdir/${smpkey}_2_trimmed.$original_ext"
         # Paired end recognized
         det=0
+        # in case user used single end for paired end
+        if [[ $hisatlib == R ]]; then
+            hisatlib=RF
+        elif [[ $hisatlib == F ]]; then
+            hisatlib=FR
+        fi
         echo "$smpext is a part of a paired-end sequencing file"
         echo ""
         fastq2hamr
@@ -1040,7 +1062,7 @@ fastq2hamrhouse () {
     fi
 
     # Check which mapping software, and check for index
-    if [[ "$tophat" = false ]]; then  
+    if [[ "$hisat" = false ]]; then  
     # Check if indexed files already present for STAR
         if [ -e "$out/STARref/SAindex" ]; then
             echo "STAR Genome Directory with indexed genome detected, skipping STAR indexing"
@@ -1063,16 +1085,18 @@ fastq2hamrhouse () {
         fi
     else
         # check for user input
-        if [[ ! $tophatref = "" ]]; then
-            echo "user input for tophat index detected, skipping bowtie index generation"
+        if [[ ! $hsref = "" ]]; then
+            echo "user input for hisat index detected, skipping bowtie index generation"
         # Check if bowtie index directory is already present
-        elif [ -e "$out/btref" ]; then
+        elif [ -e "$out/hsref" ]; then
             echo "existing bowtie indexed directory detected, skipping bowtie index generation"
         else
         # If not, first check if ref folder is present, if not then make
-            if [ ! -d "$out/btref" ]; then mkdir "$out/btref"; echo "created path: $out/btref"; fi
-            echo "Creating Bowtie references..."
-            bowtie2-build "$genome" "$out"/btref
+            if [ ! -d "$out/hsref" ]; then mkdir "$out/hsref"; echo "created path: $out/hsref"; fi
+            cd $out/hsref
+            echo "Creating hisat index..."
+            hisat2-build -p 16 "$genome" genome
+            cd 
         fi
     fi
 
