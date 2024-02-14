@@ -72,7 +72,7 @@ featurecount=false
 hamrbox=false
 exechamr="/HAMR/hamr.py"
 execpthr="/pantherapi-pyclient/pthr_go_annots.py"
-hisatref=""
+hsref=""
 fastq_in=""
 porg=""
 pterm=""
@@ -155,7 +155,7 @@ while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CakTGH:DupEPS:F:" opt; do
     hisatlib=$OPTARG
     ;;
     x)
-    hisatref=$OPTARG
+    hsref=$OPTARG
     ;;
     E)
     err=$OPTARG
