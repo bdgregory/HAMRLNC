@@ -489,7 +489,7 @@ fastq2hamr () {
             -n "$smpout"/Aligned.sortedByCoord.out.bam \
             -o "$smpout"/sort_accepted.bam
         else
-            samtools view -bS output.sam > output.bam
+            samtools view -bS "$smpout"/output.sam > "$smpout"/output.bam
             samtools sort \
             -n "$smpout"/output.bam \
             -o "$smpout"/sort_accepted.bam
