@@ -140,6 +140,8 @@ RUN gzip -d /evolinc_docker/uniprot_sprot.dmnd.gz && \
 # rFAM database
 ADD https://de.cyverse.org/dl/d/12EF1A2F-B9FC-456D-8CD9-9F87197CACF2/rFAM_sequences.fasta /evolinc_docker/
 
+RUN R -e "install.packages('tidyr')"
+
 # CPC2
 WORKDIR /evolinc_docker/CPC2-beta/libs/libsvm/
 RUN tar xvf libsvm-3.22.tar.gz
