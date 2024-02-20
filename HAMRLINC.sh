@@ -460,8 +460,8 @@ fastq2hamr () {
                     --no-temp-splicesite \
                     --no-spliced-alignment \
                     -x "$out"/hsref/genome \
-                    -1 "$smp"_1.fq \
-                    -2 "$smp"_2.fq \
+                    -1 "$smp" \
+                    -2 "$smp2" \
                     -p 2 \
                     --dta-cufflinks \
                     -S output.sam \
