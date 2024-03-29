@@ -24,9 +24,6 @@ Read the [doc](https://chosenobih.github.io/hamrlinc_docs/Tutorial/) for detaile
 | Optional |
 | -n | \[number of threads\] <br> default=4 |
 | -d | \[raw fastq folder\] <br> a path to a folder containing raw fastq files if needed
-| -a | \[use Tophat2 instead of STAR\] <br> default uses STAR |
-| -b | \[Tophat2 library choice: fr-unstranded, fr-firststrand, fr-secondstrand\] <br> default=fr-firststrand |
-| -x | \[Genome index directory for tophat2 by user input\] <br> default=None|
 | -f | \[filter\] <br> default=filter_SAM_number_hits.pl |
 | -k | \[activate modification analysis (left arm)\] |
 | -p | \[activate lincRNA identification (inner right arm)\] |
@@ -48,6 +45,10 @@ Read the [doc](https://chosenobih.github.io/hamrlinc_docs/Tutorial/) for detaile
 | -h | \[help message\]|
 | -S | \[path to hamr.py for internal testing and server usage\] <br> default=/HAMR/hamr.py |
 | -H | \[path to pthr_go_annots.py for internal testing and server usage\] <br> default=/pantherapi-pyclient/pthr_go_annots.py |
+| Disabled |
+| -a | \[use Tophat2 instead of STAR\] <br> default uses STAR |
+| -b | \[Tophat2 library choice: fr-unstranded, fr-firststrand, fr-secondstrand\] <br> default=fr-firststrand |
+| -x | \[Genome index directory for tophat2 by user input\] <br> default=None|
 
 Running HAMRLINC
 -----------------------
