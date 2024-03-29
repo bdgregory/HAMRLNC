@@ -22,10 +22,10 @@ cat <<'EOF'
 
   OPTIONAL: 
     -n  number of threads (default 4)
-    -a	[use HISAT2 instead of STAR]
-    -x  [Genome index directory for HISAT2 by user input]
+    -a	[use HISAT2 instead of STAR]        #####Disabled 3/28/24######
+    -x  [Genome index directory for HISAT2 by user input]       #####Disabled 3/28/24######
     -d  [input a directory of fastq]
-    -b	[HISAT library choice: single: F or R, paired: FR or RF, unstranded: leave unspecified]
+    -b	[HISAT library choice: single: F or R, paired: FR or RF, unstranded: leave unspecified]         #####Disabled 3/28/24######
     -f	[filter]
     -m	[HAMR model]
     -k  [activate hamrbox]
@@ -62,7 +62,7 @@ err=0.01
 pvalue=1
 fdr=0.05
 evolinc_i_option="M"
-hisatlib="R"
+# hisatlib="R"
 filter="$util"/filter_SAM_number_hits.pl
 model="$util"/euk_trna_mods.Rdata
 json="$util"/panther_params.json
@@ -151,18 +151,18 @@ while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CakTGH:DupEPS:F:" opt; do
     C)
     coverage=$OPTARG
     ;;
-    b)
-    hisatlib=$OPTARG
-    ;;
-    x)
-    hsref=$OPTARG
-    ;;
+    # b)
+    # hisatlib=$OPTARG
+    # ;;
+    # x)
+    # hsref=$OPTARG
+    # ;;
     E)
     err=$OPTARG
     ;;
-    a)
-    hisat=true
-    ;;
+    # a)
+    # hisat=true
+    # ;;
     P)
     pvalue=$OPTARG
     ;;
@@ -320,17 +320,17 @@ fqgrab2 () {
 
 fastq2hamr () {
     # translates string library prep strandedness into feature count required number
-    if [[ "$hisatlib" = R ]]; then
-        fclib=2
-    elif [[ "$hisatlib" = F ]]; then
-        fclib=1
-    elif [[ "$hisatlib" = RF ]]; then
-        fclib=2
-    elif [[ "$hisatlib" = FR ]]; then
-        fclib=1
-    else 
-        fclib=0
-    fi
+    # if [[ "$hisatlib" = R ]]; then
+    #     fclib=2
+    # elif [[ "$hisatlib" = F ]]; then
+    #     fclib=1
+    # elif [[ "$hisatlib" = RF ]]; then
+    #     fclib=2
+    # elif [[ "$hisatlib" = FR ]]; then
+    #     fclib=1
+    # else 
+    #     fclib=0
+    # fi
 
     # Read the CSV file into a DataFrame
     mapfile -t names < <(awk -F, '{ print $1 }' "$csv")
@@ -844,11 +844,11 @@ parallelwrapf2h () {
         # Paired end recognized
         det=0
         # in case user used single end for paired end
-        if [[ $hisatlib == R ]]; then
-            hisatlib=RF
-        elif [[ $hisatlib == F ]]; then
-            hisatlib=FR
-        fi
+        # if [[ $hisatlib == R ]]; then
+        #     hisatlib=RF
+        # elif [[ $hisatlib == F ]]; then
+        #     hisatlib=FR
+        # fi
         echo "$smpext is a part of a paired-end sequencing file"
         echo ""
         fastq2hamr
