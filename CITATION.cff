@@ -1,8 +1,10 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 authors:
-  - family-names: Li, Obih
-    given-names: Jiatong, Chosen
+  - family-names: Li
+    given-names: Jiatong
+  - family-names: Obih
+    given-names: Chosen
 title: "HAMRLINC: High-throughput Analysis of Modified Ribonucleotides and Long Intergenic Non-Coding RNAs"
 version: beta
 identifiers:
