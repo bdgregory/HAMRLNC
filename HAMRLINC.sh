@@ -452,7 +452,7 @@ lncCallBranch () {
     echo "entering lncRNA annotation pipeline..."
     
     # turn bam into gtf
-    stringtie "$smpout"/sort_accepted.bam \
+    stringtie "$smpout"/Aligned.sortedByCoord.out.bam \
     -G $annotation \
     -o "$smpout"/stringtie_out.gtf \
     -f 0.05 \
