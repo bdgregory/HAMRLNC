@@ -597,7 +597,7 @@ fastq2raw () {
 
     # Reassign lnc output directory
     if [ ! -d "$out/lnc_out" ]; then
-        mkdir "$out"/lmc_out
+        mkdir "$out"/lnc_out
         echo "created path: $out/lnc_out"
     fi
 
