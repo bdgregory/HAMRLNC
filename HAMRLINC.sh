@@ -239,7 +239,8 @@ checkpoint () {
     echo "$1" > "$out"/checkpoint.txt
 }
 
-fqgrab () {
+# is repeated for each accession code found in csv, performs fasterq-dump, fastqc, and trimming; automatic paired-end recognition
+fastqGrabSRA () {
 
   echo "begin downloading $line..." 
 
@@ -303,7 +304,8 @@ fqgrab () {
   echo ""
 }
 
-fqgrab2 () {
+# is repeated for each local file provided, performs fastqc and trimming; automatic paired-end recognition
+fastqGrabLocal () {
     sname=$(basename "$fq")
     tt=$(echo "$sname" | cut -d'.' -f1)
     echo "[$sname] performing fastqc on raw file..."
@@ -318,7 +320,228 @@ fqgrab2 () {
     # choosing not to remove user provided raw fastq
 }
 
-fastq2hamr () {
+# called upon completion of each sorted BAM files, takes the file through pre-processing, and performs hamr
+hamrBranch () {
+    if [[ $currProg == "2" ]]; then
+        #filter the accepted hits by uniqueness
+        echo "[$smpkey] filtering uniquely mapped reads..."
+        samtools view \
+            -h "$smpout"/sort_accepted.bam \
+            | perl "$filter" 1 \
+            | samtools view -bS - \
+            | samtools sort \
+            -o "$smpout"/unique.bam
+        echo "[$smpkey] finished filtering"
+        echo ""
+
+        # filtering unique completed without erroring out if this is reached
+        echo "3" > "$smpout"/progress.txt
+        currProg="3"
+    fi
+
+    wait
+
+    if [[ $currProg == "3" ]]; then
+        if [[ "$hamrbox" = false ]]; then
+            echo "[$(date '+%d/%m/%Y %H:%M:%S')] hamrbox functionality suppressed, $smpkey analysis completed."
+            exit 0
+        else
+            #adds read groups using picard, note the RG arguments are disregarded here
+            echo "[$smpkey] adding/replacing read groups..."
+            gatk AddOrReplaceReadGroups \
+                I="$smpout"/unique.bam \
+                O="$smpout"/unique_RG.bam \
+                RGID=1 \
+                RGLB=xxx \
+                RGPL=illumina_100se \
+                RGPU=HWI-ST1395:97:d29b4acxx:8 \
+                RGSM=sample
+            echo "[$smpkey] finished adding/replacing read groups"
+            echo ""
+
+            # RG finished without exiting
+            echo "4" > "$smpout"/progress.txt
+            currProg="4"
+            fi
+    fi 
+
+    wait
+
+    if [[ $currProg == "4" ]]; then
+        #reorder the reads using picard
+        echo "[$smpkey] reordering..."
+        echo "$genome"
+        gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" ReorderSam \
+            I="$smpout"/unique_RG.bam \
+            O="$smpout"/unique_RG_ordered.bam \
+            R="$genome" \
+            CREATE_INDEX=TRUE \
+            SEQUENCE_DICTIONARY="$dict" \
+            TMP_DIR="$smpout"/tmp
+        echo "[$smpkey] finished reordering"
+        echo ""
+
+        # ordering finished without exiting
+        echo "5" > "$smpout"/progress.txt
+        currProg="5"
+    fi 
+
+    wait
+
+    if [[ $currProg == "5" ]]; then
+        #splitting and cigarring the reads, using genome analysis tool kit
+        #note can alter arguments to allow cigar reads 
+        echo "[$smpkey] getting split and cigar reads..."
+        gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" SplitNCigarReads \
+            -R "$genome" \
+            -I "$smpout"/unique_RG_ordered.bam \
+            -O "$smpout"/unique_RG_ordered_splitN.bam
+            # -U ALLOW_N_CIGAR_READS
+        echo "[$smpkey] finished splitting N cigarring"
+        echo ""
+
+        # cigaring and spliting finished without exiting
+        echo "6" > "$smpout"/progress.txt
+        currProg="6"
+    fi 
+
+    wait
+
+    if [[ $currProg == "6" ]]; then
+        #final resorting using picard
+        echo "[$smpkey] resorting..."
+        gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" SortSam \
+            I="$smpout"/unique_RG_ordered_splitN.bam \
+            O="$smpout"/unique_RG_ordered_splitN.resort.bam \
+            SORT_ORDER=coordinate
+        echo "[$smpkey] finished resorting"
+        echo ""
+
+        # cigaring and spliting finished without exiting
+        echo "7" > "$smpout"/progress.txt
+        currProg="7"
+    fi 
+
+    wait
+
+    if [[ $currProg == "7" ]]; then
+        #hamr step, can take ~1hr
+        echo "[$smpkey] hamr..."
+        #hamr_path=$(which hamr.py) 
+        python $exechamr \
+            -fe "$smpout"/unique_RG_ordered_splitN.resort.bam "$genome" "$model" "$smpout" $smpname $quality $coverage $err H4 $pvalue $fdr .05
+        wait
+
+        if [ ! -e "$smpout/${smpname}.mods.txt" ]; then 
+            cd "$hamrout" || exit
+            printf '%s \n' "$smpname" >> zero_mod.txt
+            cd || exit
+        else
+        # HAMR needs separate folders to store temp for each sample, so we move at the end
+            cp "$smpout"/"${smpname}".mods.txt "$hamrout"
+        fi
+        echo "8" > "$smpout"/progress.txt
+        currProg="8"
+    fi
+}
+
+# called upon completion of each sorted BAM files, takes the sorted BAM through lncRNA prediction pipeline
+lncCallBranch () {
+
+    #########################################
+    echo "entering lncRNA annotation pipeline..."
+    
+    # turn bam into gtf
+    stringtie "$smpout"/sort_accepted.bam \
+    -G $annotation \
+    -o "$smpout"/stringtie_out.gtf \
+    -f 0.05 \
+    -j 9 \
+    -c 7 \
+    -s 20
+
+    # merge gtf from bam with ref gtf
+    stringtie --merge -G $annotation \
+    -o "$smpout"/stringtie_merge_out.gtf \
+    "$smpout"/stringtie_out.gtf
+
+    gffcompare -r $annotation "$smpout"/stringtie_merge_out.gtf
+
+    awk '$7 != "." {print}' "$smpout"/gffcmp.annotated.gtf > "$smpout"/filtered_gffcmp.annotated.gtf
+
+    grep -E 'class_code "u";|class_code "x";' "$smpout"/filtered_gffcmp.annotated.gtf > "$smpout"/UXfiltered_gffcmp.annotated.gtf
+    
+    samtools faidx $genome
+
+    gffread "$smpout"/UXfiltered_gffcmp_annotated.gtf -T -o "$smpout"/UXfiltered_gffcmp_annotated.gff3
+
+    # why this step????? come back later
+    gffread "$smpout"/UXfiltered_gffcmp_annotated.gtf -g $genome -w "$smpout"/transcripts.fa
+
+    # get directory access here, come back later
+    python CPC2/bin/CPC2.py -i "$smpout"/transcripts.fa -o "$smpout"/cpc2_output
+
+    awk '$7 < 0.5' "$smpout"/cpc2_output.txt > "$smpout"/filtered_transcripts.txt
+
+    inputFile="$smpout/filtered_transcripts.txt"
+    gtfFile="$smpout/UXfiltered_gffcmp_annotated.gtf"
+    outputFile="$smpout/cpc_filtered_transcripts.txt"
+    while IFS= read -r line; do
+        pattern=$(echo "$line" | cut -f1)
+        grep "$pattern" "$gtfFile" >> "$outputFile"
+    done < "$inputFile"
+
+    gffread "$smpout"/cpc_filtered_transcripts.txt -g $genome "$smpout"/-w rfam_in.fa
+
+    # is the directory correct here...?
+    cmscan --nohmmonly \
+    --rfam --cut_ga --fmt 2 --oclan --oskip \
+    --clanin "$smpout"/Rfam.clanin -o "$smpout"/my.cmscan.out --tblout "$smpout"/my.cmscan.tblout "$smpout"/Rfam.cm "$smpout"/rfam_in.fa
+
+    # tblout info extraction 
+    inputFile="$smpout/my.cmscan.tblout"
+    gtfFile="$smpout/cpc_filtered_transcripts.txt"
+    outputFile="$smpout/rfam_filtered_transcripts.txt"
+
+    # first two line always skip
+    # note the python script is susceptible to empty hits, debug as we go
+    tail -n +3 "$inputFile" >> "$smpout"/parsed_rfam_out.tblout
+
+
+    # created a python script to deal with infernal's space delimited file
+    cp "$smpout/cpc_filtered_transcripts.txt" "$smpout/rfam_filtered_transcripts.txt"
+    while IFS= read -r line; do
+        if [[ $line =~ ^#$ ]]; then 
+            break
+        else
+            pattern=$(python "$scripts"/parser.py "$line")
+            sed -i "/$pattern/d" "$outputFile"
+        fi
+    done < "$smpout"/parsed_rfam_out.tblout
+
+    # i don't understand why we need to concatenate the two, so here I'm going to only retain the predicted regions
+    # cat $annotation "$smpout"/rfam_filtered_transcripts.txt > "$smpout"/final_combined.gtf
+
+    mv "$smpout"/rfam_filtered_transcripts.txt "$smpout"/"${smpname}".lnc.gtf
+
+    echo "done"
+    echo ""
+
+    ################################
+
+    echo "processing identified lncRNA into GTF..."
+    Rscript "$scripts"/lnc_processing.R \
+        "$smpout"/"${smpname}".lnc.gtf \
+        "$smpout"
+
+    cp "$smpout"/"${smpname}".lnc.gtf "$lncout"
+
+    echo "done"
+    echo ""
+}
+
+# the wrapper around hamrBranch and lncCallBranch, is called once for each rep (or input file)
+fastq2raw () {
     # translates string library prep strandedness into feature count required number
     # if [[ "$hisatlib" = R ]]; then
     #     fclib=2
@@ -372,8 +595,17 @@ fastq2hamr () {
         echo "created path: $out/hamr_out"
     fi
 
+    # Reassign lnc output directory
+    if [ ! -d "$out/lnc_out" ]; then
+        mkdir "$out"/lmc_out
+        echo "created path: $out/lnc_out"
+    fi
+
     hamrout=$out/hamr_out
-    echo "[$smpkey] You can find the HAMR output file for $smpkey at $hamrout/$smpname.mod.txt" 
+    lncout=$out/lnc_out
+
+    echo "[$smpkey] You can find the HAMR output file for $smpkey at $hamrout/$smpname.mod.txt"
+    echo "[$smpkey] You can find the lncRNA output file for $smpkey at $lncout/$smpname.mod.txt" 
 
     # check if progress.txt exists, if not, create it with 0
     if [[ ! -e "$smpout"/progress.txt ]]; then
@@ -504,166 +736,10 @@ fastq2hamr () {
 
     wait
 
-    if [[ $currProg == "2" ]]; then
-        #filter the accepted hits by uniqueness
-        echo "[$smpkey] filtering uniquely mapped reads..."
-        samtools view \
-            -h "$smpout"/sort_accepted.bam \
-            | perl "$filter" 1 \
-            | samtools view -bS - \
-            | samtools sort \
-            -o "$smpout"/unique.bam
-        echo "[$smpkey] finished filtering"
-        echo ""
-
-        # filtering unique completed without erroring out if this is reached
-        echo "3" > "$smpout"/progress.txt
-        currProg="3"
-    fi
-
-    wait
-
-    ###############################################
-    ########evolinc_i logic here (left arm)###########
-    ############################################### 
-    # if user didn't suppress evolinc_i, start the pipeline, note the constitutive featurecount after evolinc
-    if [[ "$evolinc_i" = true ]]; then
-        echo "################################################################"
-        echo "############## Entering lincRNA abundance quantification pipeline ##############"
-        echo "################################################################"
-        date '+%d/%m/%Y %H:%M:%S'
-        
-        # MO mode requires these 3 files
-        if [ "$evolinc_i_option" == "MO" ]; then
-            echo "chekcing for input files needed for evolinc under MO mode"
-            if [[ ! -z "$blast_file" ]]; then blast_file="$user_dir"/"$blast_file"; else echo "Error: missing blast file!"; exit 1; fi
-            if [[ ! -z "$cage_file" ]]; then cage_file="$user_dir"/"$cage_file"; else echo "Error: missing cage file!"; exit 1; fi
-            if [[ ! -z "$known_file" ]]; then known_linc="$user_dir"/"$known_linc"; else echo "Error: missing known linc file!"; exit 1; fi
-        fi
-
-        if [ ! -d "$out/evolinc_out" ]; then mkdir "$out/evolinc_out"; fi
-        # run stringtie accordingly, note PE and SE here is taken care of
-        # output is unnamed and stored in each fastq folder
-
-        # check if evoprog.txt exists, if not, create it with a
-        if [[ ! -e "$smpout"/evoprog.txt ]]; then
-        echo "a" > "$smpout"/evoprog.txt
-        fi
-        # determine stage of progress for this sample folder at this run
-        # progress must be none empty so currProg is never empty
-        currEvoProg=$(cat "$smpout"/evoprog.txt)
-
-        if [[ $currEvoProg == "a" ]]; then
-            echo "[$smpkey] producing transcript assembly using stringtie..."
-            if [[ "$fclib" = 2 ]]; then
-                echo "[$smpkey] running stringtie with --rf"
-                stringtie \
-                    "$smpout"/unique.bam \
-                    -o "$smpout"/transcriptAssembly.gtf \
-                    -G "$annotation" \
-                    -p 2 \
-                    --rf
-            elif [[ "$fclib" = 1 ]]; then
-                echo "[$smpkey] running stringtie with --fr"
-                stringtie \
-                    "$smpout"/unique.bam \
-                    -o "$smpout"/transcriptAssembly.gtf \
-                    -G "$annotation" \
-                    -p 2 \
-                    --fr
-            else
-                echo "[$smpkey] running stringtie assuming an unstranded library"
-                stringtie \
-                    "$smpout"/unique.bam \
-                    -o "$smpout/"transcriptAssembly.gtf \
-                    -G "$annotation" \
-                    -p 2
-            fi
-
-            echo "b" > "$smpout"/currEvoProgress.txt
-            currEvoProg="b"
-        fi
-
-        if [[ $currEvoProg == "b" ]]; then
-            # next run cuff compare
-            echo "[$smpkey] merging assemblies using cuffcompare..."
-            cuffcompare \
-                "$smpout"/transcriptAssembly.gtf \
-                -r "$annotation" \
-                -s "$genome" \
-                -T \
-                -o "$smpout"/cuffed
-                
-            echo "c" > "$smpout"/currEvoProgress.txt
-            currEvoProg="c"
-        fi
-
-
-        if [[ $currEvoProg == "c" ]]; then
-            # run evolinc
-            echo "[$smpkey] annotating lincRNA using Evolinc-i..."
-            if [ "$evolinc_i_option" == "M" ]; then
-                echo "[$smpkey] M option identified for evolinc"
-                evolinc-part-I.sh \
-                    -c "$smpout"/cuffed.combined.gtf \
-                    -g "$genome" \
-                    -u "$annotation" \
-                    -r "$annotation" \
-                    -n 2 \
-                    -o "$smpout"/"$smpname"_lincRNA
-            elif [ "$evolinc_i_option" == "MO" ]; then
-                echo "[$smpkey] MO option identified for evolinc"
-                evolinc-part-I.sh \
-                    -c "$smpout"/cuffed.combined.gtf \
-                    -g "$genome" \
-                    -u "$annotation" \
-                    -r "$annotation" \
-                    -n 2 \
-                    -o "$smpout"/"$smpname"_lincRNA \
-                    -b "$blast_file" \
-                    -t "$cage_file" \
-                    -x "$known_linc"
-            fi
-            echo "f" > "$smpout"/currEvoProgress.txt
-            currEvoProg="f"
-        fi
-
-        cd $smpout
-        # house keeping for evolinc
-        rm *.loci *.stats *.tracking
-        mv *_lincRNA* "$out/evolinc_out"
-        cd
-
-        # run constitutive feature count within evolinc_i (left arm) if the user didn't suppress feacturecount
-        if [[ "$featurecount" = true ]]; then
-            echo "[$(date '+%d/%m/%Y %H:%M:%S')$smpkey] quantifying lincRNA-based transcript abundance using featurecounts..."
-            if [ ! -d "$out/featurecount_out" ]; then mkdir "$out/featurecount_out"; fi
-            if [ "$det" -eq 1 ]; then
-                echo "[$smpkey] running featurecount with $fclib as the -s argument"
-                featureCounts \
-                    -T 2 \
-                    -s $fclib \
-                    -a "$smpout"/lincRNA/lincRNA.updated.gtf \
-                    -o "$smpout"/"$smpname"_lincRNA_featurecount.txt \
-                    "$smpout"/unique.bam
-            else
-                featureCounts \
-                    -T 2 \
-                    -a "$smpout"/lincRNA/lincRNA.updated.gtf \
-                    -o "$smpout"/"$smpname"_lincRNA_featurecount.txt \
-                    "$smpout"/unique.bam
-            fi
-
-            # housekeeping for feature counts
-            cd "$smpout"
-            mv *_featurecount.txt* "$out/featurecount_out"
-            cd
-        fi 
-        echo "################################################################"
-        echo "############## lincRNA abundance quantification pipeline completed ##############"
-        echo "################################################################"
-    fi
-    wait
+    # pipeline bifurcates here into lncRNA annotation and HAMR
+    # let's see if I can parallelize these two
+    hamrBranch &
+    lncCallBranch
 
     ###############################################
     ########regular feature count logic here (right arm)###########
@@ -704,111 +780,9 @@ fastq2hamr () {
     wait
 
     ###############################################
-    ########original continuation of fastq2hamr here###########
+    ########original continuation of fastq2raw here###########
     ############################################### 
-    # run below only if hamrbox is true
-    if [[ $currProg == "3" ]]; then
-        if [[ "$hamrbox" = false ]]; then
-            echo "[$(date '+%d/%m/%Y %H:%M:%S')] hamrbox functionality suppressed, $smpkey analysis completed."
-            exit 0
-        else
-            #adds read groups using picard, note the RG arguments are disregarded here
-            echo "[$smpkey] adding/replacing read groups..."
-            gatk AddOrReplaceReadGroups \
-                I="$smpout"/unique.bam \
-                O="$smpout"/unique_RG.bam \
-                RGID=1 \
-                RGLB=xxx \
-                RGPL=illumina_100se \
-                RGPU=HWI-ST1395:97:d29b4acxx:8 \
-                RGSM=sample
-            echo "[$smpkey] finished adding/replacing read groups"
-            echo ""
-
-            # RG finished without exiting
-            echo "4" > "$smpout"/progress.txt
-            currProg="4"
-            fi
-    fi 
-
-    wait
-
-    if [[ $currProg == "4" ]]; then
-        #reorder the reads using picard
-        echo "[$smpkey] reordering..."
-        echo "$genome"
-        gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" ReorderSam \
-            I="$smpout"/unique_RG.bam \
-            O="$smpout"/unique_RG_ordered.bam \
-            R="$genome" \
-            CREATE_INDEX=TRUE \
-            SEQUENCE_DICTIONARY="$dict" \
-            TMP_DIR="$smpout"/tmp
-        echo "[$smpkey] finished reordering"
-        echo ""
-
-        # ordering finished without exiting
-        echo "5" > "$smpout"/progress.txt
-        currProg="5"
-    fi 
-
-    wait
-
-    if [[ $currProg == "5" ]]; then
-        #splitting and cigarring the reads, using genome analysis tool kit
-        #note can alter arguments to allow cigar reads 
-        echo "[$smpkey] getting split and cigar reads..."
-        gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" SplitNCigarReads \
-            -R "$genome" \
-            -I "$smpout"/unique_RG_ordered.bam \
-            -O "$smpout"/unique_RG_ordered_splitN.bam
-            # -U ALLOW_N_CIGAR_READS
-        echo "[$smpkey] finished splitting N cigarring"
-        echo ""
-
-        # cigaring and spliting finished without exiting
-        echo "6" > "$smpout"/progress.txt
-        currProg="6"
-    fi 
-
-    wait
-
-    if [[ $currProg == "6" ]]; then
-        #final resorting using picard
-        echo "[$smpkey] resorting..."
-        gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" SortSam \
-            I="$smpout"/unique_RG_ordered_splitN.bam \
-            O="$smpout"/unique_RG_ordered_splitN.resort.bam \
-            SORT_ORDER=coordinate
-        echo "[$smpkey] finished resorting"
-        echo ""
-
-        # cigaring and spliting finished without exiting
-        echo "7" > "$smpout"/progress.txt
-        currProg="7"
-    fi 
-
-    wait
-
-    if [[ $currProg == "7" ]]; then
-        #hamr step, can take ~1hr
-        echo "[$smpkey] hamr..."
-        #hamr_path=$(which hamr.py) 
-        python $exechamr \
-            -fe "$smpout"/unique_RG_ordered_splitN.resort.bam "$genome" "$model" "$smpout" $smpname $quality $coverage $err H4 $pvalue $fdr .05
-        wait
-
-        if [ ! -e "$smpout/${smpname}.mods.txt" ]; then 
-            cd "$hamrout" || exit
-            printf '%s \n' "$smpname" >> zero_mod.txt
-            cd || exit
-        else
-        # HAMR needs separate folders to store temp for each sample, so we move at the end
-            cp "$smpout"/"${smpname}".mods.txt "$hamrout"
-        fi
-        echo "8" > "$smpout"/progress.txt
-        currProg="8"
-    fi
+    
 
     if [[ $currProg == "8" ]]; then
         # Move the unique_RG_ordered.bam and unique_RG_ordered.bai to a folder for read depth analysis
@@ -830,7 +804,8 @@ fastq2hamr () {
     fi
 }
 
-parallelwrapf2h () {
+# the wrapper around fastq2raw, iterates through existing files so fastq2raw can be called once for each file
+parallelWrap () {
     smpext=$(basename "$smp")
     smpdir=$(dirname "$smp")
     smpkey="${smpext%.*}"
@@ -851,7 +826,7 @@ parallelwrapf2h () {
         # fi
         echo "$smpext is a part of a paired-end sequencing file"
         echo ""
-        fastq2hamr
+        fastq2raw
     elif [[ $smpkey == *_2* ]]; then
         # If _2 is in the filename, this file was processed along with its corresponding _1 so we skip
         echo "$smpext has already been processed with its _1 counter part. Skipped."
@@ -860,10 +835,11 @@ parallelwrapf2h () {
         det=1
         echo "$smpext is a single-end sequencing file"
         echo ""
-        fastq2hamr
+        fastq2raw
     fi
 }
 
+# de novo function to deal with consensus modifications
 consensusOverlap () {
     IFS="/" read -ra sections <<< "$smp"
     temp="${sections[-1]}"
@@ -957,10 +933,20 @@ consensusOverlap () {
             > "$out"/lap/"$smpname""_ncRNA".bed
         echo "finished finding overlap with ncRNA library"
     fi
+
+    ######## this is from the lncRNA identification steps ##########
+    # given lines of lncRNA region in gtf, see if any mod can be found there
+    intersectBed \
+        -a "$smpout"/"$smpname".lnc.gtf \
+        -b "$smp" \
+        -wa -wb \
+        > "$out"/lap/"$smpname"_overlapped_lnc.bed
+    echo "finished finding overlap with lncRNA predictions"
 }
 
-fqgrabhouse () {
-    ##########fqgrab housekeeping begins#########
+# house keeping steps for fastqGrab functions, mostly creating folders and checking function calls
+fastqGrabHouseKeeping () {
+    ##########fastqGrab housekeeping begins#########
     if [ ! -d "$out" ]; then mkdir "$out"; echo "created path: $out"; fi
 
     if [ ! -d "$out/datasets" ]; then mkdir "$out"/datasets; echo "created path: $out/datasets"; fi
@@ -1017,11 +1003,12 @@ fqgrabhouse () {
         echo "Failed to call gatk command. Please check your installation."
         exit 1
     fi
-    ##########fqgrab housekeeping ends#########
+    ##########fastqGrab housekeeping ends#########
 }
 
-fastq2hamrhouse () {
-    ############fastq2hamr housekeeping begins##############
+# house keeping steps for fastq2raw, mostly creating folders, some indices, and checking function calls
+fastq2rawHouseKeeping () {
+    ############fastq2raw housekeeping begins##############
     # Checks if the files were trimmed or cleaned, and if so, take those files for downstream
     hamrin=""
     suf=""
@@ -1100,7 +1087,7 @@ fastq2hamrhouse () {
         fi
     fi
 
-    # Run a series of command checks to ensure fastq2hamr can run smoothly
+    # Run a series of command checks to ensure fastq2raw can run smoothly
     if ! command -v mapfile > /dev/null; then
         echo "Failed to call mapfile command. Please check your installation."
         exit 1
@@ -1143,7 +1130,7 @@ fastq2hamrhouse () {
 
     # Creates a folder for depth analysis
     if [ ! -d "$out/pipeline/depth" ]; then mkdir "$out"/pipeline/depth; echo "created path: $out/pipeline/depth"; fi
-    #############fastq2hamr housekeeping ends#############
+    #############fastq2raw housekeeping ends#############
 }
 
 ######################################################### Main Program Begins #########################################
@@ -1189,27 +1176,27 @@ else
     last_checkpoint="start"
 fi
 
-# run fqgrab when checkpoint agrees so
+# run fastqGrab when checkpoint agrees so
 if [ "$last_checkpoint" = "start" ] || [ "$last_checkpoint" = "" ]; then
-    fqgrabhouse
-    ##########fqgrab main begins#########
+    fastqGrabHouseKeeping
+    ##########fastqGrab main begins#########
     if [[ $mode -eq 1 ]]; then
         # Grabs the fastq files from acc list provided into the dir ~/datasets
         i=0
         while IFS= read -r line
         do ((i=i%threads)); ((i++==0)) && wait
-        fqgrab &
+        fastqGrabSRA &
         done < "$acc"
 
     elif [[ $mode -eq 2 ]]; then
         i=0
         for fq in "$fastq_in"/*; do
         ((i=i%threads)); ((i++==0)) && wait
-        fqgrab2 &
+        fastqGrabLocal &
         done
     fi
     wait
-    ##################fqgrab main ends#################
+    ##################fastqGrab main ends#################
 
     echo ""
     echo "################ Finished downloading and processing all fastq files. Entering pipeline for HAMR analysis. ######################"
@@ -1220,10 +1207,10 @@ if [ "$last_checkpoint" = "start" ] || [ "$last_checkpoint" = "" ]; then
     checkpoint $last_checkpoint
 fi
 
-# run fastq2hamr when checkpoint agrees
+# run fastq2raw when checkpoint agrees
 if [ "$last_checkpoint" = "checkpoint1" ]; then 
-    fastq2hamrhouse
-    #############fastq2hamr main begins###############
+    fastq2rawHouseKeeping
+    #############fastq2raw main begins###############
     # Pipes each fastq down the hamr pipeline, and stores out put in ~/hamr_out
     # Note there's also a hamr_out in ~/pipeline/SRRNUMBER_temp/, but that one's for temp files
     
@@ -1236,7 +1223,7 @@ if [ "$last_checkpoint" = "checkpoint1" ]; then
     ttop=$((threads/2))
     for smp in "$hamrin"/*."$suf"; do
     ((i=i%ttop)); ((i++==0)) && wait   
-    parallelwrapf2h &
+    parallelWrap &
     done
 
     if [[ "$hamrbox" = false ]]; then
@@ -1259,7 +1246,7 @@ if [ "$last_checkpoint" = "checkpoint1" ]; then
     echo "$(date '+%d/%m/%Y %H:%M:%S')"
     echo ""
 
-    #############fastq2hamr main ends###############
+    #############fastq2raw main ends###############
 
     # obtained all HAMR txts, record down checkpoint
     last_checkpoint="checkpoint2"
@@ -1270,7 +1257,8 @@ fi
 if [ "$last_checkpoint" = "checkpoint2" ]; then 
     ##############consensus finding begins##############
     # Produce consensus bam files based on filename (per extracted from name.csv) and store in ~/consensus
-    if [ ! -d "$out/consensus" ]; then mkdir "$out"/consensus; echo "created path: $out/consensus"; fi
+    if [ ! -d "$out/hamr_consensus" ]; then mkdir "$out"/hamr_consensus; echo "created path: $out/hamr_consensus"; fi
+    if [ ! -d "$out/lnc_consensus" ]; then mkdir "$out"/lnc_consensus; echo "created path: $out/lnc_consensus"; fi
 
     # Run a series of command checks to ensure findConsensus can run smoothly
     if ! command -v Rscript > /dev/null; then
@@ -1282,18 +1270,23 @@ if [ "$last_checkpoint" = "checkpoint2" ]; then
     # Find consensus accross all reps of a given sample group
     Rscript "$scripts"/findConsensus.R \
         "$out"/hamr_out \
-        "$out"/consensus
+        "$out"/hamr_consensus
+
+    Rscript "$scripts"/findConsensus_lnc.R \
+        "$out"/lnc_out \
+        "$out"/lnc_consensus
+
     wait
     echo "done"
 
     # The case where no consensus file is found, prevents *.bed from being created
-    if [ -z "$(ls -A "$out"/consensus)" ]; then
+    if [ -z "$(ls -A "$out"/hamr_consensus)" ]; then
     echo "No consensus mods found within any sequencing group. Please see check individual rep for analysis. "
     exit 1
     fi
 
     # Add depth columns with info from each rep alignment, mutate in place
-    for f in "$out"/consensus/*.bed
+    for f in "$out"/hamr_consensus/*.bed
     do
     t=$(basename "$f")
     d=$(dirname "$f")
@@ -1322,7 +1315,7 @@ if [ "$last_checkpoint" = "checkpoint2" ]; then
         done
     wait
 
-    for f in "$out"/consensus/*.bed
+    for f in "$out"/hamr_consensus/*.bed
     do
     if [ -s "$f" ]; then
     # The file is not-empty.
@@ -1375,7 +1368,7 @@ if [ "$last_checkpoint" = "checkpoint3" ]; then
     fi
 
     # Overlap with provided libraries for each sample group
-    for smp in "$out"/consensus/*
+    for smp in "$out"/hamr_consensus/*
     do consensusOverlap
     done
 
