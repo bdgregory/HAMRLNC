@@ -2,76 +2,76 @@
 set -u
 
 # Harry Li, University of Pennsylvania & Chosen Obih, University of Arizona
-
-
+# man page
 usage () {
     echo ""
     echo "Usage : sh $0"
     echo ""
 
-cat <<'EOF'
-  
+    cat <<'EOF'
   ######################################### COMMAND LINE OPTIONS #############################
   REQUIRED:
-    -o	<project directory>
-    -c	<filenames with key and name>
-    -g	<reference genome.fa>
+    -o  <project directory>
+    -c  <filenames with key and name>
+    -g  <reference genome.fa>
     -i  <reference genome annotation.gff3>
-    -l	<read length>
-    -s	<genome size in bp>
+    -l  <read length>
 
   OPTIONAL: 
     -n  number of threads (default 4)
-    -a	[use HISAT2 instead of STAR]        #####Disabled 3/28/24######
+    -a  [use HISAT2 instead of STAR]        #####Disabled 3/28/24######
     -x  [Genome index directory for HISAT2 by user input]       #####Disabled 3/28/24######
     -d  [input a directory of fastq]
-    -b	[HISAT library choice: single: F or R, paired: FR or RF, unstranded: leave unspecified]         #####Disabled 3/28/24######
-    -f	[filter]
-    -m	[HAMR model]
-    -k  [activate hamrbox]
-    -p  [activate evolinc_i]
-    -u  [activate featurecount]
-    -v  [evolinc_i_option: M or MO, default=M]
-    -Q	[HAMR: minimum qualuty score, default=30]
-    -C	[HAMR: minimum coverage default=10]
-    -E	[HAMR: sequencing error, default=0.01]
-    -P	[HAMR: maximum p-value, default=1]
-    -F	[HAMR: maximum fdr, default=0.05]
+    -b  [HISAT library choice: single: F or R, paired: FR or RF, unstranded: leave unspecified]         #####Disabled 3/28/24######
+    -f  [filter]
+    -m  [HAMR model]
+    -k  [activate modification annotation workflow]
+    -p  [activate lncRNA annotation workflow]
+    -u  [activate featurecount workflow]
+    -G  [attribute used for featurecount, default=gene_id]
+    -Q  [HAMR: minimum quality score, default=30]
+    -C  [HAMR: minimum coverage, default=10]
+    -E  [HAMR: sequencing error, default=0.01]
+    -P  [HAMR: maximum p-value, default=1]
+    -F  [HAMR: maximum fdr, default=0.05]
     -O  [Panther: organism taxon ID, default 3702]
     -A  [Panther: annotation data set, default GO:0008150]
     -Y  [Panther: test type, default FISHER]
     -R  [Panther: correction type, default FDR]
-    -T  <transposable Elements file> (optional file for evolinc_i)
-    -G  <CAGE RNA file> (optional file for evolinc_i)
-    -D  <known lincRNA file> (optional file for evolinc_i)
     -S  [optional path for hamr.py]
-    -h	[help message] 
-
-
+    -h  [help message] 
   ################################################# END ########################################
 EOF
     exit 0
 }
 
-#curdir=$(dirname "$0")
-threads=4
-hisat=false
+
+############################################# Define Default Variables #####################################
+# hamr related defaults
 quality=30
 coverage=10
 err=0.01
 pvalue=1
 fdr=0.05
-evolinc_i_option="M"
-# hisatlib="R"
+exechamr="/HAMR/hamr.py"
 filter="$util"/filter_SAM_number_hits.pl
 model="$util"/euk_trna_mods.Rdata
+
+# hamr downstream
 json="$util"/panther_params.json
 generator="$scripts"/annotationGenerateUnified.R
-evolinc_i=false
-featurecount=false
-hamrbox=false
-exechamr="/HAMR/hamr.py"
 execpthr="/pantherapi-pyclient/pthr_go_annots.py"
+
+# subprogram activation logic
+run_lnc=false
+run_mod=false
+run_featurecount=false
+
+# other initialization
+threads=4
+hisat=false
+attribute_fc="gene_id"
+#curdir=$(dirname "$0")
 hsref=""
 fastq_in=""
 porg=""
@@ -79,62 +79,51 @@ pterm=""
 ptest=""
 pcorrect=""
 
-#############Grabbing arguments############
-while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CakTGH:DupEPS:F:" opt; do
+
+######################################################### Grab Arguments #########################################
+while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CakTtGH:DupEPS:F:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
-     ;;
+    ;;
     c)
     csv=$OPTARG # SRR to filename table
-     ;;
+    ;;
     g)
-    genome=$OPTARG # reference genome directory
-     ;;
+    genome=$OPTARG # reference genome 
+    ;;
     i)
     annotation=$OPTARG # reference genome annotation
     ;;
     l)
     length+=$OPTARG # read length 
     ;;
-    s)
-    genomelength=$OPTARG # length or size of the genome
-     ;;
     f)
     filter=$OPTARG
-     ;;
+    ;;
     m)
     model=$OPTARG
-     ;;
-    v)
-    evolinc_i_option="$OPTARG"
     ;;
     n)
     threads=$OPTARG
     ;;
     p)
-    evolinc_i=true
+    run_lnc=true
     ;;
     k)
-    hamrbox=true
+    run_mod=true
     ;;
     u)
-    featurecount=true
+    run_featurecount=true
     ;;
     Q)
     quality=$OPTARG
     ;;
-    T)
-    blast_file=$OPTARG
-     ;;
-    G)
-    cage_file=$OPTARG
-     ;;
-    D)
-    known_linc=$OPTARG
-    ;;
     O)
     porg=$OPTARG
+    ;;
+    G)
+    attribute_fc=$OPTARG
     ;;
     A)
     pterm=$OPTARG
@@ -181,14 +170,16 @@ while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CakTGH:DupEPS:F:" opt; do
     \?)
       echo "Invalid option: -$OPTARG" >&2
       exit 1
-      ;;
+    ;;
     :)
       echo "Option -$OPTARG requires an argument." >&2
       exit 1
-      ;;
+    ;;
   esac
 done
 
+
+############################################### Derive Other Variables #########################################
 # reassign sample input files, genome and annotation files name and include file paths
 user_dir=$(pwd)
 genome="$user_dir"/"$genome"
@@ -198,33 +189,11 @@ csv="$user_dir"/"$csv"
 
 # assigning additional variables
 dumpout=$out/datasets
+ttop=$((threads/2))
 mismatch=$((length*6/100))
 overhang=$((mismatch-1))
 genomedir=$(dirname "$genome")
 last_checkpoint=""
-
-# # Assigning the appropriate annotationGenerate.R 
-# if [[ $generator == "AT" ]]; then
-#     generator=$annotationGenerate/annotationGenerateAT.R
-#     echo "Model organism detected: Arabidopsis thaliana"
-# elif [[ $generator == "BD" ]]; then
-#     generator=$annotationGenerate/annotationGenerateBD.R
-#     echo "Model organism detected: Brachypodium distachyon"
-# elif [[ $generator == "ZM" ]]; then
-#     generator=$annotationGenerate/annotationGenerateZM.R
-#     echo "Model organism detected: Zea mays"
-# elif [[ $generator == "OSJ" ]]; then
-#     generator=$annotationGenerate/annotationGenerateOSJ.R
-#     echo "Model organism detected: Oryza sativa jadica"
-# elif [[ $generator == "OSIR64" ]]; then
-#     generator=$annotationGenerate/annotationGenerateOSIR64.R
-#     echo "Model organism detected: Oryza sativa IR64"
-# else
-#     echo "##################################################"
-#     echo "model organism code not recognized, please check your input"
-#     echo "HAMRLINC will proceed with limited functionalities"
-#     echo "##################################################"
-# fi
 
 # designate log file, if exist, clear, and have all stdout written
 logstart=$(date "+%Y.%m.%d-%H.%M.%S")
@@ -233,7 +202,9 @@ exec > >(tee -a "$logfile") 2>&1
 #below captures only echo...?
 #exec 2>&1 1>>$logfile 3>&1
 
-######################################################### Subprogram Definition #########################################
+
+################################################ Subprogram Definitions #########################################
+# announces reached checkpoint and updates checkpoint file, or create txt if it didn't exist
 checkpoint () {
     echo "Checkpoint reached: $1"
     echo "$1" > "$out"/checkpoint.txt
@@ -342,8 +313,8 @@ hamrBranch () {
     wait
 
     if [[ $currProg == "3" ]]; then
-        if [[ "$hamrbox" = false ]]; then
-            echo "[$(date '+%d/%m/%Y %H:%M:%S')] hamrbox functionality suppressed, $smpkey analysis completed."
+        if [[ "$run_mod" = false ]]; then
+            echo "[$(date '+%d/%m/%Y %H:%M:%S')] modification annotation functionality suppressed, $smpkey analysis completed."
             exit 0
         else
             #adds read groups using picard, note the RG arguments are disregarded here
@@ -540,6 +511,70 @@ lncCallBranch () {
     echo ""
 }
 
+# called upon completion of lncCall, performs abundance analysis for each BAM dependning on lnc arm
+featureCountBranch () {
+    echo "[$(date '+%d/%m/%Y %H:%M:%S')$smpkey] quantifying regular transcript abundance using featurecounts..."
+    if [ ! -d "$out/featurecount_out" ]; then mkdir "$out/featurecount_out"; fi
+
+    if [[ "$run_lnc" = true ]]; then
+        # if lncRNA annotated we also feature count with the combined gtf, separate by PE det
+        echo "[$smpkey] quantifying transcripts found in reads..."
+        if [ "$det" -eq 1 ]; then
+            echo "[$smpkey] running featurecount with $fclib as the -s argument"
+            featureCounts \
+                -T 2 \
+                -t transcript \
+                -s $fclib \
+                -g $attribute_fc \
+                -a "$out"/final_combined.gtf \
+                -o "$smpout"/"$smpname"_transcript_abundance_lncRNA-included.txt \
+                "$smpout"/sort_accepted.bam
+        else
+            featureCounts \
+                -T 2 \
+                -t transcript \
+                -g $attribute_fc \
+                -a "$out"/final_combined.gtf \
+                -o "$smpout"/"$smpname"_transcript_abundance_lncRNA-included.txt \
+                "$smpout"/sort_accepted.bam
+        fi
+        echo "[$smpkey] finished quantifying read features"
+
+    # always do feature count with the regular gtf
+    # first create gtf file from gff3 file
+    gffread \
+        "$annotation" \
+        -T \
+        -o "$out"/temp.gtf
+    
+    echo "[$smpkey] quantifying exons found in reads..."
+    if [ "$det" -eq 1 ]; then
+        echo "[$smpkey] running featurecount with $fclib as the -s argument"
+        featureCounts \
+            -T 2 \
+            -t exon \
+            -g $attribute_fc \
+            -s $fclib \
+            -a "$out"/temp.gtf \
+            -o "$smpout"/"$smpname"_exon_abundance.txt \
+            "$smpout"/sort_accepted.bam
+    else
+        featureCounts \
+            -T 2 \
+            -t exon \
+            -g $attribute_fc \
+            -a "$out"/temp.gtf \
+            -o "$smpout"/"$smpname"_exon_abundance.txt \
+            "$smpout"/sort_accepted.bam
+    fi
+    echo "[$smpkey] finished quantifying read features"
+
+    # housekeeping for regular abundance
+    cd "$smpout"
+    mv *_featurecount.txt* "$out/featurecount_out"
+    cd
+}
+
 # the wrapper around hamrBranch and lncCallBranch, is called once for each rep (or input file)
 fastq2raw () {
     # translates string library prep strandedness into feature count required number
@@ -561,7 +596,8 @@ fastq2raw () {
 
     # Create a dictionary from the DataFrame
     declare -A dictionary
-    for ((i=0; i<${#names[@]}; i++)); do
+    for ((i=0; i<${#names[@]}; i++)); 
+    do
         dictionary[${names[i]}]=${smpf[i]}
     done
 
@@ -610,6 +646,7 @@ fastq2raw () {
     # check if progress.txt exists, if not, create it with 0
     if [[ ! -e "$smpout"/progress.txt ]]; then
         echo "0" > "$smpout"/progress.txt
+    fi
 
     # determine stage of progress for this sample folder at this run
     # progress must be none empty so currProg is never empty
@@ -736,54 +773,27 @@ fastq2raw () {
 
     wait
 
-    # pipeline bifurcates here into lncRNA annotation and HAMR
-    # let's see if I can parallelize these two
-    hamrBranch &
-    lncCallBranch
-
-    ###############################################
-    ########regular feature count logic here (right arm)###########
-    ############################################### 
-    # first create gtf file from gff3 file
-    if [[ "$featurecount" = true ]]; then
-        gffread \
-            "$annotation" \
-            -T \
-            -o "$out"/temp.gtf
-    fi    
-
-    # run feature count for normal alignment transcript quantification if user didn't suppress
-    if [[ "$featurecount" = true ]]; then
-        echo "[$(date '+%d/%m/%Y %H:%M:%S')$smpkey] quantifying regular transcript abundance using featurecounts..."
-        if [ ! -d "$out/featurecount_out" ]; then mkdir "$out/featurecount_out"; fi
-        if [ "$det" -eq 1 ]; then
-            echo "[$smpkey] running featurecount with $fclib as the -s argument"
-            featureCounts \
-                -T 2 \
-                -s $fclib \
-                -a "$out"/temp.gtf \
-                -o "$smpout"/"$smpname"_alignment_featurecount.txt \
-                "$smpout"/unique.bam
-        else
-            featureCounts \
-                -T 2 \
-                -a "$out"/temp.gtf \
-                -o "$smpout"/"$smpname"_alignment_featurecount.txt \
-                "$smpout"/unique.bam
-        fi
-
-        # housekeeping for regular abundance
-        cd "$smpout"
-        mv *_featurecount.txt* "$out/featurecount_out"
-        cd
+    # if both lnc and mod are true, then run them parallelized
+    if [[ "$run_lnc" = true ]] && [[ "$run_mod" = true ]]; then
+        hamrBranch &
+        lncCallBranch
+    # this means only lnc runs, mod doesn't
+    elif [[ "$run_lnc" = true ]]; then
+        lncCallBranch
+    # this means only mod runs, lnc doesn't
+    elif [[ "$run_mod" = true ]]; then
+        hamrBranch
     fi
+
     wait
 
-    ###############################################
-    ########original continuation of fastq2raw here###########
-    ############################################### 
-    
+    if [[ "$run_featurecount" = true ]]; then
+        featureCountBranch
+    fi    
 
+    wait
+
+    # intermediate file clean up
     if [[ $currProg == "8" ]]; then
         # Move the unique_RG_ordered.bam and unique_RG_ordered.bai to a folder for read depth analysis
         cp "$smpout"/unique_RG_ordered.bam "$out"/pipeline/depth/"$smpname".bam
@@ -800,7 +810,6 @@ fastq2raw () {
         echo "[$smpkey] finished cleaning"
         
         echo "9" > "$smpout"/progress.txt
-    fi
     fi
 }
 
@@ -936,12 +945,14 @@ consensusOverlap () {
 
     ######## this is from the lncRNA identification steps ##########
     # given lines of lncRNA region in gtf, see if any mod can be found there
-    intersectBed \
-        -a "$smpout"/"$smpname".lnc.gtf \
-        -b "$smp" \
-        -wa -wb \
-        > "$out"/lap/"$smpname"_overlapped_lnc.bed
-    echo "finished finding overlap with lncRNA predictions"
+    if [[ "$run_lnc" = true ]]; then
+        intersectBed \
+            -a "$smpout"/"$smpname".lnc.gtf \
+            -b "$smp" \
+            -wa -wb \
+            > "$out"/lap/"$smpname"_overlapped_lnc.bed
+        echo "finished finding overlap with lncRNA predictions"
+    fi
 }
 
 # house keeping steps for fastqGrab functions, mostly creating folders and checking function calls
@@ -1054,7 +1065,10 @@ fastq2rawHouseKeeping () {
         if [ -e "$out/STARref/SAindex" ]; then
             echo "STAR Genome Directory with indexed genome detected, skipping STAR indexing"
         else
-            # Now, do the indexing step
+            # get genome length
+            genomelength=$(bioawk -c fastx '{ print length($seq) }' < $genome | awk '{sum += $1} END {print sum}')
+            echo "For reference, your provided genome length is $genomelength long"
+
             # Define the SA index number argument
             log_result=$(echo "scale=2; l($genomelength)/l(2)/2 - 1" | bc -l)
             sain=$(echo "scale=0; if ($log_result < 14) $log_result else 14" | bc)
@@ -1133,50 +1147,53 @@ fastq2rawHouseKeeping () {
     #############fastq2raw housekeeping ends#############
 }
 
-######################################################### Main Program Begins #########################################
+# house keeping steps before starting the main program, checks key arguments, set checkpoints, etc
+mainHouseKeeping () {
+    # Check if the required arguments are provided
+    if [ -z "$out" ]; then 
+        echo "output directory not detected, exiting..."
+        exit 1
+    elif [ -z "$csv" ]; then
+        echo "filename dictionary csv not detected, exiting..."
+        exit 1
+    elif [ -z "$genome" ]; then
+        echo "model organism genmome fasta not detected, exiting..."
+        exit 1
+    elif [ -z "$annotation" ]; then
+        echo "model organism genmome annotation gff3 not detected, exiting..."
+        exit 1
+    elif [ -z "$length" ]; then
+        echo "read length not detected, exiting..."
+        exit 1
+    else
+        echo "all required arguments provided, proceding..."
+    fi
 
+    # check that the user didn't suppress all three programs -- if so, there's no need to run anything
+    if [[ "$run_lnc" = false ]] && [[ "$run_featurecount" = false ]] && [[ "$run_mod" = false ]]; then
+        echo "User has not activated any functionalities. Exiting..."
+        exit 0
+    fi
+
+    # check whether checkpoint.txt is present 
+    if [ -e "$out"/checkpoint.txt ]; then
+        last_checkpoint=$(cat "$out"/checkpoint.txt)
+        echo "Resuming from checkpoint: $last_checkpoint"
+    else
+        last_checkpoint="start"
+    fi
+}
+
+
+######################################################### Main Program #########################################
 echo ""
 echo "##################################### Begin HAMRLINC #################################"
 echo ""
 
-# Check if the required arguments are provided
-if [ -z "$out" ]; then 
-    echo "output directory not detected, exiting..."
-    exit 1
-elif [ -z "$csv" ]; then
-    echo "filename dictionary csv not detected, exiting..."
-    exit 1
-elif [ -z "$genome" ]; then
-    echo "model organism genmome fasta not detected, exiting..."
-    exit 1
-elif [ -z "$annotation" ]; then
-    echo "model organism genmome annotation gff3 not detected, exiting..."
-    exit 1
-elif [ -z "$length" ]; then
-    echo "read length not detected, exiting..."
-    exit 1
-elif [ -z "$genomelength" ]; then
-    echo "genome size not detected, exiting..."
-    exit 1
-else
-    echo "all required arguments provided, proceding..."
-fi
+# perform house keeping steps
+mainHouseKeeping
 
-# check that the user didn't suppress all three programs -- if so, there's no need to run anything
-if [ $evolinc_i = false ] && [ $featurecount = false ] && [ $hamrbox = false ]; then
-    echo "User has not activated any functionalities. Exiting..."
-    exit 0
-fi
-
-# check whether checkpoint.txt is present 
-if [ -e "$out"/checkpoint.txt ]; then
-    last_checkpoint=$(cat "$out"/checkpoint.txt)
-    echo "Resuming from checkpoint: $last_checkpoint"
-else
-    last_checkpoint="start"
-fi
-
-# run fastqGrab when checkpoint agrees so
+# run fastqGrab when checkpoint is at start
 if [ "$last_checkpoint" = "start" ] || [ "$last_checkpoint" = "" ]; then
     fastqGrabHouseKeeping
     ##########fastqGrab main begins#########
@@ -1190,24 +1207,25 @@ if [ "$last_checkpoint" = "start" ] || [ "$last_checkpoint" = "" ]; then
 
     elif [[ $mode -eq 2 ]]; then
         i=0
-        for fq in "$fastq_in"/*; do
-        ((i=i%threads)); ((i++==0)) && wait
-        fastqGrabLocal &
+        for fq in "$fastq_in"/*; 
+        do
+            ((i=i%threads)); ((i++==0)) && wait
+            fastqGrabLocal &
         done
     fi
     wait
-    ##################fastqGrab main ends#################
-
+    ##########fastqGrab main ends############
     echo ""
     echo "################ Finished downloading and processing all fastq files. Entering pipeline for HAMR analysis. ######################"
     date '+%d/%m/%Y %H:%M:%S'
     echo ""
+
     # obtained all processed fastq files, record down checkpoint
     last_checkpoint="checkpoint1"
     checkpoint $last_checkpoint
 fi
 
-# run fastq2raw when checkpoint agrees
+# run fastq2raw if program is at checkpoint 1
 if [ "$last_checkpoint" = "checkpoint1" ]; then 
     fastq2rawHouseKeeping
     #############fastq2raw main begins###############
@@ -1220,40 +1238,39 @@ if [ "$last_checkpoint" = "checkpoint1" ]; then
     #cd ..
 
     i=0
-    ttop=$((threads/2))
-    for smp in "$hamrin"/*."$suf"; do
-    ((i=i%ttop)); ((i++==0)) && wait   
-    parallelWrap &
+    for smp in "$hamrin"/*."$suf"; 
+    do
+        ((i=i%ttop)); ((i++==0)) && wait   
+        parallelWrap &
     done
-
-    if [[ "$hamrbox" = false ]]; then
-        exit 0
-    fi
 
     wait
 
-    # Check whether any hamr.mod.text is present, if not, halt the program here
-    if [ -z "$(ls -A "$out"/hamr_out)" ]; then
-    echo "No HAMR predicted mod found for any sequencing data in this project, please see log for verification"
-    exit 1
+    # these checks apply only if mod arm was on
+    if [[ "$run_mod" = true ]]; then
+        # Check whether any hamr.mod.text is present, if not, halt the program here
+        if [[ -z "$(ls -A "$out"/hamr_out)" ]]; then
+            echo "No HAMR predicted mod found for any sequencing data in this project, please see log for verification"
+            exit 1
+        else
+            #at least 1 mod file, move zero mod record outside so it doesn't get read as a modtbl next
+            mv "$out"/hamr_out/zero_mod.txt "$out"
+        fi
     fi
 
-    # If program didn't exit, at least 1 mod file, move zero mod record outside so it doesn't get read as a modtbl next
-    mv "$out"/hamr_out/zero_mod.txt "$out"
-
     echo ""
-    echo "################ Finished HAMR analysis. Producing consensus mod table and depth analysis. ######################"
+    echo "################ Finished the requested analysis for each fastq file. Now producing consensus files and depth analysis. ######################"
     echo "$(date '+%d/%m/%Y %H:%M:%S')"
     echo ""
 
     #############fastq2raw main ends###############
 
-    # obtained all HAMR txts, record down checkpoint
+    # obtained all HAMR / lnc results, record down checkpoint
     last_checkpoint="checkpoint2"
     checkpoint $last_checkpoint
 fi
 
-# run consensus when checkpoint agrees
+# run consensus when checkpoint is at 2
 if [ "$last_checkpoint" = "checkpoint2" ]; then 
     ##############consensus finding begins##############
     # Produce consensus bam files based on filename (per extracted from name.csv) and store in ~/consensus
@@ -1268,13 +1285,17 @@ if [ "$last_checkpoint" = "checkpoint2" ]; then
 
     echo "Producing consensus file across biological replicates..."
     # Find consensus accross all reps of a given sample group
-    Rscript "$scripts"/findConsensus.R \
-        "$out"/hamr_out \
-        "$out"/hamr_consensus
+    if [[ "$run_mod" = true ]]; then
+        Rscript "$scripts"/findConsensus.R \
+            "$out"/hamr_out \
+            "$out"/hamr_consensus
+    fi
 
-    Rscript "$scripts"/findConsensus_lnc.R \
-        "$out"/lnc_out \
-        "$out"/lnc_consensus
+    if [[ "$run_lnc" = true ]]; then
+        Rscript "$scripts"/findConsensus_lnc.R \
+            "$out"/lnc_out \
+            "$out"/lnc_consensus
+    fi
 
     wait
     echo "done"
@@ -1288,11 +1309,11 @@ if [ "$last_checkpoint" = "checkpoint2" ]; then
     # Add depth columns with info from each rep alignment, mutate in place
     for f in "$out"/hamr_consensus/*.bed
     do
-    t=$(basename "$f")
-    d=$(dirname "$f")
-    n=${t%.*}
-    echo "starting depth analysis on $n"
-    for ff in "$out"/pipeline/depth/*.bam
+        t=$(basename "$f")
+        d=$(dirname "$f")
+        n=${t%.*}
+        echo "starting depth analysis on $n"
+        for ff in "$out"/pipeline/depth/*.bam
         do
             if echo "$ff" | grep -q "$n"
             then
@@ -1310,20 +1331,20 @@ if [ "$last_checkpoint" = "checkpoint2" ]; then
                     awk -v "i=$i" 'NR==i {print $0"\t"var; next} 1' var="$dph" "$f" > "$d"/"${nn}"_new.bed && mv "$d"/"${nn}"_new.bed "$f" 
                 done
                 echo "[$n] finished $nn"
-                fi
-            done &
-        done
+            fi
+        done &
+    done
     wait
 
     for f in "$out"/hamr_consensus/*.bed
     do
-    if [ -s "$f" ]; then
-    # The file is not-empty.
-        t=$(basename "$f")
-        n=${t%.*}
-        echo "computing depth across reps for $n"
-        Rscript "$scripts"/depthHelperAverage.R "$f"
-    fi
+        if [ -s "$f" ]; then
+        # The file is not-empty.
+            t=$(basename "$f")
+            n=${t%.*}
+            echo "computing depth across reps for $n"
+            Rscript "$scripts"/depthHelperAverage.R "$f"
+        fi
     done
 
     wait
@@ -1369,7 +1390,8 @@ if [ "$last_checkpoint" = "checkpoint3" ]; then
 
     # Overlap with provided libraries for each sample group
     for smp in "$out"/hamr_consensus/*
-    do consensusOverlap
+    do 
+        consensusOverlap
     done
 
     if [ -z "$(ls -A "$out"/lap)" ]; then
@@ -1499,13 +1521,13 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
             # Send each gene list into panther API and generate a overrepresentation result file in another folter
             for f in "$dir"/go/genelists/*.txt
             do
-            n=$(basename "$f")
-            echo "$n"
-            python $execpthr \
-                --service enrich \
-                --params_file $json \
-                --seq_id_file "$f" \
-                > "$dir"/go/pantherout/"$n"
+                n=$(basename "$f")
+                echo "$n"
+                python $execpthr \
+                    --service enrich \
+                    --params_file $json \
+                    --seq_id_file "$f" \
+                    > "$dir"/go/pantherout/"$n"
             done
 
             echo "producing heatmap..."
