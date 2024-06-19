@@ -62,7 +62,7 @@ json="$util"/panther_params.json
 generator="$scripts"/annotationGenerateUnified.R
 execpthr="/pantherapi-pyclient/pthr_go_annots.py"
 
-# subprogram activation logic
+# subprogram activation boolean
 run_lnc=false
 run_mod=false
 run_featurecount=false
@@ -204,7 +204,7 @@ exec > >(tee -a "$logfile") 2>&1
 
 
 ################################################ Subprogram Definitions #########################################
-# announces reached checkpoint and updates checkpoint file, or create txt if it didn't exist
+# announces reached checkpoint and updates checkpoint file, or creates txt if it didn't exist
 checkpoint () {
     echo "Checkpoint reached: $1"
     echo "$1" > "$out"/checkpoint.txt
@@ -539,7 +539,7 @@ featureCountBranch () {
                 "$smpout"/sort_accepted.bam
         fi
         echo "[$smpkey] finished quantifying read features"
-
+    fi
     # always do feature count with the regular gtf
     # first create gtf file from gff3 file
     gffread \
