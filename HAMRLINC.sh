@@ -38,7 +38,7 @@ usage () {
     -A  [Panther: annotation data set, default GO:0008150]
     -Y  [Panther: test type, default FISHER]
     -R  [Panther: correction type, default FDR]
-    -S  [optional path for hamr.py]
+    -S  [optional path for HAMR folder]
     -h  [help message] 
   ################################################# END ########################################
 EOF
@@ -53,8 +53,7 @@ coverage=10
 err=0.01
 pvalue=1
 fdr=0.05
-exechamr="/HAMR/hamr.py"
-execignoreends="/HAMR/ignoreBamReadEnds.pyy"
+path_to_HAMR="/HAMR"
 filter="$util"/filter_SAM_number_hits.pl
 model="$util"/euk_trna_mods.Rdata
 
@@ -157,7 +156,7 @@ while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CakTtGH:DupEPS:F:" opt; do
     pvalue=$OPTARG
     ;;
     S)
-    exechamr="$OPTARG"
+    path_to_HAMR="$OPTARG"
     ;;
     H)
     execpthr="$OPTARG"
@@ -202,6 +201,11 @@ logfile=$out/Log_$logstart.log
 exec > >(tee -a "$logfile") 2>&1
 #below captures only echo...?
 #exec 2>&1 1>>$logfile 3>&1
+
+# HAMR components path assignment
+exechamrpy="$path_to_HAMR"/"hamr.py"
+execignoreends="$path_to_HAMR"/"ignoreBamReadEnds.py"
+
 
 
 ################################################ Subprogram Definitions #########################################
