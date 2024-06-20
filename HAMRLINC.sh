@@ -195,13 +195,6 @@ overhang=$((mismatch-1))
 genomedir=$(dirname "$genome")
 last_checkpoint=""
 
-# designate log file, if exist, clear, and have all stdout written
-logstart=$(date "+%Y.%m.%d-%H.%M.%S")
-logfile=$out/Log_$logstart.log
-exec > >(tee -a "$logfile") 2>&1
-#below captures only echo...?
-#exec 2>&1 1>>$logfile 3>&1
-
 # HAMR components path assignment
 exechamrpy="$path_to_HAMR"/"hamr.py"
 execignoreends="$path_to_HAMR"/"ignoreBamReadEnds.py"
@@ -1150,8 +1143,6 @@ consensusOverlap () {
 # house keeping steps for fastqGrab functions, mostly creating folders and checking function calls
 fastqGrabHouseKeeping () {
     ##########fastqGrab housekeeping begins#########
-    if [ ! -d "$out" ]; then mkdir "$out"; echo "created path: $out"; fi
-
     if [ ! -d "$out/datasets" ]; then mkdir "$out"/datasets; echo "created path: $out/datasets"; fi
 
     # first see whether input folder is provided
@@ -1380,11 +1371,19 @@ mainHouseKeeping () {
     echo "-------------------------------------------"
 }
 
-
 ######################################################### Main Program #########################################
 echo ""
 echo "##################################### Begin HAMRLINC #################################"
 echo ""
+
+if [ ! -d "$out" ]; then mkdir "$out"; echo "created path: $out"; fi
+
+# designate log file, if exist, clear, and have all stdout written
+logstart=$(date "+%Y.%m.%d-%H.%M.%S")
+logfile=$out/Log_$logstart.log
+exec > >(tee -a "$logfile") 2>&1
+#below captures only echo...?
+#exec 2>&1 1>>$logfile 3>&1
 
 # perform house keeping steps
 mainHouseKeeping
