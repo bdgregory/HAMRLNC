@@ -807,6 +807,7 @@ fastq2raw () {
     echo "[$smpkey] You can find all the intermediate files for $smpkey at $smpout" 
 
     # sort out directories and progress info for mod
+    currProg_mod="0"
     if [[ "$run_mod" = true ]]; then
         # Reassign hamr output directory
         if [ ! -d "$out/hamr_out" ]; then
@@ -826,6 +827,7 @@ fastq2raw () {
     fi
 
     # sort out directories and progress info for lnc
+    currProg_lnc="0"
     if [[ "$run_lnc" = true ]]; then
         # Reassign lnc output directory
         if [ ! -d "$out/lnc_out" ]; then
@@ -844,9 +846,7 @@ fastq2raw () {
         echo "-------------Folder $smpkey is at progress number $currProg_lnc for this run of lncRNA annotation--------------"
     fi
 
-    echo "--------------------------------------------------------------------"
     echo "$(date '+%d/%m/%Y %H:%M:%S') [$smpkey] Begin preprocessing pipeline"
-    echo "--------------------------------------------------------------------"
 
     # if 0, then either this run failed before mapping completion or this run just started
     if [[ $currProg_mod == "0" || $currProg_lnc == "0" ]]; then
@@ -1028,7 +1028,6 @@ parallelWrap () {
         #     hisatlib=FR
         # fi
         echo "$smpext is a part of a paired-end sequencing file"
-        echo ""
         fastq2raw
     elif [[ $smpkey == *_2* ]]; then
         # If _2 is in the filename, this file was processed along with its corresponding _1 so we skip
@@ -1037,7 +1036,6 @@ parallelWrap () {
     else
         det=1
         echo "$smpext is a single-end sequencing file"
-        echo ""
         fastq2raw
     fi
 }
@@ -1371,6 +1369,7 @@ mainHouseKeeping () {
 
     # check if run checkpoint.txt exists, if not, create it with start
     if [[ ! -e "$out"/checkpoint.txt ]]; then
+        touch "$out"/checkpoint.txt
         echo "start" > "$out"/checkpoint.txt
     fi
 
