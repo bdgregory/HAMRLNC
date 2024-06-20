@@ -422,10 +422,12 @@ lncCallBranch () {
     #########################################
     echo "entering lncRNA annotation pipeline..."
     
+    cd $smpout
+
     # turn bam into gtf
-    stringtie "$smpout"/Aligned.sortedByCoord.out.bam \
+    stringtie Aligned.sortedByCoord.out.bam \
     -G $annotation \
-    -o "$smpout"/stringtie_out.gtf \
+    -o stringtie_out.gtf \
     -f 0.05 \
     -j 9 \
     -c 7 \
@@ -433,26 +435,27 @@ lncCallBranch () {
 
     # merge gtf from bam with ref gtf
     stringtie --merge -G $annotation \
-    -o "$smpout"/stringtie_merge_out.gtf \
-    "$smpout"/stringtie_out.gtf
+    -o stringtie_merge_out.gtf \
+    stringtie_out.gtf
 
-    gffcompare -r $annotation "$smpout"/stringtie_merge_out.gtf
+    gffcompare -r $annotation =stringtie_merge_out.gtf
 
-    awk '$7 != "." {print}' "$smpout"/gffcmp.annotated.gtf > "$smpout"/filtered_gffcmp.annotated.gtf
+    awk '$7 != "." {print}' gffcmp.annotated.gtf > filtered_gffcmp.annotated.gtf
 
-    grep -E 'class_code "u";|class_code "x";' "$smpout"/filtered_gffcmp.annotated.gtf > "$smpout"/UXfiltered_gffcmp.annotated.gtf
+    grep -E 'class_code "u";|class_code "x";' filtered_gffcmp.annotated.gtf > UXfiltered_gffcmp.annotated.gtf
     
+    # I could copy over the already made fai but... eh
     samtools faidx $genome
 
-    gffread "$smpout"/UXfiltered_gffcmp_annotated.gtf -T -o "$smpout"/UXfiltered_gffcmp_annotated.gff3
+    gffread UXfiltered_gffcmp_annotated.gtf -T -o UXfiltered_gffcmp_annotated.gff3
 
     # why this step????? come back later
-    gffread "$smpout"/UXfiltered_gffcmp_annotated.gtf -g $genome -w "$smpout"/transcripts.fa
+    gffread UXfiltered_gffcmp_annotated.gtf -g $genome -w transcripts.fa
 
     # get directory access here, come back later
-    python CPC2/bin/CPC2.py -i "$smpout"/transcripts.fa -o "$smpout"/cpc2_output
+    python CPC2/bin/CPC2.py -i transcripts.fa -o cpc2_output
 
-    awk '$7 < 0.5' "$smpout"/cpc2_output.txt > "$smpout"/filtered_transcripts.txt
+    awk '$7 < 0.5' cpc2_output.txt > filtered_transcripts.txt
 
     inputFile="$smpout/filtered_transcripts.txt"
     gtfFile="$smpout/UXfiltered_gffcmp_annotated.gtf"
@@ -462,12 +465,12 @@ lncCallBranch () {
         grep "$pattern" "$gtfFile" >> "$outputFile"
     done < "$inputFile"
 
-    gffread "$smpout"/cpc_filtered_transcripts.txt -g $genome "$smpout"/-w rfam_in.fa
+    gffread cpc_filtered_transcripts.txt -g $genome rfam_in.fa
 
     # is the directory correct here...?
     cmscan --nohmmonly \
-    --rfam --cut_ga --fmt 2 --oclan --oskip \
-    --clanin "$smpout"/Rfam.clanin -o "$smpout"/my.cmscan.out --tblout "$smpout"/my.cmscan.tblout "$smpout"/Rfam.cm "$smpout"/rfam_in.fa
+        --rfam --cut_ga --fmt 2 --oclan --oskip \
+        --clanin "$smpout"/Rfam.clanin -o "$smpout"/my.cmscan.out --tblout "$smpout"/my.cmscan.tblout "$smpout"/Rfam.cm "$smpout"/rfam_in.fa
 
     # tblout info extraction 
     inputFile="$smpout/my.cmscan.tblout"
@@ -476,11 +479,11 @@ lncCallBranch () {
 
     # first two line always skip
     # note the python script is susceptible to empty hits, debug as we go
-    tail -n +3 "$inputFile" >> "$smpout"/parsed_rfam_out.tblout
+    tail -n +3 "$inputFile" >> parsed_rfam_out.tblout
 
 
     # created a python script to deal with infernal's space delimited file
-    cp "$smpout/cpc_filtered_transcripts.txt" "$smpout/rfam_filtered_transcripts.txt"
+    cp "cpc_filtered_transcripts.txt" "rfam_filtered_transcripts.txt"
     while IFS= read -r line; do
         if [[ $line =~ ^#$ ]]; then 
             break
@@ -493,10 +496,12 @@ lncCallBranch () {
     # i don't understand why we need to concatenate the two, so here I'm going to only retain the predicted regions
     # cat $annotation "$smpout"/rfam_filtered_transcripts.txt > "$smpout"/final_combined.gtf
 
-    mv "$smpout"/rfam_filtered_transcripts.txt "$smpout"/"${smpname}".lnc.gtf
+    mv rfam_filtered_transcripts.txt "${smpname}".lnc.gtf
 
     echo "done"
     echo ""
+
+    cd
 
     ################################
 
@@ -1048,7 +1053,7 @@ fastq2rawHouseKeeping () {
     # create dict file using fasta genome file
     count=$(ls -1 "$genomedir"/*.dict 2>/dev/null | wc -l)
     if [ "$count" == 0 ]; then 
-    gatk CreateSequenceDictionary \
+        gatk CreateSequenceDictionary \
         R="$genome"
     fi
     dict=$(find "$genomedir" -maxdepth 1 -name "*.dict")
@@ -1056,7 +1061,7 @@ fastq2rawHouseKeeping () {
     # create fai index file using fasta genome
     count=$(ls -1 "$genomedir"/*.fai 2>/dev/null | wc -l)
     if [ "$count" == 0 ]; then 
-    samtools faidx "$genome"
+        samtools faidx "$genome"
     fi
 
     # Check which mapping software, and check for index
