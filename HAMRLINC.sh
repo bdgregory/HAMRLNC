@@ -1371,7 +1371,7 @@ mainHouseKeeping () {
 
     # check if run checkpoint.txt exists, if not, create it with start
     if [[ ! -e "$out"/checkpoint.txt ]]; then
-        echo "start" > "$smpout"/checkpoint.txt
+        echo "start" > "$out"/checkpoint.txt
     fi
 
     # determine stage of progress for this sample folder at this run
