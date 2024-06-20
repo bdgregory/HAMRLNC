@@ -54,6 +54,7 @@ err=0.01
 pvalue=1
 fdr=0.05
 exechamr="/HAMR/hamr.py"
+execignoreends="/HAMR/ignoreBamReadEnds.pyy"
 filter="$util"/filter_SAM_number_hits.pl
 model="$util"/euk_trna_mods.Rdata
 
@@ -294,57 +295,69 @@ fastqGrabLocal () {
 # called upon completion of each sorted BAM files, takes the file through pre-processing, and performs hamr
 hamrBranch () {
     if [[ $currProg == "2" ]]; then
-        #filter the accepted hits by uniqueness
-        echo "[$smpkey] filtering uniquely mapped reads..."
-        samtools view \
-            -h "$smpout"/sort_accepted.bam \
-            | perl "$filter" 1 \
-            | samtools view -bS - \
-            | samtools sort \
-            -o "$smpout"/unique.bam
-        echo "[$smpkey] finished filtering"
+        #adds read groups using picard, note the RG arguments are disregarded here
+        echo "[$smpkey] adding/replacing read groups..."
+        gatk AddOrReplaceReadGroups \
+            I="$smpout"/sort_accepted.bam \
+            O="$smpout"/sorted_RG.bam \
+            RGPU=HWI-ST1395:97:d29b4acxx:8 \
+            RGID=1 \
+            RGSM=xxx \
+            RGLB=xxx \
+            RGPL=illumina 
+        echo "[$smpkey] finished adding/replacing read groups"
         echo ""
 
-        # filtering unique completed without erroring out if this is reached
+        # RG finished without exiting
         echo "3" > "$smpout"/progress.txt
         currProg="3"
-    fi
-
-    wait
-
-    if [[ $currProg == "3" ]]; then
-        if [[ "$run_mod" = false ]]; then
-            echo "[$(date '+%d/%m/%Y %H:%M:%S')] modification annotation functionality suppressed, $smpkey analysis completed."
-            exit 0
-        else
-            #adds read groups using picard, note the RG arguments are disregarded here
-            echo "[$smpkey] adding/replacing read groups..."
-            gatk AddOrReplaceReadGroups \
-                I="$smpout"/unique.bam \
-                O="$smpout"/unique_RG.bam \
-                RGID=1 \
-                RGLB=xxx \
-                RGPL=illumina_100se \
-                RGPU=HWI-ST1395:97:d29b4acxx:8 \
-                RGSM=sample
-            echo "[$smpkey] finished adding/replacing read groups"
-            echo ""
-
-            # RG finished without exiting
-            echo "4" > "$smpout"/progress.txt
-            currProg="4"
-            fi
     fi 
 
     wait
 
+    if [[ $currProg == "3" ]]; then
+        #filter the accepted hits by uniqueness
+        echo "[$smpkey] filtering uniquely mapped reads..."
+        samtools view \
+            -h "$smpout"/sorted_RG.bam \
+            | perl "$filter" 1 \
+            | samtools view -bS - \
+            | samtools sort \
+            -o "$smpout"/sorted_RG_unique.bam
+        echo "[$smpkey] finished filtering"
+        echo ""
+
+        # filtering unique completed without erroring out if this is reached
+        echo "4" > "$smpout"/progress.txt
+        currProg="4"
+    fi
+
+    wait
+
     if [[ $currProg == "4" ]]; then
+        #ignore read ends
+        echo "[$smpkey] excluding read ends..."
+        python $execignoreends \
+            -5p 1 -3p 1 \
+            "$smpout"/sorted_RG_unique.bam \
+            "$smpout"/sorted_RG_unique_endsIGN.bam
+        echo "[$smpkey] finished excluding"
+        echo ""
+
+        # removing ends finished without exiting
+        echo "5" > "$smpout"/progress.txt
+        currProg="5"
+    fi 
+
+    wait
+
+
+    if [[ $currProg == "5" ]]; then
         #reorder the reads using picard
         echo "[$smpkey] reordering..."
-        echo "$genome"
         gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" ReorderSam \
-            I="$smpout"/unique_RG.bam \
-            O="$smpout"/unique_RG_ordered.bam \
+            I="$smpout"/sorted_RG_unique_endsIGN.bam \
+            O="$smpout"/sorted_RG_unique_endsIGN_reordered.bam \
             R="$genome" \
             CREATE_INDEX=TRUE \
             SEQUENCE_DICTIONARY="$dict" \
@@ -353,25 +366,6 @@ hamrBranch () {
         echo ""
 
         # ordering finished without exiting
-        echo "5" > "$smpout"/progress.txt
-        currProg="5"
-    fi 
-
-    wait
-
-    if [[ $currProg == "5" ]]; then
-        #splitting and cigarring the reads, using genome analysis tool kit
-        #note can alter arguments to allow cigar reads 
-        echo "[$smpkey] getting split and cigar reads..."
-        gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" SplitNCigarReads \
-            -R "$genome" \
-            -I "$smpout"/unique_RG_ordered.bam \
-            -O "$smpout"/unique_RG_ordered_splitN.bam
-            # -U ALLOW_N_CIGAR_READS
-        echo "[$smpkey] finished splitting N cigarring"
-        echo ""
-
-        # cigaring and spliting finished without exiting
         echo "6" > "$smpout"/progress.txt
         currProg="6"
     fi 
@@ -379,13 +373,15 @@ hamrBranch () {
     wait
 
     if [[ $currProg == "6" ]]; then
-        #final resorting using picard
-        echo "[$smpkey] resorting..."
-        gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" SortSam \
-            I="$smpout"/unique_RG_ordered_splitN.bam \
-            O="$smpout"/unique_RG_ordered_splitN.resort.bam \
-            SORT_ORDER=coordinate
-        echo "[$smpkey] finished resorting"
+        #splitting and cigarring the reads, using genome analysis tool kit
+        #note can alter arguments to allow cigar reads 
+        echo "[$smpkey] getting split and cigar reads..."
+        gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" SplitNCigarReads \
+            -R "$genome" \
+            -I "$smpout"/sorted_RG_unique_endsIGN_reordered.bam \
+            -O "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC.bam \
+            -U ALLOW_N_CIGAR_READS
+        echo "[$smpkey] finished splitting N cigarring"
         echo ""
 
         # cigaring and spliting finished without exiting
@@ -396,11 +392,28 @@ hamrBranch () {
     wait
 
     if [[ $currProg == "7" ]]; then
+        #final resorting using picard
+        echo "[$smpkey] resorting..."
+        gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" SortSam \
+            I="$smpout"/sorted_RG_unique_endsIGN_reordered_SNC.bam \
+            O="$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam \
+            SORT_ORDER=coordinate
+        echo "[$smpkey] finished resorting"
+        echo ""
+
+        # cigaring and spliting finished without exiting
+        echo "8" > "$smpout"/progress.txt
+        currProg="8"
+    fi 
+
+    wait
+
+    if [[ $currProg == "8" ]]; then
         #hamr step, can take ~1hr
         echo "[$smpkey] hamr..."
         #hamr_path=$(which hamr.py) 
         python $exechamr \
-            -fe "$smpout"/unique_RG_ordered_splitN.resort.bam "$genome" "$model" "$smpout" $smpname $quality $coverage $err H4 $pvalue $fdr .05
+            -fe "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam "$genome" "$model" "$smpout" $smpname $quality $coverage $err H4 $pvalue $fdr .05
         wait
 
         if [ ! -e "$smpout/${smpname}.mods.txt" ]; then 
@@ -411,8 +424,8 @@ hamrBranch () {
         # HAMR needs separate folders to store temp for each sample, so we move at the end
             cp "$smpout"/"${smpname}".mods.txt "$hamrout"
         fi
-        echo "8" > "$smpout"/progress.txt
-        currProg="8"
+        echo "9" > "$smpout"/progress.txt
+        currProg="9"
     fi
 }
 
@@ -425,7 +438,7 @@ lncCallBranch () {
     cd $smpout
 
     # turn bam into gtf
-    stringtie Aligned.sortedByCoord.out.bam \
+    stringtie sort_accepted.bam \
     -G $annotation \
     -o stringtie_out.gtf \
     -f 0.05 \
@@ -757,11 +770,10 @@ fastq2raw () {
     if [[ $currProg == "1" ]]; then
         #sorts the accepted hits
         echo "[$smpkey] sorting..."
-        # handles HISAT or star output
+        # handles HISAT or STAR output
         if [[ "$hisat" = false ]]; then
-            samtools sort \
-            -n "$smpout"/Aligned.sortedByCoord.out.bam \
-            -o "$smpout"/sort_accepted.bam
+            # already sorted if STAR
+            mv "$smpout"/Aligned.sortedByCoord.out.bam "$smpout"/sort_accepted.bam
         else
             samtools view -bS "$smpout"/output.sam > "$smpout"/output.bam
             samtools sort \
@@ -799,19 +811,19 @@ fastq2raw () {
     wait
 
     # intermediate file clean up
-    if [[ $currProg == "8" ]]; then
+    if [[ $currProg == "9" ]]; then
         # Move the unique_RG_ordered.bam and unique_RG_ordered.bai to a folder for read depth analysis
-        cp "$smpout"/unique_RG_ordered.bam "$out"/pipeline/depth/"$smpname".bam
-        cp "$smpout"/unique_RG_ordered.bai "$out"/pipeline/depth/"$smpname".bai
+        cp "$smpout"/sorted_RG_unique_endsIGN_reordered.bam "$out"/pipeline/depth/"$smpname".bam
+        cp "$smpout"/sorted_RG_unique_endsIGN_reordered.bai "$out"/pipeline/depth/"$smpname".bai
 
         # delete more intermediate files
         echo "[$smpkey] removing large intermediate files..."
-        rm "$smpout"/sort_accepted.bam
-        rm "$smpout"/unique.bam
-        rm "$smpout"/unique_RG.bam
-        rm "$smpout"/unique_RG_ordered.bam
-        rm "$smpout"/unique_RG_ordered_splitN.bam
-        rm "$smpout"/unique_RG_ordered_splitN.resort.bam
+        rm "$smpout"/sorted_RG.bam
+        rm "$smpout"/sorted_RG_unique.bam
+        rm "$smpout"/sorted_RG_unique_endsIGN.bam
+        rm "$smpout"/sorted_RG_unique_endsIGN_reordered.bam
+        rm "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC.bam
+        rm "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam
         echo "[$smpkey] finished cleaning"
         
         echo "9" > "$smpout"/progress.txt
@@ -1180,13 +1192,17 @@ mainHouseKeeping () {
         exit 0
     fi
 
-    # check whether checkpoint.txt is present 
-    if [ -e "$out"/checkpoint.txt ]; then
-        last_checkpoint=$(cat "$out"/checkpoint.txt)
-        echo "Resuming from checkpoint: $last_checkpoint"
-    else
-        last_checkpoint="start"
+    # check if run checkpoint.txt exists, if not, create it with start
+    if [[ ! -e "$out"/checkpoint.txt ]]; then
+        echo "start" > "$smpout"/progress.txt
     fi
+
+    # determine stage of progress for this sample folder at this run
+    # progress must be none empty so currProg is never empty
+    last_checkpoint=$(cat "$out"/checkpoint.txt)
+    echo "-------------------------------------------"
+    echo "Starting from checkpoint: $last_checkpoint"
+    echo "-------------------------------------------"
 }
 
 
