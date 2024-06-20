@@ -298,7 +298,7 @@ fastqGrabLocal () {
 
 # called upon completion of each sorted BAM files, takes the file through pre-processing, and performs hamr
 hamrBranch () {
-    if [[ $currProg == "2" ]]; then
+    if [[ $currProg_mod == "2" ]]; then
         #adds read groups using picard, note the RG arguments are disregarded here
         echo "[$smpkey] adding/replacing read groups..."
         gatk AddOrReplaceReadGroups \
@@ -309,17 +309,17 @@ hamrBranch () {
             RGSM=xxx \
             RGLB=xxx \
             RGPL=illumina 
-        echo "[$smpkey] finished adding/replacing read groups"
+        echo "[$smpkey] finished adding/replacing read groups (MOD 1/7)"
         echo ""
 
         # RG finished without exiting
-        echo "3" > "$smpout"/progress.txt
-        currProg="3"
-    fi 
+        echo "3" > "$smpout"/progress_mod.txt
+        currProg_mod="3"
+    fi
 
     wait
 
-    if [[ $currProg == "3" ]]; then
+    if [[ $currProg_mod == "3" ]]; then
         #filter the accepted hits by uniqueness
         echo "[$smpkey] filtering uniquely mapped reads..."
         samtools view \
@@ -328,35 +328,35 @@ hamrBranch () {
             | samtools view -bS - \
             | samtools sort \
             -o "$smpout"/sorted_RG_unique.bam
-        echo "[$smpkey] finished filtering"
+        echo "[$smpkey] finished filtering (MOD 2/7)"
         echo ""
 
         # filtering unique completed without erroring out if this is reached
-        echo "4" > "$smpout"/progress.txt
-        currProg="4"
+        echo "4" > "$smpout"/progress_mod.txt
+        currProg_mod="4"
     fi
 
     wait
 
-    if [[ $currProg == "4" ]]; then
+    if [[ $currProg_mod == "4" ]]; then
         #ignore read ends
         echo "[$smpkey] excluding read ends..."
         python $execignoreends \
             -5p 1 -3p 1 \
             "$smpout"/sorted_RG_unique.bam \
             "$smpout"/sorted_RG_unique_endsIGN.bam
-        echo "[$smpkey] finished excluding"
+        echo "[$smpkey] finished excluding (MOD 3/7)"
         echo ""
 
         # removing ends finished without exiting
-        echo "5" > "$smpout"/progress.txt
-        currProg="5"
+        echo "5" > "$smpout"/progress_mod.txt
+        currProg_mod="5"
     fi 
 
     wait
 
 
-    if [[ $currProg == "5" ]]; then
+    if [[ $currProg_mod == "5" ]]; then
         #reorder the reads using picard
         echo "[$smpkey] reordering..."
         gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" ReorderSam \
@@ -366,17 +366,17 @@ hamrBranch () {
             CREATE_INDEX=TRUE \
             SEQUENCE_DICTIONARY="$dict" \
             TMP_DIR="$smpout"/tmp
-        echo "[$smpkey] finished reordering"
+        echo "[$smpkey] finished reordering (MOD 4/7)"
         echo ""
 
         # ordering finished without exiting
-        echo "6" > "$smpout"/progress.txt
-        currProg="6"
+        echo "6" > "$smpout"/progress_mod.txt
+        currProg_mod="6"
     fi 
 
     wait
 
-    if [[ $currProg == "6" ]]; then
+    if [[ $currProg_mod == "6" ]]; then
         #splitting and cigarring the reads, using genome analysis tool kit
         #note can alter arguments to allow cigar reads 
         echo "[$smpkey] getting split and cigar reads..."
@@ -385,34 +385,34 @@ hamrBranch () {
             -I "$smpout"/sorted_RG_unique_endsIGN_reordered.bam \
             -O "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC.bam \
             -U ALLOW_N_CIGAR_READS
-        echo "[$smpkey] finished splitting N cigarring"
+        echo "[$smpkey] finished splitting N cigarring (MOD 5/7)"
         echo ""
 
         # cigaring and spliting finished without exiting
-        echo "7" > "$smpout"/progress.txt
-        currProg="7"
+        echo "7" > "$smpout"/progress_mod.txt
+        currProg_mod="7"
     fi 
 
     wait
 
-    if [[ $currProg == "7" ]]; then
+    if [[ $currProg_mod == "7" ]]; then
         #final resorting using picard
         echo "[$smpkey] resorting..."
         gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" SortSam \
             I="$smpout"/sorted_RG_unique_endsIGN_reordered_SNC.bam \
             O="$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam \
             SORT_ORDER=coordinate
-        echo "[$smpkey] finished resorting"
+        echo "[$smpkey] finished resorting (MOD 6/7)"
         echo ""
 
         # cigaring and spliting finished without exiting
-        echo "8" > "$smpout"/progress.txt
-        currProg="8"
+        echo "8" > "$smpout"/progress_mod.txt
+        currProg_mod="8"
     fi 
 
     wait
 
-    if [[ $currProg == "8" ]]; then
+    if [[ $currProg_mod == "8" ]]; then
         #hamr step, can take ~1hr
         echo "[$smpkey] hamr..."
         #hamr_path=$(which hamr.py) 
@@ -428,99 +428,258 @@ hamrBranch () {
         # HAMR needs separate folders to store temp for each sample, so we move at the end
             cp "$smpout"/"${smpname}".mods.txt "$hamrout"
         fi
-        echo "9" > "$smpout"/progress.txt
-        currProg="9"
+        echo "9" > "$smpout"/progress_mod.txt
+        currProg_mod="9"
     fi
 }
 
 # called upon completion of each sorted BAM files, takes the sorted BAM through lncRNA prediction pipeline
 lncCallBranch () {
 
-    #########################################
-    echo "entering lncRNA annotation pipeline..."
-    
     cd $smpout
 
-    # turn bam into gtf
-    stringtie sort_accepted.bam \
-    -G $annotation \
-    -o stringtie_out.gtf \
-    -f 0.05 \
-    -j 9 \
-    -c 7 \
-    -s 20
+    if [[ $currProg_lnc == "2" ]]; then
+        echo "[$smpkey] running stringtie for gtf conversion..."
 
-    # merge gtf from bam with ref gtf
-    stringtie --merge -G $annotation \
-    -o stringtie_merge_out.gtf \
-    stringtie_out.gtf
+        # turn bam into gtf
+        stringtie \
+            sort_accepted.bam \
+            -G $annotation -o stringtie_out.gtf \
+            -f 0.05 -j 9 -c 7 -s 20
 
-    gffcompare -r $annotation =stringtie_merge_out.gtf
+        echo "[$smpkey] finished converting bam to gtf (LNC 1/15)"
+        echo ""
 
-    awk '$7 != "." {print}' gffcmp.annotated.gtf > filtered_gffcmp.annotated.gtf
+        echo "3" > "$smpout"/progress_lnc.txt
+        currProg_lnc="3"
+    fi
 
-    grep -E 'class_code "u";|class_code "x";' filtered_gffcmp.annotated.gtf > UXfiltered_gffcmp.annotated.gtf
+    wait
     
-    # I could copy over the already made fai but... eh
-    samtools faidx $genome
+    if [[ $currProg_lnc == "3" ]]; then
+        echo "[$smpkey] merging sample gtf with reference gtf..."
+        
+        # merge gtf from bam with ref gtf
+        stringtie --merge -G $annotation \
+            -o stringtie_merge_out.gtf \
+            stringtie_out.gtf
 
-    gffread UXfiltered_gffcmp_annotated.gtf -T -o UXfiltered_gffcmp_annotated.gff3
+        echo "[$smpkey] finished merging (LNC 2/15)"
+        echo ""
 
-    # why this step????? come back later
-    gffread UXfiltered_gffcmp_annotated.gtf -g $genome -w transcripts.fa
+        echo "4" > "$smpout"/progress_lnc.txt
+        currProg__lnc="4"
+    fi
+    
+    wait
 
-    # get directory access here, come back later
-    python CPC2/bin/CPC2.py -i transcripts.fa -o cpc2_output
+    if [[ $currProg_lnc == "4" ]]; then
+        echo "[$smpkey] running gffcompare on merged gtf..."
+        
+        # gffcmp merged gtf
+        gffcompare -r $annotation stringtie_merge_out.gtf
 
-    awk '$7 < 0.5' cpc2_output.txt > filtered_transcripts.txt
+        echo "[$smpkey] finished gffcompare (LNC 3/15)"
+        echo ""
 
-    inputFile="$smpout/filtered_transcripts.txt"
-    gtfFile="$smpout/UXfiltered_gffcmp_annotated.gtf"
-    outputFile="$smpout/cpc_filtered_transcripts.txt"
-    while IFS= read -r line; do
-        pattern=$(echo "$line" | cut -f1)
-        grep "$pattern" "$gtfFile" >> "$outputFile"
-    done < "$inputFile"
+        echo "5" > "$smpout"/progress_lnc.txt
+        currProg__lnc="5"
+    fi
 
-    gffread cpc_filtered_transcripts.txt -g $genome rfam_in.fa
+    wait
 
-    # is the directory correct here...?
-    cmscan --nohmmonly \
-        --rfam --cut_ga --fmt 2 --oclan --oskip \
-        --clanin "$smpout"/Rfam.clanin -o "$smpout"/my.cmscan.out --tblout "$smpout"/my.cmscan.tblout "$smpout"/Rfam.cm "$smpout"/rfam_in.fa
+    if [[ $currProg_lnc == "5" ]]; then
+        echo "[$smpkey] filtering..."
+        
+        # filter with awk
+        awk '$7 != "." {print}' gffcmp.annotated.gtf > filtered_gffcmp.annotated.gtf
 
-    # tblout info extraction 
-    inputFile="$smpout/my.cmscan.tblout"
-    gtfFile="$smpout/cpc_filtered_transcripts.txt"
-    outputFile="$smpout/rfam_filtered_transcripts.txt"
+        echo "[$smpkey] finished filtering (LNC 4/15)"
+        echo ""
 
-    # first two line always skip
-    # note the python script is susceptible to empty hits, debug as we go
-    tail -n +3 "$inputFile" >> parsed_rfam_out.tblout
+        echo "6" > "$smpout"/progress_lnc.txt
+        currProg__lnc="6"
+    fi
 
+    wait
 
-    # created a python script to deal with infernal's space delimited file
-    cp "cpc_filtered_transcripts.txt" "rfam_filtered_transcripts.txt"
-    while IFS= read -r line; do
-        if [[ $line =~ ^#$ ]]; then 
-            break
-        else
-            pattern=$(python "$scripts"/parser.py "$line")
-            sed -i "/$pattern/d" "$outputFile"
-        fi
-    done < "$smpout"/parsed_rfam_out.tblout
+    if [[ $currProg_lnc == "6" ]]; then
+        echo "[$smpkey] filtering for UX..."
+        
+        # filter with grep for UX class codes
+        grep -E 'class_code "u";|class_code "x";' filtered_gffcmp.annotated.gtf > UXfiltered_gffcmp.annotated.gtf
 
-    # i don't understand why we need to concatenate the two, so here I'm going to only retain the predicted regions
-    # cat $annotation "$smpout"/rfam_filtered_transcripts.txt > "$smpout"/final_combined.gtf
+        echo "[$smpkey] finished filtering (LNC 6/15)"
+        echo ""
 
-    mv rfam_filtered_transcripts.txt "${smpname}".lnc.gtf
+        echo "7" > "$smpout"/progress_lnc.txt
+        currProg__lnc="7"
+    fi
 
-    echo "done"
-    echo ""
+    wait
+
+    if [[ $currProg_lnc == "7" ]]; then
+        echo "[$smpkey] creating index file..."
+        
+        # I could copy over the already made fai but... eh
+        samtools faidx $genome
+
+        echo "[$smpkey] finished indexing (LNC 7/15)"
+        echo ""
+
+        echo "8" > "$smpout"/progress_lnc.txt
+        currProg__lnc="8"
+    fi
+
+    wait
+    
+   if [[ $currProg_lnc == "8" ]]; then
+        echo "[$smpkey] converting filtered gtf to gff3..."
+        
+        # covnvert to gff3
+        gffread UXfiltered_gffcmp_annotated.gtf -T -o UXfiltered_gffcmp_annotated.gff3
+
+        echo "[$smpkey] finished conversion (LNC 8/15)"
+        echo ""
+
+        echo "9" > "$smpout"/progress_lnc.txt
+        currProg__lnc="9"
+    fi
+
+    wait
+
+    if [[ $currProg_lnc == "9" ]]; then
+        echo "[$smpkey] writing fa file from filtered gtf..."
+        
+        # write gtf to fasta
+        gffread UXfiltered_gffcmp_annotated.gtf -g $genome -w transcripts.fa
+
+        echo "[$smpkey] finished writing (LNC 9/15)"
+        echo ""
+
+        echo "10" > "$smpout"/progress_lnc.txt
+        currProg__lnc="10"
+    fi
+
+    wait
+
+    if [[ $currProg_lnc == "10" ]]; then
+        echo "[$smpkey] analyzing for transcript coding probability with cpc2..."
+        
+        # use cpc2 to analyze for coding probablity
+        python CPC2/bin/CPC2.py -i transcripts.fa -o cpc2_output
+
+        echo "[$smpkey] finished analysis (LNC 10/15)"
+        echo ""
+
+        echo "11" > "$smpout"/progress_lnc.txt
+        currProg__lnc="11"
+    fi
+
+    wait
+
+    if [[ $currProg_lnc == "11" ]]; then
+        echo "[$smpkey] extracting transcripts with probability less than 0.5..."
+        
+        # use awk to extract result
+        awk '$7 < 0.5' cpc2_output.txt > filtered_transcripts.txt
+
+        echo "[$smpkey] finished extraction (LNC 11/15)"
+        echo ""
+
+        echo "12" > "$smpout"/progress_lnc.txt
+        currProg__lnc="12"
+    fi
+
+    wait
+
+    if [[ $currProg_lnc == "12" ]]; then
+        echo "[$smpkey] using cpc2 results to filter gtf..."
+        
+        # loop to fetch entries from gtf
+        inputFile="$smpout/filtered_transcripts.txt"
+        gtfFile="$smpout/UXfiltered_gffcmp_annotated.gtf"
+        outputFile="$smpout/cpc_filtered_transcripts.txt"
+        while IFS= read -r line; do
+            pattern=$(echo "$line" | cut -f1)
+            grep "$pattern" "$gtfFile" >> "$outputFile"
+        done < "$inputFile"
+
+        echo "[$smpkey] finished filtering (LNC 12/15)"
+        echo ""
+
+        echo "13" > "$smpout"/progress_lnc.txt
+        currProg__lnc="13"
+    fi
+
+    wait
+    
+    if [[ $currProg_lnc == "13" ]]; then
+        echo "[$smpkey] creating fa file from cpc2 filtered gtf..."
+        
+        # create fa from cpc filtered gtf
+        gffread cpc_filtered_transcripts.txt -g $genome rfam_in.fa
+
+        echo "[$smpkey] finished writing (LNC 13/15)"
+        echo ""
+
+        echo "14" > "$smpout"/progress_lnc.txt
+        currProg__lnc="14"
+    fi
+
+    wait
+
+    if [[ $currProg_lnc == "14" ]]; then
+        echo "[$smpkey] performing cmscan..."
+        
+        # create fa from cpc filtered gtf
+        cmscan --nohmmonly \
+            --rfam --cut_ga --fmt 2 --oclan --oskip \
+            --clanin "$smpout"/Rfam.clanin -o "$smpout"/my.cmscan.out --tblout "$smpout"/my.cmscan.tblout "$smpout"/Rfam.cm "$smpout"/rfam_in.fa
+
+        echo "[$smpkey] finished (LNC 14/15)"
+        echo ""
+
+        echo "15" > "$smpout"/progress_lnc.txt
+        currProg__lnc="15"
+    fi
+
+    wait
+
+    if [[ $currProg_lnc == "15" ]]; then
+        echo "[$smpkey] sacnning against rfam and finishing lncRNA annotation..."
+        
+        # tblout info extraction 
+        inputFile="$smpout/my.cmscan.tblout"
+        gtfFile="$smpout/cpc_filtered_transcripts.txt"
+        outputFile="$smpout/rfam_filtered_transcripts.txt"
+        tail -n +3 "$inputFile" >> parsed_rfam_out.tblout
+
+        # created a python script to deal with infernal's space delimited file
+        cp "cpc_filtered_transcripts.txt" "rfam_filtered_transcripts.txt"
+        while IFS= read -r line; do
+            if [[ $line =~ ^#$ ]]; then 
+                break
+            else
+                pattern=$(python "$scripts"/parser.py "$line")
+                sed -i "/$pattern/d" "$outputFile"
+            fi
+        done < "$smpout"/parsed_rfam_out.tblout
+
+        # rename, combine
+        mv rfam_filtered_transcripts.txt "${smpname}".lnc.gtf
+        cat $annotation "$smpout"/rfam_filtered_transcripts.txt > "$smpout"/final_combined.gtf
+
+        echo "[$smpkey] finished lncRNA annotation (LNC 15/15)"
+        echo ""
+
+        echo "16" > "$smpout"/progress_lnc.txt
+        currProg__lnc="16"
+    fi
+
+    wait
 
     cd
-
-    ################################
 
     echo "processing identified lncRNA into GTF..."
     Rscript "$scripts"/lnc_processing.R \
@@ -643,44 +802,54 @@ fastq2raw () {
         echo "[$smpkey] created path: $out/pipeline/$smpkey""_temp"
     fi
 
+    # shared info for all 3 arms
     smpout=$out/pipeline/$smpkey"_temp"
     echo "[$smpkey] You can find all the intermediate files for $smpkey at $smpout" 
 
+    # sort out directories and progress info for mod
+    if [[ "$run_mod" = true ]]; then
+        # Reassign hamr output directory
+        if [ ! -d "$out/hamr_out" ]; then
+            mkdir "$out"/hamr_out
+            echo "created path: $out/hamr_out"
+        fi
+        hamrout=$out/hamr_out
+        echo "[$smpkey] You can find the HAMR output file for $smpkey at $hamrout/$smpname.mod.txt"
 
-    # Reassign hamr output directory
-    if [ ! -d "$out/hamr_out" ]; then
-        mkdir "$out"/hamr_out
-        echo "created path: $out/hamr_out"
+        # check if progress_mod.txt exists, if not, create it with 0
+        if [[ ! -e "$smpout"/progress_mod.txt ]]; then
+            echo "0" > "$smpout"/progress_mod.txt
+        fi
+
+        currProg_mod=$(cat "$smpout"/progress_mod.txt)
+        echo "-------------Folder $smpkey is at progress number $currProg_mod for this run of modification annotation--------------"
     fi
 
-    # Reassign lnc output directory
-    if [ ! -d "$out/lnc_out" ]; then
-        mkdir "$out"/lnc_out
-        echo "created path: $out/lnc_out"
+    # sort out directories and progress info for lnc
+    if [[ "$run_lnc" = true ]]; then
+        # Reassign lnc output directory
+        if [ ! -d "$out/lnc_out" ]; then
+            mkdir "$out"/lnc_out
+            echo "created path: $out/lnc_out"
+        fi
+        lncout=$out/lnc_out
+        echo "[$smpkey] You can find the lncRNA output file for $smpkey at $lncout/$smpname.mod.txt" 
+
+        # check if progress_lnc.txt exists, if not, create it with 0
+        if [[ ! -e "$smpout"/progress_lnc.txt ]]; then
+            echo "0" > "$smpout"/progress_lnc.txt
+        fi
+
+        currProg_lnc=$(cat "$smpout"/progress_lnc.txt)
+        echo "-------------Folder $smpkey is at progress number $currProg_lnc for this run of lncRNA annotation--------------"
     fi
 
-    hamrout=$out/hamr_out
-    lncout=$out/lnc_out
-
-    echo "[$smpkey] You can find the HAMR output file for $smpkey at $hamrout/$smpname.mod.txt"
-    echo "[$smpkey] You can find the lncRNA output file for $smpkey at $lncout/$smpname.mod.txt" 
-
-    # check if progress.txt exists, if not, create it with 0
-    if [[ ! -e "$smpout"/progress.txt ]]; then
-        echo "0" > "$smpout"/progress.txt
-    fi
-
-    # determine stage of progress for this sample folder at this run
-    # progress must be none empty so currProg is never empty
-    currProg=$(cat "$smpout"/progress.txt)
-    echo "----------------------------------------------------------"
-    echo "Folder $smpkey is at progress number $currProg for this run"
-    echo "----------------------------------------------------------"
-
+    echo "--------------------------------------------------------------------"
     echo "$(date '+%d/%m/%Y %H:%M:%S') [$smpkey] Begin preprocessing pipeline"
+    echo "--------------------------------------------------------------------"
 
     # if 0, then either this run failed before mapping completion or this run just started
-    if [[ $currProg == "0" ]]; then
+    if [[ $currProg_mod == "0" || $currProg_lnc == "0" ]]; then
         cd "$smpout" || exit
         # maps the trimmed reads to provided annotated genome, can take ~1.5hr
         echo "--------Entering mapping step--------"
@@ -762,16 +931,18 @@ fastq2raw () {
         cd || exit
 
         # mapping completed without erroring out if this is reached
-        echo "1" > "$smpout"/progress.txt
+        echo "1" > "$smpout"/progress_mod.txt
+        echo "1" > "$smpout"/progress_lnc.txt
 
         # update directly for normal progression
-        currProg="1"
+        currProg_mod="1"
+        currProg_lnc="1"
     fi
 
     wait
 
     # if 1, then either last run failed before sorting completion or this run just came out of mapping
-    if [[ $currProg == "1" ]]; then
+    if [[ $currProg_mod == "1" || $currProg_lnc == "1" ]]; then
         #sorts the accepted hits
         echo "[$smpkey] sorting..."
         # handles HISAT or STAR output
@@ -788,8 +959,10 @@ fastq2raw () {
         echo ""
 
         # sorting completed without erroring out if this is reached
-        echo "2" > "$smpout"/progress.txt
-        currProg="2"
+        echo "2" > "$smpout"/progress_mod.txt
+        echo "2" > "$smpout"/progress_lnc.txt
+        currProg_mod="2"
+        currProg_lnc="2"
     fi
 
     wait
@@ -815,7 +988,7 @@ fastq2raw () {
     wait
 
     # intermediate file clean up
-    if [[ $currProg == "9" ]]; then
+    if [[ $currProg_mod == "9" ]]; then
         # Move the unique_RG_ordered.bam and unique_RG_ordered.bai to a folder for read depth analysis
         cp "$smpout"/sorted_RG_unique_endsIGN_reordered.bam "$out"/pipeline/depth/"$smpname".bam
         cp "$smpout"/sorted_RG_unique_endsIGN_reordered.bai "$out"/pipeline/depth/"$smpname".bai
@@ -828,9 +1001,9 @@ fastq2raw () {
         rm "$smpout"/sorted_RG_unique_endsIGN_reordered.bam
         rm "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC.bam
         rm "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam
-        echo "[$smpkey] finished cleaning"
+        echo "[$smpkey] finished cleaning (MOD 7/7)"
         
-        echo "9" > "$smpout"/progress.txt
+        echo "10" > "$smpout"/progress_mod.txt
     fi
 }
 
@@ -1198,11 +1371,10 @@ mainHouseKeeping () {
 
     # check if run checkpoint.txt exists, if not, create it with start
     if [[ ! -e "$out"/checkpoint.txt ]]; then
-        echo "start" > "$smpout"/progress.txt
+        echo "start" > "$smpout"/checkpoint.txt
     fi
 
     # determine stage of progress for this sample folder at this run
-    # progress must be none empty so currProg is never empty
     last_checkpoint=$(cat "$out"/checkpoint.txt)
     echo "-------------------------------------------"
     echo "Starting from checkpoint: $last_checkpoint"
