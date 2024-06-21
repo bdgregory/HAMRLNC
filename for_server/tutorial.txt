@@ -11,7 +11,7 @@ scp /dir/to/PRJNA478205.csv smolbiologist@cloud-compute.com:/smolbiologist
 # everything below here needs to be executed from ssh 
 # create a local conda environment
 cd /smolbiologist
-conda env create -f hamrlinc.yml      # this will take ~10min
+conda create --name hamrlinc --file env.txt
 conda activate hamrlinc
 cd
 
@@ -41,12 +41,12 @@ export PATH="/smolbiologist/gatk-4.3.0.0/:$PATH"
 # call hamrlinc
 cd /smolbiologist/tryout
 /smolbiologist/HAMRLINC/HAMRLINC.sh \
-    -o test \
+    -o project_content \
     -c PRJNA478205.csv \
     -g Arabidopsis_thaliana.TAIR10.dna.toplevel.fa \
     -i Arabidopsis_thaliana.TAIR10.57.gff3 \
-    -l 50 -s 135000000 -n 10 -k \
-    -S /smolbiologist/HAMR/hamr.py \
+    -l 50 -n 10 -k \
+    -S /smolbiologist/HAMR \
     -H /smolbiologist/pantherapi-pyclient/pthr_go_annots.py
 
 # the run should take upwards of 5 hours, 1 hour should suffice
