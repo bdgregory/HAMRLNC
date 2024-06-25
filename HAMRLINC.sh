@@ -200,17 +200,18 @@ exechamrpy="$path_to_HAMR"/"hamr.py"
 execignoreends="$path_to_HAMR"/"ignoreBamReadEnds.py"
 
 # translates string library prep strandedness into feature count required number
-if [[ "$hisatlib" = R ]]; then
-    fclib=2
-elif [[ "$hisatlib" = F ]]; then
-    fclib=1
-elif [[ "$hisatlib" = RF ]]; then
-    fclib=2
-elif [[ "$hisatlib" = FR ]]; then
-    fclib=1
-else 
-    fclib=0
-fi
+# if [[ "$hisatlib" = R ]]; then
+#     fclib=2
+# elif [[ "$hisatlib" = F ]]; then
+#     fclib=1
+# elif [[ "$hisatlib" = RF ]]; then
+#     fclib=2
+# elif [[ "$hisatlib" = FR ]]; then
+#     fclib=1
+# else 
+#     fclib=0
+# fi
+fclib=0
 
 
 ################################################ Subprogram Definitions #########################################
