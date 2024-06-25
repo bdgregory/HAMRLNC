@@ -430,7 +430,7 @@ hamrBranch () {
         #hamr step, can take ~1hr
         echo "[$smpkey] hamr..."
         #hamr_path=$(which hamr.py) 
-        python $exechamr \
+        python $exechamrpy \
             -fe "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam "$genome" "$model" "$smpout" $smpname $quality $coverage $err H4 $pvalue $fdr .05
         wait
 
@@ -733,8 +733,12 @@ featureCountBranch () {
                 -o "$smpout"/"$smpname"_transcript_abundance_lncRNA-included.txt \
                 "$smpout"/sort_accepted.bam
         fi
+
+        # housekeeping for lnc abundance
+        mv "$smpout"/"$smpname"_transcript_abundance_lncRNA-included.txt "$out/featurecount_out"
         echo "[$smpkey] finished quantifying read features"
     fi
+    
     # always do feature count with the regular gtf
     # first create gtf file from gff3 file
     gffread \
@@ -765,9 +769,7 @@ featureCountBranch () {
     echo "[$smpkey] finished quantifying read features"
 
     # housekeeping for regular abundance
-    cd "$smpout"
-    mv *_featurecount.txt* "$out/featurecount_out"
-    cd
+    mv "$smpout"/"$smpname"_exon_abundance.txt "$out/featurecount_out"
 }
 
 # the wrapper around hamrBranch and lncCallBranch, is called once for each rep (or input file)
