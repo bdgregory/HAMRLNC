@@ -377,7 +377,8 @@ hamrBranch () {
             -R "$genome" \
             -I "$smpout"/sorted_RG_unique_endsIGN_reordered.bam \
             -O "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC.bam \
-            -U ALLOW_N_CIGAR_READS
+            # apparently this is now outdated
+            # -U ALLOW_N_CIGAR_READS
         echo "[$smpkey] finished splitting N cigarring (MOD 5/7)"
         echo ""
 
