@@ -199,6 +199,18 @@ last_checkpoint=""
 exechamrpy="$path_to_HAMR"/"hamr.py"
 execignoreends="$path_to_HAMR"/"ignoreBamReadEnds.py"
 
+# translates string library prep strandedness into feature count required number
+if [[ "$hisatlib" = R ]]; then
+    fclib=2
+elif [[ "$hisatlib" = F ]]; then
+    fclib=1
+elif [[ "$hisatlib" = RF ]]; then
+    fclib=2
+elif [[ "$hisatlib" = FR ]]; then
+    fclib=1
+else 
+    fclib=0
+fi
 
 
 ################################################ Subprogram Definitions #########################################
@@ -332,8 +344,15 @@ hamrBranch () {
     wait
 
     if [[ $currProg_mod == "4" ]]; then
-        #ignore read ends
         echo "[$smpkey] excluding read ends..."
+        # first index the input bam file with samtools
+        samtools index \
+            "$smpout"/sorted_RG_unique.bam \
+            -o "$smpout"/sorted_RG_unique.bai
+
+        wait
+
+        # ignore read ends
         python $execignoreends \
             -5p 1 -3p 1 \
             "$smpout"/sorted_RG_unique.bam \
@@ -675,14 +694,14 @@ lncCallBranch () {
 
     cd
 
-    echo "processing identified lncRNA into GTF..."
+    echo "[$smpkey] processing identified lncRNA into GTF..."
     Rscript "$scripts"/lnc_processing.R \
         "$smpout"/"${smpname}".lnc.gtf \
         "$smpout"
 
     cp "$smpout"/"${smpname}".lnc.gtf "$lncout"
 
-    echo "done"
+    echo "[$smpkey] done (LNC)"
     echo ""
 }
 
@@ -752,18 +771,6 @@ featureCountBranch () {
 
 # the wrapper around hamrBranch and lncCallBranch, is called once for each rep (or input file)
 fastq2raw () {
-    # translates string library prep strandedness into feature count required number
-    # if [[ "$hisatlib" = R ]]; then
-    #     fclib=2
-    # elif [[ "$hisatlib" = F ]]; then
-    #     fclib=1
-    # elif [[ "$hisatlib" = RF ]]; then
-    #     fclib=2
-    # elif [[ "$hisatlib" = FR ]]; then
-    #     fclib=1
-    # else 
-    #     fclib=0
-    # fi
 
     # Read the CSV file into a DataFrame
     mapfile -t names < <(awk -F, '{ print $1 }' "$csv")
