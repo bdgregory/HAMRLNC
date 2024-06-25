@@ -37,4 +37,4 @@ out <- gff%>%
   mutate(Name=getAttributeField(attributes, 'gene_id')) %>%
   select(c('seqname','start','end','bio','Name','score','strand'))
 
-write.table(out, paste(args[2], "/", "lnc.gtf", sep=""), sep='\t', row.names=F, col.names=F, quote=F)
+write.table(out, paste(args[2], ".lnc.gtf", sep=""), sep='\t', row.names=F, col.names=F, quote=F)
