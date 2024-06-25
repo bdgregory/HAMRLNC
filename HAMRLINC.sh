@@ -467,8 +467,6 @@ lncCallBranch () {
         echo "3" > "$smpout"/progress_lnc.txt
         currProg_lnc="3"
     fi
-
-    wait
     
     if [[ $currProg_lnc == "3" ]]; then
         echo "[$smpkey] merging sample gtf with reference gtf..."
@@ -482,10 +480,9 @@ lncCallBranch () {
         echo ""
 
         echo "4" > "$smpout"/progress_lnc.txt
-        currProg__lnc="4"
+        currProg_lnc="4"
     fi
-    
-    wait
+
 
     if [[ $currProg_lnc == "4" ]]; then
         echo "[$smpkey] running gffcompare on merged gtf..."
@@ -497,42 +494,40 @@ lncCallBranch () {
         echo ""
 
         echo "5" > "$smpout"/progress_lnc.txt
-        currProg__lnc="5"
+        currProg_lnc="5"
     fi
-
-    wait
 
     if [[ $currProg_lnc == "5" ]]; then
         echo "[$smpkey] filtering..."
         
         # filter with awk
-        awk '$7 != "." {print}' gffcmp.annotated.gtf > filtered_gffcmp.annotated.gtf
+        awk '$7 != "." {print}' gffcmp.annotated.gtf > filtered_gffcmp_annotated.gtf
 
         echo "[$smpkey] finished filtering (LNC 4/15)"
         echo ""
 
         echo "6" > "$smpout"/progress_lnc.txt
-        currProg__lnc="6"
+        currProg_lnc="6"
     fi
 
-    wait
 
     if [[ $currProg_lnc == "6" ]]; then
         echo "[$smpkey] filtering for UX..."
         
         # filter with grep for UX class codes
-        grep -E 'class_code "u";|class_code "x";' filtered_gffcmp.annotated.gtf > UXfiltered_gffcmp.annotated.gtf
+        grep -E 'class_code "u";|class_code "x";' filtered_gffcmp_annotated.gtf > UXfiltered_gffcmp_annotated.gtf
 
         echo "[$smpkey] finished filtering (LNC 6/15)"
         echo ""
 
         echo "7" > "$smpout"/progress_lnc.txt
-        currProg__lnc="7"
+        currProg_lnc="7"
     fi
 
-    wait
+    if 
 
-    if [[ $currProg_lnc == "7" ]]; then
+
+    if [[ $currProg_lnc == "7" ]] && [[ -s UXfiltered_gffcmp_annotated.gtf ]]; then
         echo "[$smpkey] creating index file..."
         
         # I could copy over the already made fai but... eh
@@ -542,12 +537,11 @@ lncCallBranch () {
         echo ""
 
         echo "8" > "$smpout"/progress_lnc.txt
-        currProg__lnc="8"
+        currProg_lnc="8"
     fi
 
-    wait
     
-   if [[ $currProg_lnc == "8" ]]; then
+    if [[ $currProg_lnc == "8" ]]; then
         echo "[$smpkey] converting filtered gtf to gff3..."
         
         # covnvert to gff3
@@ -557,10 +551,9 @@ lncCallBranch () {
         echo ""
 
         echo "9" > "$smpout"/progress_lnc.txt
-        currProg__lnc="9"
+        currProg_lnc="9"
     fi
 
-    wait
 
     if [[ $currProg_lnc == "9" ]]; then
         echo "[$smpkey] writing fa file from filtered gtf..."
@@ -572,10 +565,9 @@ lncCallBranch () {
         echo ""
 
         echo "10" > "$smpout"/progress_lnc.txt
-        currProg__lnc="10"
+        currProg_lnc="10"
     fi
 
-    wait
 
     if [[ $currProg_lnc == "10" ]]; then
         echo "[$smpkey] analyzing for transcript coding probability with cpc2..."
@@ -587,10 +579,9 @@ lncCallBranch () {
         echo ""
 
         echo "11" > "$smpout"/progress_lnc.txt
-        currProg__lnc="11"
+        currProg_lnc="11"
     fi
 
-    wait
 
     if [[ $currProg_lnc == "11" ]]; then
         echo "[$smpkey] extracting transcripts with probability less than 0.5..."
@@ -602,10 +593,9 @@ lncCallBranch () {
         echo ""
 
         echo "12" > "$smpout"/progress_lnc.txt
-        currProg__lnc="12"
+        currProg_lnc="12"
     fi
 
-    wait
 
     if [[ $currProg_lnc == "12" ]]; then
         echo "[$smpkey] using cpc2 results to filter gtf..."
@@ -623,10 +613,9 @@ lncCallBranch () {
         echo ""
 
         echo "13" > "$smpout"/progress_lnc.txt
-        currProg__lnc="13"
+        currProg_lnc="13"
     fi
 
-    wait
     
     if [[ $currProg_lnc == "13" ]]; then
         echo "[$smpkey] creating fa file from cpc2 filtered gtf..."
@@ -638,10 +627,9 @@ lncCallBranch () {
         echo ""
 
         echo "14" > "$smpout"/progress_lnc.txt
-        currProg__lnc="14"
+        currProg_lnc="14"
     fi
 
-    wait
 
     if [[ $currProg_lnc == "14" ]]; then
         echo "[$smpkey] performing cmscan..."
@@ -655,10 +643,9 @@ lncCallBranch () {
         echo ""
 
         echo "15" > "$smpout"/progress_lnc.txt
-        currProg__lnc="15"
+        currProg_lnc="15"
     fi
 
-    wait
 
     if [[ $currProg_lnc == "15" ]]; then
         echo "[$smpkey] sacnning against rfam and finishing lncRNA annotation..."
@@ -688,19 +675,21 @@ lncCallBranch () {
         echo ""
 
         echo "16" > "$smpout"/progress_lnc.txt
-        currProg__lnc="16"
+        currProg_lnc="16"
     fi
 
-    wait
-
     cd
+    
+    if [[ $currProg_lnc == "16" ]]; then
+        echo "[$smpkey] processing identified lncRNA into GTF..."
+        Rscript "$scripts"/lnc_processing.R \
+            "$smpout"/rfam_filtered_transcripts.txt \
+            "$smpout"/"${smpname}"
 
-    echo "[$smpkey] processing identified lncRNA into GTF..."
-    Rscript "$scripts"/lnc_processing.R \
-        "$smpout"/"${smpname}".lnc.gtf \
-        "$smpout"
-
-    cp "$smpout"/"${smpname}".lnc.gtf "$lncout"
+        cp "$smpout"/"${smpname}".lnc.gtf "$lncout"
+    elif [[ $currProg_lnc == "7" ]]; then
+        echo "[$smpkey] filtering by class codes -u -x in gtf yielded no entries, no lncRNA can be annotated"
+    fi 
 
     echo "[$smpkey] done (LNC)"
     echo ""
@@ -738,7 +727,7 @@ featureCountBranch () {
         mv "$smpout"/"$smpname"_transcript_abundance_lncRNA-included.txt "$out/featurecount_out"
         echo "[$smpkey] finished quantifying read features"
     fi
-    
+
     # always do feature count with the regular gtf
     # first create gtf file from gff3 file
     gffread \
