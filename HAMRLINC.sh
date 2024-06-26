@@ -66,6 +66,7 @@ execpthr="/pantherapi-pyclient/pthr_go_annots.py"
 run_lnc=false
 run_mod=false
 run_featurecount=false
+mod_partial=false
 
 # other initialization
 threads=4
@@ -81,7 +82,7 @@ pcorrect=""
 
 
 ######################################################### Grab Arguments #########################################
-while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CakTtGH:DupEPS:F:" opt; do
+while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CaqkTtGH:DupEPS:F:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -115,6 +116,9 @@ while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CakTtGH:DupEPS:F:" opt; do
     ;;
     u)
     run_featurecount=true
+    ;;
+    q)
+    mod_partial=true
     ;;
     Q)
     quality=$OPTARG
@@ -524,8 +528,6 @@ lncCallBranch () {
         currProg_lnc="7"
     fi
 
-    if 
-
 
     if [[ $currProg_lnc == "7" ]] && [[ -s UXfiltered_gffcmp_annotated.gtf ]]; then
         echo "[$smpkey] creating index file..."
@@ -689,7 +691,7 @@ lncCallBranch () {
         cp "$smpout"/"${smpname}".lnc.gtf "$lncout"
     elif [[ $currProg_lnc == "7" ]]; then
         echo "[$smpkey] filtering by class codes -u -x in gtf yielded no entries, no lncRNA can be annotated"
-    fi 
+    fi
 
     echo "[$smpkey] done (LNC)"
     echo ""
@@ -1465,8 +1467,14 @@ if [ "$last_checkpoint" = "checkpoint1" ]; then
     checkpoint $last_checkpoint
 fi
 
-# run consensus when checkpoint is at 2
-if [ "$last_checkpoint" = "checkpoint2" ]; then 
+# check for mod_partial flag, if not, run consensus when checkpoint is at 2
+if [[ "$partial_mod" = true ]]; then 
+    echo "User has selected to perform only partial HAMRLINC functions"
+    echo ""
+    echo "#################################### HAMRLINC has finished running #######################################"
+    date '+%d/%m/%Y %H:%M:%S'
+    echo ""
+elif [ "$last_checkpoint" = "checkpoint2" ]; then 
     ##############consensus finding begins##############
     # Produce consensus bam files based on filename (per extracted from name.csv) and store in ~/consensus
     if [ ! -d "$out/hamr_consensus" ]; then mkdir "$out"/hamr_consensus; echo "created path: $out/hamr_consensus"; fi
