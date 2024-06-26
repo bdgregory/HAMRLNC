@@ -1021,7 +1021,7 @@ parallelWrap () {
     smpname=""
     original_ext="${smpext##*.}"
     # always run the below to ensure necessary variables are assigned
-    if [[ $smpkey == *_1* ]]; then
+    if [[ $smpkey == *_1 ]]; then
         smpkey="${smpkey%_1*}"
         smp1="$smpdir/${smpkey}_1_trimmed.$original_ext"
         smp2="$smpdir/${smpkey}_2_trimmed.$original_ext"
@@ -1035,7 +1035,7 @@ parallelWrap () {
         # fi
         echo "$smpext is a part of a paired-end sequencing file"
         fastq2raw
-    elif [[ $smpkey == *_2* ]]; then
+    elif [[ $smpkey == *_2 ]]; then
         # If _2 is in the filename, this file was processed along with its corresponding _1 so we skip
         echo "$smpext has already been processed with its _1 counter part. Skipped."
         echo ""
