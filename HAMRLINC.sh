@@ -1242,19 +1242,22 @@ fastq2rawHouseKeeping () {
 
 
     # create dict file using fasta genome file
-    count=$(ls -1 "$genomedir"/*.dict 2>/dev/null | wc -l)
-    if [ "$count" == 0 ]; then 
+    # previous code didn't work when the genome dir contained another genome with its dict
+    fafilename=$(basename "$genome")
+    fafilestem="${fafilename%.*}"
+    dict="$genomedir"/"$fafilestem".dict
+    if [[ ! -f "$dict" ]]; then
         gatk CreateSequenceDictionary \
         R="$genome"
     fi
-    dict=$(find "$genomedir" -maxdepth 1 -name "*.dict")
 
     # create fai index file using fasta genome
-    count=$(ls -1 "$genomedir"/*.fai 2>/dev/null | wc -l)
-    if [ "$count" == 0 ]; then 
+    # same as above, note fai by convention has .fa in file name
+    fai="$genomedir"/"$fafilestem".fa.fai
+    if [[ ! -f "$dict" ]]; then
         samtools faidx "$genome"
     fi
-
+    
     # Check which mapping software, and check for index
     if [[ "$hisat" = false ]]; then  
     # Check if indexed files already present for STAR
