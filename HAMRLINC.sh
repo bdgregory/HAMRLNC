@@ -29,6 +29,8 @@ usage () {
     -p  [activate lncRNA annotation workflow]
     -u  [activate featurecount workflow]
     -G  [attribute used for featurecount, default=gene_id]
+    -y  [disable intermediate file cleaning for debugging]
+    -q  [cut the program short after reaching checkpoint 2]
     -Q  [HAMR: minimum quality score, default=30]
     -C  [HAMR: minimum coverage, default=10]
     -E  [HAMR: sequencing error, default=0.01]
@@ -72,6 +74,7 @@ mod_partial=false
 threads=4
 hisat=false
 attribute_fc="gene_id"
+clean=true
 #curdir=$(dirname "$0")
 hsref=""
 fastq_in=""
@@ -119,6 +122,9 @@ while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CaqkTtGH:DupEPS:F:" opt; do
     ;;
     q)
     mod_partial=true
+    ;;
+    y)
+    clean=false
     ;;
     Q)
     quality=$OPTARG
@@ -375,6 +381,7 @@ hamrBranch () {
 
     if [[ $currProg_mod == "5" ]]; then
         #reorder the reads using picard
+        # 6/26 adding allow discordance, remove ends might have messed with the length?
         echo "[$smpkey] reordering..."
         gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" ReorderSam \
             I="$smpout"/sorted_RG_unique_endsIGN.bam \
@@ -382,7 +389,8 @@ hamrBranch () {
             R="$genome" \
             CREATE_INDEX=TRUE \
             SEQUENCE_DICTIONARY="$dict" \
-            TMP_DIR="$smpout"/tmp
+            TMP_DIR="$smpout"/tmp \
+            ALLOW_CONTIG_LENGTH_DISCORDANCE=true
         echo "[$smpkey] finished reordering (MOD 4/7)"
         echo ""
 
@@ -988,16 +996,19 @@ fastq2raw () {
         cp "$smpout"/sorted_RG_unique_endsIGN_reordered.bam "$out"/pipeline/depth/"$smpname".bam
         cp "$smpout"/sorted_RG_unique_endsIGN_reordered.bai "$out"/pipeline/depth/"$smpname".bai
 
-        # delete more intermediate files
-        echo "[$smpkey] removing large intermediate files..."
-        rm "$smpout"/sorted_RG.bam
-        rm "$smpout"/sorted_RG_unique.bam
-        rm "$smpout"/sorted_RG_unique_endsIGN.bam
-        rm "$smpout"/sorted_RG_unique_endsIGN_reordered.bam
-        rm "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC.bam
-        rm "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam
+        # only delete intermediates if user didn't disable it
+        if [[ "$clean" == true ]]; then
+            # delete more intermediate files
+            echo "[$smpkey] removing large intermediate files..."
+            rm "$smpout"/sorted_RG.bam
+            rm "$smpout"/sorted_RG_unique.bam
+            rm "$smpout"/sorted_RG_unique_endsIGN.bam
+            rm "$smpout"/sorted_RG_unique_endsIGN_reordered.bam
+            rm "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC.bam
+            rm "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam
+        fi
+
         echo "[$smpkey] finished cleaning (MOD 7/7)"
-        
         echo "10" > "$smpout"/progress_mod.txt
     fi
 }
