@@ -85,7 +85,7 @@ pcorrect=""
 
 
 ######################################################### Grab Arguments #########################################
-while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CaqkTtGH:DupEPS:F:" opt; do
+while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CayqkTtGH:DupEPS:F:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
