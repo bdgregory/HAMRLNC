@@ -1468,7 +1468,7 @@ if [ "$last_checkpoint" = "checkpoint1" ]; then
 fi
 
 # check for mod_partial flag, if not, run consensus when checkpoint is at 2
-if [[ "$partial_mod" = true ]]; then 
+if [[ "$mod_partial" = true ]]; then 
     echo "User has selected to perform only partial HAMRLINC functions"
     echo ""
     echo "#################################### HAMRLINC has finished running #######################################"
