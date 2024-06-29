@@ -85,7 +85,7 @@ pcorrect=""
 
 
 ######################################################### Grab Arguments #########################################
-while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CayqkTtGH:DupEPS:F:" opt; do
+while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CayqkTtJGH:DupEPS:F:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -170,6 +170,9 @@ while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CayqkTtGH:DupEPS:F:" opt; do
     ;;
     H)
     execpthr="$OPTARG"
+    ;;
+    J)
+    execcpc="$OPTARG"
     ;;
     F)
     fdr=$OPTARG
@@ -583,7 +586,7 @@ lncCallBranch () {
         echo "[$smpkey] analyzing for transcript coding probability with cpc2..."
         
         # use cpc2 to analyze for coding probablity
-        python CPC2/bin/CPC2.py -i transcripts.fa -o cpc2_output
+        python $execcpc -i transcripts.fa -o cpc2_output
 
         echo "[$smpkey] finished analysis (LNC 10/15)"
         echo ""
