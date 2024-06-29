@@ -63,6 +63,7 @@ model="$util"/euk_trna_mods.Rdata
 json="$util"/panther_params.json
 generator="$scripts"/annotationGenerateUnified.R
 execpthr="/pantherapi-pyclient/pthr_go_annots.py"
+execcpc="/CPC2/bin/CPC2.py"
 
 # subprogram activation boolean
 run_lnc=false
