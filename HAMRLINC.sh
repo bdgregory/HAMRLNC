@@ -19,6 +19,8 @@ usage () {
 
   OPTIONAL: 
     -d  [input a directory of fastq]
+    -D  [input a directory of bam]
+    -b  [sort input bam files, default=false]
     -h  [help message] 
     -n  number of threads (default=4)
     -O  [Panther: organism taxon ID, default=3702]
@@ -75,6 +77,8 @@ clean=true
 #curdir=$(dirname "$0")
 hsref=""
 fastq_in=""
+bam_in=""
+bam_sorted=true
 porg=""
 pterm=""
 ptest=""
@@ -86,7 +90,7 @@ gatk_dir=""
 
 
 ######################################################### Grab Arguments #########################################
-while getopts ":o:c:g:i:l:d:hn:O:A:Y:R:yqG:kupH:U:W:S:J:f:m:Q:E:P:F:C:" opt; do
+while getopts ":o:c:g:i:l:d:D:bhn:O:A:Y:R:yqG:kupH:U:W:S:J:f:m:Q:E:P:F:C:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -147,6 +151,12 @@ while getopts ":o:c:g:i:l:d:hn:O:A:Y:R:yqG:kupH:U:W:S:J:f:m:Q:E:P:F:C:" opt; do
     ;;
     d)
     fastq_in=$OPTARG
+    ;;
+    D)
+    bam_in=$OPTARG
+    ;;
+    b)
+    bam_sorted=false
     ;;
     C)
     coverage=$OPTARG
@@ -674,8 +684,8 @@ lncCallBranch () {
         done < "$smpout"/parsed_rfam_out.tblout
 
         # rename, combine
-        mv rfam_filtered_transcripts.txt "${smpname}".lnc.gtf
         cat $annotation "$smpout"/rfam_filtered_transcripts.txt > "$smpout"/final_combined.gtf
+        mv rfam_filtered_transcripts.txt "${smpname}".lnc.gtf
 
         echo "[$smpkey] finished lncRNA annotation (LNC 15/15)"
         echo ""
@@ -825,41 +835,55 @@ fastq2raw () {
 
     echo "$(date '+%d/%m/%Y %H:%M:%S') [$smpkey] Begin preprocessing pipeline"
 
+    
     # if 0, then either this run failed before mapping completion or this run just started
     if [[ $currProg_mod == "0" || $currProg_lnc == "0" ]]; then
-        cd "$smpout" || exit
-        # maps the trimmed reads to provided annotated genome, can take ~1.5hr
-        echo "--------Entering mapping step--------"
-        if [ "$det" -eq 1 ]; then
-            echo "[$smpkey] Using STAR for mapping with a single-end file."
-            STAR \
-            --runThreadN 2 \
-            --genomeDir "$out"/STARref \
-            --readFilesIn "$smp" \
-            --sjdbOverhang $overhang \
-            --sjdbGTFfile "$annotation" \
-            --sjdbGTFtagExonParentTranscript Parent \
-            --outFilterMultimapNmax 10 \
-            --outFilterMismatchNmax $mismatch \
-            --outSAMtype BAM SortedByCoordinate \
-            --outSAMstrandField intronMotif \
-            --outFilterIntronMotifs RemoveNoncanonical
-        else
-            echo "[$smpkey] Using STAR for mapping with a paired-end file."
-            STAR \
-            --runThreadN 2 \
-            --genomeDir "$out"/STARref \
-            --readFilesIn "$smp1" "$smp2" \
-            --sjdbOverhang $overhang \
-            --sjdbGTFfile "$annotation" \
-            --sjdbGTFtagExonParentTranscript Parent \
-            --outFilterMultimapNmax 10 \
-            --outFilterMismatchNmax $mismatch \
-            --outSAMtype BAM SortedByCoordinate \
-            --outSAMstrandField intronMotif \
-            --outFilterIntronMotifs RemoveNoncanonical
+        if [[ -z $bam_in ]]; then
+            cd "$smpout" || exit
+            # maps the trimmed reads to provided annotated genome, can take ~1.5hr
+            echo "--------Entering mapping step--------"
+            if [ "$det" -eq 1 ]; then
+                echo "[$smpkey] Using STAR for mapping with a single-end file."
+                STAR \
+                --runThreadN 2 \
+                --genomeDir "$out"/STARref \
+                --readFilesIn "$smp" \
+                --sjdbOverhang $overhang \
+                --sjdbGTFfile "$annotation" \
+                --sjdbGTFtagExonParentTranscript Parent \
+                --outFilterMultimapNmax 10 \
+                --outFilterMismatchNmax $mismatch \
+                --outSAMtype BAM SortedByCoordinate \
+                --outSAMstrandField intronMotif \
+                --outFilterIntronMotifs RemoveNoncanonical
+            else
+                echo "[$smpkey] Using STAR for mapping with a paired-end file."
+                STAR \
+                --runThreadN 2 \
+                --genomeDir "$out"/STARref \
+                --readFilesIn "$smp1" "$smp2" \
+                --sjdbOverhang $overhang \
+                --sjdbGTFfile "$annotation" \
+                --sjdbGTFtagExonParentTranscript Parent \
+                --outFilterMultimapNmax 10 \
+                --outFilterMismatchNmax $mismatch \
+                --outSAMtype BAM SortedByCoordinate \
+                --outSAMstrandField intronMotif \
+                --outFilterIntronMotifs RemoveNoncanonical
+            fi
+            cd || exit
+        else 
+            echo "relocating provided bam file..."
+            if [[ "$bam_sorted" = true ]]; then
+                mv "$smp" "$smpout/sort_accepted.bam"
+            else
+                echo "user requested sorting provided bam files..."
+                samtools sort \
+                    -n "$smp" \
+                    -o "$smpout"/sort_accepted.bam
+                echo "[$smpkey] finished sorting"
+            fi
         fi
-        cd || exit
 
         # mapping completed without erroring out if this is reached
         echo "1" > "$smpout"/progress_mod.txt
@@ -874,11 +898,16 @@ fastq2raw () {
 
     # if 1, then either last run failed before sorting completion or this run just came out of mapping
     if [[ $currProg_mod == "1" || $currProg_lnc == "1" ]]; then
-        echo "[$smpkey] renaming file"
-        # star already sorts its output
-        mv "$smpout"/Aligned.sortedByCoord.out.bam "$smpout"/sort_accepted.bam
-        echo "[$smpkey] finished"
-        echo ""
+        if [[ -z $bam_in ]]; then
+            echo "[$smpkey] renaming file"
+            # star already sorts its output
+            mv "$smpout"/Aligned.sortedByCoord.out.bam "$smpout"/sort_accepted.bam
+            echo "[$smpkey] finished"
+            echo ""
+        else
+            echo "@@@@ bam input mode has now merged track with fastq mode"
+            echo "@@@@ developer can go get a coffee now"
+        fi
 
         # sorting completed without erroring out if this is reached
         echo "2" > "$smpout"/progress_mod.txt
@@ -939,22 +968,29 @@ parallelWrap () {
     smpkey="${smpext%.*}"
     smpname=""
     original_ext="${smpext##*.}"
-    # always run the below to ensure necessary variables are assigned
-    if [[ $smpkey == *_1 ]]; then
-        smpkey="${smpkey%_1*}"
-        smp1="$smpdir/${smpkey}_1_trimmed.$original_ext"
-        smp2="$smpdir/${smpkey}_2_trimmed.$original_ext"
-        # Paired end recognized
-        det=0
-        echo "$smpext is a part of a paired-end sequencing file"
-        fastq2raw
-    elif [[ $smpkey == *_2 ]]; then
-        # If _2 is in the filename, this file was processed along with its corresponding _1 so we skip
-        echo "$smpext has already been processed with its _1 counter part. Skipped."
-        echo ""
+
+    # this function will be split into bam route and fastq route, 6/30/24
+    if [[ -z $bam_in ]]; then
+        # always run the below to ensure necessary variables are assigned
+        if [[ $smpkey == *_1 ]]; then
+            smpkey="${smpkey%_1*}"
+            smp1="$smpdir/${smpkey}_1_trimmed.$original_ext"
+            smp2="$smpdir/${smpkey}_2_trimmed.$original_ext"
+            # Paired end recognized
+            det=0
+            echo "$smpext is a part of a paired-end sequencing file"
+            fastq2raw
+        elif [[ $smpkey == *_2 ]]; then
+            # If _2 is in the filename, this file was processed along with its corresponding _1 so we skip
+            echo "$smpext has already been processed with its _1 counter part. Skipped."
+            echo ""
+        else
+            det=1
+            echo "$smpext is a single-end sequencing file"
+            fastq2raw
+        fi
     else
-        det=1
-        echo "$smpext is a single-end sequencing file"
+        echo "$smpext is a bam file, HAMRLINC will shortcut into appropriate steps"
         fastq2raw
     fi
 }
@@ -1241,6 +1277,88 @@ fastq2rawHouseKeeping () {
     #############fastq2raw housekeeping ends#############
 }
 
+# house keeping steps for when the user inputs bam files instead of fastq
+bamEntranceHouseKeeping () {
+
+    bam_in="$user_dir"/"$bam_in"
+    if [[ -d "$bam_in" ]]; then
+        echo "Directory $bam_in is found, assuming mapped bam files are provided..."
+    fi
+
+    # Creating some folders
+    if [ ! -d "$out/pipeline" ]; then mkdir "$out"/pipeline; echo "created path: $out/pipeline"; fi
+
+    if [ ! -d "$out/hamr_out" ]; then mkdir "$out"/hamr_out; echo "created path: $out/hamr_out"; fi
+
+    # Check if zero_mod is present already, if not then create one
+    if [ ! -e "$out/hamr_out/zero_mod.txt" ]; then
+        cd "$out/hamr_out" || exit
+        echo "Below samples have 0 HAMR predicted mods:" > zero_mod.txt
+        cd || exit
+    fi
+
+    # Creates a folder for depth analysis
+    if [ ! -d "$out/pipeline/depth" ]; then mkdir "$out"/pipeline/depth; echo "created path: $out/pipeline/depth"; fi
+
+    # create dict file using fasta genome file
+    # previous code didn't work when the genome dir contained another genome with its dict
+    fafilename=$(basename "$genome")
+    fafilestem="${fafilename%.*}"
+    dict="$genomedir"/"$fafilestem".dict
+    if [[ ! -f "$dict" ]]; then
+        gatk CreateSequenceDictionary \
+        R="$genome"
+    fi
+
+    # create fai index file using fasta genome
+    # same as above, note fai by convention has .fa in file name
+    fai="$genomedir"/"$fafilestem".fa.fai
+    if [[ ! -f "$dict" ]]; then
+        samtools faidx "$genome"
+    fi
+
+
+    if ! command -v gatk > /dev/null; then
+        echo "Failed to call gatk command. Please check your installation."
+        exit 1
+    fi
+
+    if ! command -v mapfile > /dev/null; then
+        echo "Failed to call mapfile command. Please check your installation."
+        exit 1
+    fi
+
+    if ! command -v samtools > /dev/null; then
+        echo "Failed to call samtools command. Please check your installation."
+        exit 1
+    fi
+
+    if ! command -v stringtie > /dev/null; then
+        echo "Failed to call stringtie command. Please check your installation."
+        exit 1
+    fi
+
+    if ! command -v cuffcompare > /dev/null; then
+        echo "Failed to call cuffcompare command. Please check your installation."
+        exit 1
+    fi
+
+    if ! command -v featureCounts > /dev/null; then
+        echo "Failed to call featureCounts command. Please check your installation."
+        exit 1
+    fi
+
+    if ! command -v gatk > /dev/null; then
+        echo "Failed to call gatk command. Please check your installation."
+        exit 1
+    fi
+
+    if ! command -v python > /dev/null; then
+        echo "Failed to call python command. Please check your installation."
+        exit 1
+    fi
+}
+
 # house keeping steps before starting the main program, checks key arguments, set checkpoints, etc
 mainHouseKeeping () {
     # Check if the required arguments are provided
@@ -1299,52 +1417,93 @@ exec > >(tee -a "$logfile") 2>&1
 # perform house keeping steps
 mainHouseKeeping
 
-# run fastqGrab when checkpoint is at start
-if [ "$last_checkpoint" = "start" ] || [ "$last_checkpoint" = "" ]; then
-    fastqGrabHouseKeeping
-    ##########fastqGrab main begins#########
-    if [[ $mode -eq 1 ]]; then
-        # Grabs the fastq files from acc list provided into the dir ~/datasets
-        i=0
-        while IFS= read -r line
-        do ((i=i%threads)); ((i++==0)) && wait
-        fastqGrabSRA &
-        done < "$acc"
+if [[ -z $bam_in ]]; then
+    # run fastqGrab when checkpoint is at start
+    if [ "$last_checkpoint" = "start" ] || [ "$last_checkpoint" = "" ]; then
+        fastqGrabHouseKeeping
+        ##########fastqGrab main begins#########
+        if [[ $mode -eq 1 ]]; then
+            # Grabs the fastq files from acc list provided into the dir ~/datasets
+            i=0
+            while IFS= read -r line
+            do ((i=i%threads)); ((i++==0)) && wait
+            fastqGrabSRA &
+            done < "$acc"
 
-    elif [[ $mode -eq 2 ]]; then
-        i=0
-        for fq in "$fastq_in"/*; 
-        do
-            ((i=i%threads)); ((i++==0)) && wait
-            fastqGrabLocal &
-        done
+        elif [[ $mode -eq 2 ]]; then
+            i=0
+            for fq in "$fastq_in"/*; 
+            do
+                ((i=i%threads)); ((i++==0)) && wait
+                fastqGrabLocal &
+            done
+        fi
+        wait
+        ##########fastqGrab main ends############
+        echo ""
+        echo "################ Finished downloading and processing all fastq files. Entering pipeline for HAMR analysis. ######################"
+        date '+%d/%m/%Y %H:%M:%S'
+        echo ""
+
+        # obtained all processed fastq files, record down checkpoint
+        last_checkpoint="checkpoint1"
+        checkpoint $last_checkpoint
     fi
-    wait
-    ##########fastqGrab main ends############
-    echo ""
-    echo "################ Finished downloading and processing all fastq files. Entering pipeline for HAMR analysis. ######################"
-    date '+%d/%m/%Y %H:%M:%S'
-    echo ""
 
-    # obtained all processed fastq files, record down checkpoint
-    last_checkpoint="checkpoint1"
-    checkpoint $last_checkpoint
-fi
+    # run fastq2raw if program is at checkpoint 1
+    if [ "$last_checkpoint" = "checkpoint1" ]; then 
+        fastq2rawHouseKeeping
+        #############fastq2raw main begins###############
+        # Pipes each fastq down the hamr pipeline, and stores out put in ~/hamr_out
+        # Note there's also a hamr_out in ~/pipeline/SRRNUMBER_temp/, but that one's for temp files
+        
+        #mkdir trimmed_temp && mv "$hamrin"/*."$suf" trimmed_temp && chmod -R 777 trimmed_temp
+        #cd trimmed_temp
+        #current_dir=$(pwd)
+        #cd ..
 
-# run fastq2raw if program is at checkpoint 1
-if [ "$last_checkpoint" = "checkpoint1" ]; then 
-    fastq2rawHouseKeeping
-    #############fastq2raw main begins###############
-    # Pipes each fastq down the hamr pipeline, and stores out put in ~/hamr_out
-    # Note there's also a hamr_out in ~/pipeline/SRRNUMBER_temp/, but that one's for temp files
-    
-    #mkdir trimmed_temp && mv "$hamrin"/*."$suf" trimmed_temp && chmod -R 777 trimmed_temp
-    #cd trimmed_temp
-    #current_dir=$(pwd)
-    #cd ..
+        i=0
+        for smp in "$hamrin"/*."$suf"; 
+        do
+            ((i=i%ttop)); ((i++==0)) && wait   
+            parallelWrap &
+        done
 
+        wait
+
+        # these checks apply only if mod arm was on
+        if [[ "$run_mod" = true ]]; then
+            # Check whether any hamr.mod.text is present, if not, halt the program here
+            if [[ -z "$(ls -A "$out"/hamr_out)" ]]; then
+                echo "No HAMR predicted mod found for any sequencing data in this project, please see log for verification"
+                exit 1
+            else
+                #at least 1 mod file, move zero mod record outside so it doesn't get read as a modtbl next
+                mv "$out"/hamr_out/zero_mod.txt "$out"
+            fi
+        fi
+
+        echo ""
+        echo "################ Finished the requested analysis for each fastq file. Now producing consensus files and depth analysis. ######################"
+        echo "$(date '+%d/%m/%Y %H:%M:%S')"
+        echo ""
+
+        #############fastq2raw main ends###############
+
+        # obtained all HAMR / lnc results, record down checkpoint
+        last_checkpoint="checkpoint2"
+        checkpoint $last_checkpoint
+    fi
+else
+    # set up project folder
+    bamEntranceHouseKeeping
+
+    # declare cycle patterns
+    suf="bam"
+
+    # main cycle through supplied bam folder
     i=0
-    for smp in "$hamrin"/*."$suf"; 
+    for smp in "$bam_in"/*."$suf"; 
     do
         ((i=i%ttop)); ((i++==0)) && wait   
         parallelWrap &
