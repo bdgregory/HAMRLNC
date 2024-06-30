@@ -1057,11 +1057,11 @@ consensusOverlap () {
     ######## this is from the lncRNA identification steps ##########
     # given lines of lncRNA region in gtf, see if any mod can be found there
     if [[ "$run_lnc" = true ]]; then
-        intersectBed \
-            -a "$smpout"/"$smpname".lnc.gtf \
-            -b "$smp" \
-            -wa -wb \
-            > "$out"/lap/"$smpname"_overlapped_lnc.bed
+        # intersectBed \
+        #     -a "$smpout"/"$smpname".lnc.gtf \
+        #     -b "$smp" \
+        #     -wa -wb \
+        #     > "$out"/lap/"$smpname"_overlapped_lnc.bed
         echo "finished finding overlap with lncRNA predictions"
     fi
 }
