@@ -635,7 +635,7 @@ lncCallBranch () {
         echo "[$smpkey] creating fa file from cpc2 filtered gtf..."
         
         # create fa from cpc filtered gtf
-        gffread cpc_filtered_transcripts.txt -g $genome rfam_in.fa
+        gffread cpc_filtered_transcripts.txt -g $genome -w rfam_in.fa
 
         echo "[$smpkey] finished writing (LNC 13/15)"
         echo ""
