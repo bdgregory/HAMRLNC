@@ -56,12 +56,8 @@ err=0.01
 pvalue=1
 fdr=0.05
 path_to_HAMR="/HAMR"
-filter="$util"/filter_SAM_number_hits.pl
-model="$util"/euk_trna_mods.Rdata
 
 # hamr downstream
-json="$util"/panther_params.json
-generator="$scripts"/annotationGenerateUnified.R
 execpthr="/pantherapi-pyclient/pthr_go_annots.py"
 execcpc="/CPC2/bin/CPC2.py"
 
@@ -226,6 +222,11 @@ execignoreends="$path_to_HAMR"/"ignoreBamReadEnds.py"
 export util="$hamrlinc_dir"/"util"
 export scripts="$hamrlinc_dir"/"scripts"
 export PATH="$gatk_dir/:$PATH"
+
+filter="$util"/filter_SAM_number_hits.pl
+model="$util"/euk_trna_mods.Rdata
+json="$util"/panther_params.json
+generator="$scripts"/annotationGenerateUnified.R
 
 # translates string library prep strandedness into feature count required number
 # if [[ "$hisatlib" = R ]]; then
