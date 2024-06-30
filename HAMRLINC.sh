@@ -84,9 +84,13 @@ pterm=""
 ptest=""
 pcorrect=""
 
+# might change this later
+hamrlinc_dir=""
+gatk_dir=""
+
 
 ######################################################### Grab Arguments #########################################
-while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CayqkTtJ:GH:DupEPS:F:" opt; do
+while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CayqkTtJ:GH:DupEU:W:PS:F:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -178,6 +182,12 @@ while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CayqkTtJ:GH:DupEPS:F:" opt; 
     F)
     fdr=$OPTARG
     ;;
+    U)
+    hamrlinc_dir=$OPTARG
+    ;;
+    W)
+    gatk_dir=$OPTARG
+    ;;
     h)
     usage
     ;;
@@ -212,6 +222,10 @@ last_checkpoint=""
 # HAMR components path assignment
 exechamrpy="$path_to_HAMR"/"hamr.py"
 execignoreends="$path_to_HAMR"/"ignoreBamReadEnds.py"
+# this might not work?
+export util="$hamrlinc_dir"/"util"
+export scripts="$hamrlinc_dir"/"scripts"
+export PATH="$gatk_dir/:$PATH"
 
 # translates string library prep strandedness into feature count required number
 # if [[ "$hisatlib" = R ]]; then
