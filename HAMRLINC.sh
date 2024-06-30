@@ -18,30 +18,31 @@ usage () {
     -l  <read length>
 
   OPTIONAL: 
-    -n  number of threads (default 4)
-    -a  [use HISAT2 instead of STAR]        #####Disabled 3/28/24######
-    -x  [Genome index directory for HISAT2 by user input]       #####Disabled 3/28/24######
     -d  [input a directory of fastq]
-    -b  [HISAT library choice: single: F or R, paired: FR or RF, unstranded: leave unspecified]         #####Disabled 3/28/24######
-    -f  [filter]
-    -m  [HAMR model]
-    -k  [activate modification annotation workflow]
-    -p  [activate lncRNA annotation workflow]
-    -u  [activate featurecount workflow]
-    -G  [attribute used for featurecount, default=gene_id]
-    -y  [disable intermediate file cleaning for debugging]
-    -q  [cut the program short after reaching checkpoint 2]
+    -h  [help message] 
+    -n  number of threads (default=4)
+    -O  [Panther: organism taxon ID, default=3702]
+    -A  [Panther: annotation data set, default="GO:0008150"]
+    -Y  [Panther: test type, default="FISHER"]
+    -R  [Panther: correction type, default="FDR"]
+    -y  [keep intermediate bam files, default=false]
+    -q  [halt program upon completion of checkpoint 2, default=false]
+    -G  [attribute used for featurecount, default="gene_id"]
+    -k  [activate modification annotation workflow, default=false]
+    -p  [activate lncRNA annotation workflow, default=false]
+    -u  [activate featurecount workflow, default=false]
+    -H  [SERVER alt path for panther]
+    -U  [SERVER alt path for HAMRLINC]
+    -W  [SERVER alt path for GATK]
+    -S  [SERVER alt path for HAMR]
+    -J  [SERVER alt path for CPC2]
+    -f  [HAMR: filter]
+    -m  [HAMR: model]
     -Q  [HAMR: minimum quality score, default=30]
-    -C  [HAMR: minimum coverage, default=10]
     -E  [HAMR: sequencing error, default=0.01]
     -P  [HAMR: maximum p-value, default=1]
     -F  [HAMR: maximum fdr, default=0.05]
-    -O  [Panther: organism taxon ID, default 3702]
-    -A  [Panther: annotation data set, default GO:0008150]
-    -Y  [Panther: test type, default FISHER]
-    -R  [Panther: correction type, default FDR]
-    -S  [optional path for HAMR folder]
-    -h  [help message] 
+    -C  [HAMR: minimum coverage, default=10]
   ################################################# END ########################################
 EOF
     exit 0
@@ -69,7 +70,6 @@ mod_partial=false
 
 # other initialization
 threads=4
-hisat=false
 attribute_fc="gene_id"
 clean=true
 #curdir=$(dirname "$0")
@@ -86,7 +86,7 @@ gatk_dir=""
 
 
 ######################################################### Grab Arguments #########################################
-while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CayqkTtJ:GH:DupEU:W:PS:F:" opt; do
+while getopts ":o:c:g:i:l:d:hn:O:A:Y:R:yqG:kupH:U:W:S:J:f:m:Q:E:P:F:C:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -151,18 +151,9 @@ while getopts ":o:c:g:i:z:l:d:b:v:s:n:O:A:Y:R:fmhQx:CayqkTtJ:GH:DupEU:W:PS:F:" o
     C)
     coverage=$OPTARG
     ;;
-    # b)
-    # hisatlib=$OPTARG
-    # ;;
-    # x)
-    # hsref=$OPTARG
-    # ;;
     E)
     err=$OPTARG
     ;;
-    # a)
-    # hisat=true
-    # ;;
     P)
     pvalue=$OPTARG
     ;;
@@ -227,20 +218,6 @@ filter="$util"/filter_SAM_number_hits.pl
 model="$util"/euk_trna_mods.Rdata
 json="$util"/panther_params.json
 generator="$scripts"/annotationGenerateUnified.R
-
-# translates string library prep strandedness into feature count required number
-# if [[ "$hisatlib" = R ]]; then
-#     fclib=2
-# elif [[ "$hisatlib" = F ]]; then
-#     fclib=1
-# elif [[ "$hisatlib" = RF ]]; then
-#     fclib=2
-# elif [[ "$hisatlib" = FR ]]; then
-#     fclib=1
-# else 
-#     fclib=0
-# fi
-fclib=0
 
 
 ################################################ Subprogram Definitions #########################################
@@ -666,7 +643,7 @@ lncCallBranch () {
         # create fa from cpc filtered gtf
         cmscan --nohmmonly \
             --rfam --cut_ga --fmt 2 --oclan --oskip \
-            --clanin "$smpout"/Rfam.clanin -o "$smpout"/my.cmscan.out --tblout "$smpout"/my.cmscan.tblout "$smpout"/Rfam.cm "$smpout"/rfam_in.fa
+            --clanin "$out"/Rfam.clanin -o "$smpout"/my.cmscan.out --tblout "$smpout"/my.cmscan.tblout "$out"/Rfam.cm "$smpout"/rfam_in.fa
 
         echo "[$smpkey] finished (LNC 14/15)"
         echo ""
@@ -731,26 +708,15 @@ featureCountBranch () {
 
     if [[ "$run_lnc" = true ]]; then
         # if lncRNA annotated we also feature count with the combined gtf, separate by PE det
-        echo "[$smpkey] quantifying transcripts found in reads..."
-        if [ "$det" -eq 1 ]; then
-            echo "[$smpkey] running featurecount with $fclib as the -s argument"
-            featureCounts \
-                -T 2 \
-                -t transcript \
-                -s $fclib \
-                -g $attribute_fc \
-                -a "$out"/final_combined.gtf \
-                -o "$smpout"/"$smpname"_transcript_abundance_lncRNA-included.txt \
-                "$smpout"/sort_accepted.bam
-        else
-            featureCounts \
-                -T 2 \
-                -t transcript \
-                -g $attribute_fc \
-                -a "$out"/final_combined.gtf \
-                -o "$smpout"/"$smpname"_transcript_abundance_lncRNA-included.txt \
-                "$smpout"/sort_accepted.bam
-        fi
+        echo "[$smpkey] quantifying transcripts found in reads with lncRNA..."
+        echo "[$smpkey] running featurecount..."
+        featureCounts \
+            -T 2 \
+            -t transcript \
+            -g $attribute_fc \
+            -a "$out"/final_combined.gtf \
+            -o "$smpout"/"$smpname"_transcript_abundance_lncRNA-included.txt \
+            "$smpout"/sort_accepted.bam
 
         # housekeeping for lnc abundance
         mv "$smpout"/"$smpname"_transcript_abundance_lncRNA-included.txt "$out/featurecount_out"
@@ -765,25 +731,14 @@ featureCountBranch () {
         -o "$out"/temp.gtf
     
     echo "[$smpkey] quantifying exons found in reads..."
-    if [ "$det" -eq 1 ]; then
-        echo "[$smpkey] running featurecount with $fclib as the -s argument"
-        featureCounts \
-            -T 2 \
-            -t exon \
-            -g $attribute_fc \
-            -s $fclib \
-            -a "$out"/temp.gtf \
-            -o "$smpout"/"$smpname"_exon_abundance.txt \
-            "$smpout"/sort_accepted.bam
-    else
-        featureCounts \
-            -T 2 \
-            -t exon \
-            -g $attribute_fc \
-            -a "$out"/temp.gtf \
-            -o "$smpout"/"$smpname"_exon_abundance.txt \
-            "$smpout"/sort_accepted.bam
-    fi
+    echo "[$smpkey] running featurecount..."
+    featureCounts \
+        -T 2 \
+        -t exon \
+        -g $attribute_fc \
+        -a "$out"/temp.gtf \
+        -o "$smpout"/"$smpname"_exon_abundance.txt \
+        "$smpout"/sort_accepted.bam
     echo "[$smpkey] finished quantifying read features"
 
     # housekeeping for regular abundance
@@ -875,80 +830,34 @@ fastq2raw () {
         cd "$smpout" || exit
         # maps the trimmed reads to provided annotated genome, can take ~1.5hr
         echo "--------Entering mapping step--------"
-        if [[ "$hisat" = false ]]; then  
-            echo "Using STAR for mapping..."
-            if [ "$det" -eq 1 ]; then
-                echo "[$smpkey] Performing STAR with a single-end file."
-                STAR \
-                --runThreadN 2 \
-                --genomeDir "$out"/STARref \
-                --readFilesIn "$smp" \
-                --sjdbOverhang $overhang \
-                --sjdbGTFfile "$annotation" \
-                --sjdbGTFtagExonParentTranscript Parent \
-                --outFilterMultimapNmax 10 \
-                --outFilterMismatchNmax $mismatch \
-                --outSAMtype BAM SortedByCoordinate
-            else
-                echo "[$smpkey] Performing STAR with a paired-end file."
-                STAR \
-                --runThreadN 2 \
-                --genomeDir "$out"/STARref \
-                --readFilesIn "$smp1" "$smp2" \
-                --sjdbOverhang $overhang \
-                --sjdbGTFfile "$annotation" \
-                --sjdbGTFtagExonParentTranscript Parent \
-                --outFilterMultimapNmax 10 \
-                --outFilterMismatchNmax $mismatch \
-                --outSAMtype BAM SortedByCoordinate
-            fi
-
+        if [ "$det" -eq 1 ]; then
+            echo "[$smpkey] Using STAR for mapping with a single-end file."
+            STAR \
+            --runThreadN 2 \
+            --genomeDir "$out"/STARref \
+            --readFilesIn "$smp" \
+            --sjdbOverhang $overhang \
+            --sjdbGTFfile "$annotation" \
+            --sjdbGTFtagExonParentTranscript Parent \
+            --outFilterMultimapNmax 10 \
+            --outFilterMismatchNmax $mismatch \
+            --outSAMtype BAM SortedByCoordinate \
+            --outSAMstrandField intronMotif \
+            --outFilterIntronMotifs RemoveNoncanonical
         else
-            echo "Using HISAT2 for mapping..."
-            # set read distabce based on mistmatch num
-            red=8
-            if [[ $mismatch -gt 8 ]]; then red=$((mismatch +1)); fi
-
-            if [ "$det" -eq 1 ]; then
-                echo "[$smpkey] Performing HISAT2 with a single-end file."
-                hisat2 \
-                    --rna-strandness "$hisatlib" \
-                    --mp $mismatch,$mismatch \
-                    --rdg $red,$red \
-                    --rfg $red,$red \
-                    --no-discordant \
-                    --no-mixed \
-                    -k 10 \
-                    --very-sensitive \
-                    --no-temp-splicesite \
-                    --no-spliced-alignment \
-                    -x "$out"/hsref/genome \
-                    -U "$smp" \
-                    -p 2 \
-                    --dta-cufflinks \
-                    -S output.sam \
-                    --summary-file hisat2_summary.txt
-            else
-            echo "[$smpkey] Performing HISAT2 with a paired-end file."
-                hisat2 \
-                    --rna-strandness "$hisatlib" \
-                    --mp $mismatch,$mismatch \
-                    --rdg $red,$red \
-                    --rfg $red,$red \
-                    --no-discordant \
-                    --no-mixed \
-                    -k 10 \
-                    --very-sensitive \
-                    --no-temp-splicesite \
-                    --no-spliced-alignment \
-                    -x "$out"/hsref/genome \
-                    -1 "$smp" \
-                    -2 "$smp2" \
-                    -p 2 \
-                    --dta-cufflinks \
-                    -S output.sam \
-                    --summary-file hisat2_summary.txt
-            fi
+            echo "[$smpkey] Using STAR for mapping with a paired-end file."
+            STAR \
+            --runThreadN 2 \
+            --genomeDir "$out"/STARref \
+            --readFilesIn "$smp1" "$smp2" \
+            --sjdbOverhang $overhang \
+            --sjdbGTFfile "$annotation" \
+            --sjdbGTFtagExonParentTranscript Parent \
+            --outFilterMultimapNmax 10 \
+            --outFilterMismatchNmax $mismatch \
+            --outSAMtype BAM SortedByCoordinate \
+            --outSAMstrandField intronMotif \
+            --outFilterIntronMotifs RemoveNoncanonical
         fi
         cd || exit
 
@@ -965,19 +874,10 @@ fastq2raw () {
 
     # if 1, then either last run failed before sorting completion or this run just came out of mapping
     if [[ $currProg_mod == "1" || $currProg_lnc == "1" ]]; then
-        #sorts the accepted hits
-        echo "[$smpkey] sorting..."
-        # handles HISAT or STAR output
-        if [[ "$hisat" = false ]]; then
-            # already sorted if STAR
-            mv "$smpout"/Aligned.sortedByCoord.out.bam "$smpout"/sort_accepted.bam
-        else
-            samtools view -bS "$smpout"/output.sam > "$smpout"/output.bam
-            samtools sort \
-            -n "$smpout"/output.bam \
-            -o "$smpout"/sort_accepted.bam
-        fi
-        echo "[$smpkey] finished sorting"
+        echo "[$smpkey] renaming file"
+        # star already sorts its output
+        mv "$smpout"/Aligned.sortedByCoord.out.bam "$smpout"/sort_accepted.bam
+        echo "[$smpkey] finished"
         echo ""
 
         # sorting completed without erroring out if this is reached
@@ -1046,12 +946,6 @@ parallelWrap () {
         smp2="$smpdir/${smpkey}_2_trimmed.$original_ext"
         # Paired end recognized
         det=0
-        # in case user used single end for paired end
-        # if [[ $hisatlib == R ]]; then
-        #     hisatlib=RF
-        # elif [[ $hisatlib == F ]]; then
-        #     hisatlib=FR
-        # fi
         echo "$smpext is a part of a paired-end sequencing file"
         fastq2raw
     elif [[ $smpkey == *_2 ]]; then
@@ -1276,47 +1170,29 @@ fastq2rawHouseKeeping () {
     if [[ ! -f "$dict" ]]; then
         samtools faidx "$genome"
     fi
-    
-    # Check which mapping software, and check for index
-    if [[ "$hisat" = false ]]; then  
-    # Check if indexed files already present for STAR
-        if [ -e "$out/STARref/SAindex" ]; then
-            echo "STAR Genome Directory with indexed genome detected, skipping STAR indexing"
-        else
-            # get genome length
-            genomelength=$(bioawk -c fastx '{ print length($seq) }' < $genome | awk '{sum += $1} END {print sum}')
-            echo "For reference, your provided genome length is $genomelength long"
 
-            # Define the SA index number argument
-            log_result=$(echo "scale=2; l($genomelength)/l(2)/2 - 1" | bc -l)
-            sain=$(echo "scale=0; if ($log_result < 14) $log_result else 14" | bc)
-            echo "Creating STAR genome index..."
-            # Create genome index 
-            STAR \
-                --runThreadN $threads \
-                --runMode genomeGenerate \
-                --genomeDir "$out"/STARref \
-                --genomeFastaFiles "$genome" \
-                --sjdbGTFfile "$annotation" \
-                --sjdbGTFtagExonParentTranscript Parent \
-                --sjdbOverhang $overhang \
-                --genomeSAindexNbases $sain
-        fi
+    # Check if indexed files already present for STAR
+    if [ -e "$out/STARref/SAindex" ]; then
+        echo "STAR Genome Directory with indexed genome detected, skipping STAR indexing"
     else
-        # check for user input
-        if [[ ! $hsref = "" ]]; then
-            echo "user input for hisat index detected, skipping bowtie index generation"
-        # Check if bowtie index directory is already present
-        elif [ -e "$out/hsref" ]; then
-            echo "existing bowtie indexed directory detected, skipping bowtie index generation"
-        else
-        # If not, first check if ref folder is present, if not then make
-            if [ ! -d "$out/hsref" ]; then mkdir "$out/hsref"; echo "created path: $out/hsref"; fi
-            cd $out/hsref
-            echo "Creating hisat index..."
-            hisat2-build -p 16 "$genome" genome
-            cd 
-        fi
+        # get genome length
+        genomelength=$(bioawk -c fastx '{ print length($seq) }' < $genome | awk '{sum += $1} END {print sum}')
+        echo "For reference, your provided genome length is $genomelength long"
+
+        # Define the SA index number argument
+        log_result=$(echo "scale=2; l($genomelength)/l(2)/2 - 1" | bc -l)
+        sain=$(echo "scale=0; if ($log_result < 14) $log_result else 14" | bc)
+        echo "Creating STAR genome index..."
+        # Create genome index 
+        STAR \
+            --runThreadN $threads \
+            --runMode genomeGenerate \
+            --genomeDir "$out"/STARref \
+            --genomeFastaFiles "$genome" \
+            --sjdbGTFfile "$annotation" \
+            --sjdbGTFtagExonParentTranscript Parent \
+            --sjdbOverhang $overhang \
+            --genomeSAindexNbases $sain
     fi
 
     # Run a series of command checks to ensure fastq2raw can run smoothly
