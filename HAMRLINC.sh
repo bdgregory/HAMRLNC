@@ -1010,7 +1010,6 @@ consensusOverlap () {
     smpname="${templ[0]}"
 
     echo "consensus file prefix: $smpname"
-    echo ""
 
     count=$(ls -1 "$out"/annotBeds/*_CDS.bed 2>/dev/null | wc -l)
     if [ "$count" != 0 ]; then 
@@ -1106,6 +1105,8 @@ consensusOverlap () {
         #     > "$out"/lap/"$smpname"_overlapped_lnc.bed
         echo "finished finding overlap with lncRNA predictions"
     fi
+
+    echo ""
 }
 
 # house keeping steps for fastqGrab functions, mostly creating folders and checking function calls
@@ -1655,6 +1656,7 @@ if [ "$last_checkpoint" = "checkpoint3" ]; then
             echo "generating annotations for overlap..."
             # 11/17 redirect annotation generate output to out/annotBeds, second arg added
             Rscript "$generator" "$annotation" "$out/annotBeds"
+            echo ""
         else
             echo "#########NOTICE###########"
             echo "##########No annotation generator or annotation files found, please check your supplied arguments##########"
@@ -1687,7 +1689,7 @@ fi
 if [ "$last_checkpoint" = "checkpoint4" ]; then 
     ##############R analysis begins##############
     echo ""
-    echo "###############SMACK portion completed, entering EXTRACT################"
+    echo "############### Obtained all necessary pipeline files, generating dynamic epitranscriptomic summary ################"
     date '+%d/%m/%Y %H:%M:%S'
     echo ""
     #######################################begins EXTRACT######################################
