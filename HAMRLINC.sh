@@ -38,6 +38,7 @@ usage () {
     -W  [SERVER alt path for GATK]
     -S  [SERVER alt path for HAMR]
     -J  [SERVER alt path for CPC2]
+    -M  [SERVER alt path for Rfam]
     -f  [HAMR: filter]
     -m  [HAMR: model]
     -Q  [HAMR: minimum quality score, default=30]
@@ -59,6 +60,7 @@ err=0.01
 pvalue=1
 fdr=0.05
 path_to_HAMR="/HAMR"
+path_to_rfam=""
 
 # hamr downstream
 execpthr="/pantherapi-pyclient/pthr_go_annots.py"
@@ -90,7 +92,7 @@ gatk_dir=""
 
 
 ######################################################### Grab Arguments #########################################
-while getopts ":o:c:g:i:l:d:D:bhn:O:A:Y:R:yqG:kupH:U:W:S:J:f:m:Q:E:P:F:C:" opt; do
+while getopts ":o:c:g:i:l:d:D:bhn:O:A:Y:R:yqG:kupH:U:W:S:M:J:f:m:Q:E:P:F:C:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -169,6 +171,9 @@ while getopts ":o:c:g:i:l:d:D:bhn:O:A:Y:R:yqG:kupH:U:W:S:J:f:m:Q:E:P:F:C:" opt; 
     ;;
     S)
     path_to_HAMR="$OPTARG"
+    ;;
+    M)
+    path_to_rfam="$OPTARG"
     ;;
     H)
     execpthr="$OPTARG"
@@ -653,7 +658,8 @@ lncCallBranch () {
         # create fa from cpc filtered gtf
         cmscan --nohmmonly \
             --rfam --cut_ga --fmt 2 --oclan --oskip \
-            --clanin "$out"/Rfam.clanin -o "$smpout"/my.cmscan.out --tblout "$smpout"/my.cmscan.tblout "$out"/Rfam.cm "$smpout"/rfam_in.fa
+            --clanin "$path_to_rfam"/Rfam.clanin -o "$smpout"/my.cmscan.out \
+            --tblout "$smpout"/my.cmscan.tblout "$path_to_rfam"/Rfam.cm "$smpout"/rfam_in.fa
 
         echo "[$smpkey] finished (LNC 14/15)"
         echo ""
