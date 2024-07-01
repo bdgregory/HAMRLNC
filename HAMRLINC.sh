@@ -24,7 +24,7 @@ usage () {
     -h  [help message] 
     -n  number of threads (default=4)
     -O  [Panther: organism taxon ID, default=3702]
-    -A  [Panther: annotation data set, default="GO:0008150"]
+    -A  [Panther: annotation dataset, default="GO:0008150"]
     -Y  [Panther: test type, default="FISHER"]
     -R  [Panther: correction type, default="FDR"]
     -y  [keep intermediate bam files, default=false]
