@@ -29,7 +29,7 @@ RUN apt-get update && apt-get install -y g++ \
 		python3-pip \
 		python-matplotlib \
 		python-numpy \
-       		python-pandas \
+       	python-pandas \
 		tzdata \ 
 		perl \
 		wget \
@@ -92,8 +92,8 @@ RUN conda install cutadapt -c bioconda -y && \
 	conda install hisat2==2.2.1 -c bioconda -y && \
 	conda install bowtie2==2.2.5 -c bioconda -y && \
  	conda install bedops==2.4.41 -c bioconda -y && \
-    	conda install bedtools==2.31.1 -c bioconda -y && \
-    	conda install htslib==1.19.1 -c bioconda -y && \
+    conda install bedtools==2.31.1 -c bioconda -y && \
+    conda install htslib==1.19.1 -c bioconda -y && \
 	conda install trim-galore==0.6.10 -c bioconda -y && \
 	conda install bedtools==2.31.0 -c bioconda -y && \
 	conda install samtools==1.17 -c bioconda -y && \
@@ -101,6 +101,7 @@ RUN conda install cutadapt -c bioconda -y && \
 	conda install gffread==0.12.1 -c bioconda -y && \
 	conda install subread==2.0.1 -c bioconda -y && \
 	conda install stringtie==2.1.5 -c bioconda -y && \
+	conda install bioawk==1.0 -c bioconda && \
 	conda install numpy -y && \
 	conda install pandas -y && \
 	conda install last==1454-0 -c bioconda -y && \
@@ -113,10 +114,10 @@ RUN conda install cutadapt -c bioconda -y && \
 WORKDIR /
 
 ## evolinc-part-I
-RUN git clone https://github.com/chosenobih/Evolinc-I.git
-RUN cp -R /Evolinc-I /evolinc_docker
-ENV BINPATH /usr/bin
-WORKDIR /evolinc_docker
+#RUN git clone https://github.com/chosenobih/Evolinc-I.git
+#RUN cp -R /Evolinc-I /evolinc_docker
+#ENV BINPATH /usr/bin
+#WORKDIR /evolinc_docker
 
 # Cufflinks
 RUN wget -O- http://cole-trapnell-lab.github.io/cufflinks/assets/downloads/cufflinks-2.2.1.Linux_x86_64.tar.gz | tar xzvf -
@@ -133,24 +134,27 @@ RUN rm /usr/bin/python && \
     update-alternatives --install /usr/bin/python python /usr/bin/python3 1
 
 # Uniprot database
-ADD https://github.com/iPlantCollaborativeOpenSource/docker-builds/releases/download/evolinc-I/uniprot_sprot.dmnd.gz /evolinc_docker/
-RUN gzip -d /evolinc_docker/uniprot_sprot.dmnd.gz && \
-	chmod +r /evolinc_docker/uniprot_sprot.dmnd
+#ADD https://github.com/iPlantCollaborativeOpenSource/docker-builds/releases/download/evolinc-I/uniprot_sprot.dmnd.gz /evolinc_docker/
+#RUN gzip -d /evolinc_docker/uniprot_sprot.dmnd.gz && \
+#	chmod +r /evolinc_docker/uniprot_sprot.dmnd
 
 # rFAM database
-ADD https://de.cyverse.org/dl/d/12EF1A2F-B9FC-456D-8CD9-9F87197CACF2/rFAM_sequences.fasta /evolinc_docker/
+#ADD https://de.cyverse.org/dl/d/12EF1A2F-B9FC-456D-8CD9-9F87197CACF2/rFAM_sequences.fasta /evolinc_docker/
+RUN apt install infernal
+RUN mkdir Rfam && cd Rfam
+RUN wget ftp://ftp.ebi.ac.uk/pub/databases/Rfam/CURRENT/Rfam.cm.gz && \
+	gunzip Rfam.cm.gz && \
+	wget ftp://ftp.ebi.ac.uk/pub/databases/Rfam/CURRENT/Rfam.clanin && \
+	cmpress Rfam.cm && \
+	cd ..
 
 RUN R -e "install.packages('tidyr')"
 
 # CPC2
-WORKDIR /evolinc_docker/CPC2-beta/libs/libsvm/
-RUN tar xvf libsvm-3.22.tar.gz
-WORKDIR libsvm-3.22
-RUN make clean && make
-WORKDIR /
+RUN git clone https://github.com/biocoder/CPC2.git
 
 # evolinc-part-I wrapper script
-RUN chmod +x /evolinc_docker/evolinc-part-I.sh && cp /evolinc_docker/evolinc-part-I.sh $BINPATH
+#RUN chmod +x /evolinc_docker/evolinc-part-I.sh && cp /evolinc_docker/evolinc-part-I.sh $BINPATH
 
 ## HAMR (python 3 compatible)
 RUN git clone https://github.com/harrlol/HAMR && \
@@ -193,9 +197,9 @@ ENV util /util
 
 # Setting paths to all the softwares
 ENV PATH /evolinc_docker/cufflinks-2.2.1.Linux_x86_64/:$PATH
-ENV PATH /evolinc_docker/bin/:$PATH
-ENV PATH /evolinc_docker/CPC2-beta/bin/:$PATH
-ENV PATH /evolinc_docker/:$PATH
+#ENV PATH /evolinc_docker/bin/:$PATH
+#ENV PATH /evolinc_docker/CPC2-beta/bin/:$PATH
+#ENV PATH /evolinc_docker/:$PATH
 ENV PATH /usr/bin/:$PATH
 ENV PATH /HAMR/hamr.py:$PATH
 ENV PATH /HAMR/:$PATH
