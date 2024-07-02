@@ -21,6 +21,7 @@ usage () {
     -d  [input a directory of fastq]
     -D  [input a directory of bam]
     -b  [sort input bam files, default=false]
+    -I  [input genome annotation folder for STAR]
     -h  [help message] 
     -n  number of threads (default=4)
     -O  [Panther: organism taxon ID, default=3702]
@@ -61,6 +62,7 @@ pvalue=1
 fdr=0.05
 path_to_HAMR="/HAMR"
 path_to_rfam="Rfam"
+path_to_STARref=""
 
 # hamr downstream
 execpthr="/pantherapi-pyclient/pthr_go_annots.py"
@@ -92,7 +94,7 @@ gatk_dir=""
 
 
 ######################################################### Grab Arguments #########################################
-while getopts ":o:c:g:i:l:d:D:bhn:O:A:Y:R:yqG:kupH:U:W:S:M:J:f:m:Q:E:P:F:C:" opt; do
+while getopts ":o:c:g:i:l:d:D:bI:hn:O:A:Y:R:yqG:kupH:U:W:S:M:J:f:m:Q:E:P:F:C:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -156,6 +158,9 @@ while getopts ":o:c:g:i:l:d:D:bhn:O:A:Y:R:yqG:kupH:U:W:S:M:J:f:m:Q:E:P:F:C:" opt
     ;;
     D)
     bam_in=$OPTARG
+    ;;
+    I)
+    path_to_STARref=$OPTARG
     ;;
     b)
     bam_sorted=false
@@ -852,7 +857,7 @@ fastq2raw () {
                 echo "[$smpkey] Using STAR for mapping with a single-end file."
                 STAR \
                 --runThreadN 2 \
-                --genomeDir "$out"/STARref \
+                --genomeDir "$path_to_STARref" \
                 --readFilesIn "$smp" \
                 --sjdbOverhang $overhang \
                 --sjdbGTFfile "$annotation" \
@@ -866,7 +871,7 @@ fastq2raw () {
                 echo "[$smpkey] Using STAR for mapping with a paired-end file."
                 STAR \
                 --runThreadN 2 \
-                --genomeDir "$out"/STARref \
+                --genomeDir "$path_to_STARref" \
                 --readFilesIn "$smp1" "$smp2" \
                 --sjdbOverhang $overhang \
                 --sjdbGTFfile "$annotation" \
@@ -1215,7 +1220,7 @@ fastq2rawHouseKeeping () {
     fi
 
     # Check if indexed files already present for STAR
-    if [ -e "$out/STARref/SAindex" ]; then
+    if [[ -e "$out/STARref/SAindex" ]] || [[ ! -z $path_to_STARref ]]; then
         echo "STAR Genome Directory with indexed genome detected, skipping STAR indexing"
     else
         # get genome length
@@ -1236,6 +1241,8 @@ fastq2rawHouseKeeping () {
             --sjdbGTFtagExonParentTranscript Parent \
             --sjdbOverhang $overhang \
             --genomeSAindexNbases $sain
+
+        path_to_STARref="$out"/STARref
     fi
 
     # Run a series of command checks to ensure fastq2raw can run smoothly
