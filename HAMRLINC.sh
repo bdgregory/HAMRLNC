@@ -1286,6 +1286,16 @@ fastq2rawHouseKeeping () {
         exit 1
     fi
 
+    if ! command -v gffcompare > /dev/null; then
+        echo "Failed to call gffcompare command. Please check your installation."
+        exit 1
+    fi
+
+    if ! command -v gffread > /dev/null; then
+        echo "Failed to call gffread command. Please check your installation."
+        exit 1
+    fi
+
     if ! command -v featureCounts > /dev/null; then
         echo "Failed to call featureCounts command. Please check your installation."
         exit 1
