@@ -157,8 +157,9 @@ RUN git clone https://github.com/biocoder/CPC2.git
 #RUN chmod +x /evolinc_docker/evolinc-part-I.sh && cp /evolinc_docker/evolinc-part-I.sh $BINPATH
 
 ## HAMR (python 3 compatible)
-RUN git clone https://github.com/harrlol/HAMR.git && \
-	chmod +x /HAMR/hamr.py && cp /HAMR/hamr.py $BINPATH
+RUN git clone https://github.com/harrlol/HAMR.git
+RUN chmod +x /HAMR/hamr.py
+RUN cp /HAMR/hamr.py $BINPATH
 
 # GATK (4.3.0.0)
 RUN wget https://github.com/broadinstitute/gatk/releases/download/4.3.0.0/gatk-4.3.0.0.zip && \
