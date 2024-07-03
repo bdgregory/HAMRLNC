@@ -94,6 +94,7 @@ RUN conda install cutadapt -c bioconda -y && \
  	conda install bedops==2.4.41 -c bioconda -y && \
     conda install bedtools==2.31.1 -c bioconda -y && \
     conda install htslib==1.19.1 -c bioconda -y && \
+    conda install sra-tools==3.0.10 -c bioconda -y && \
 	conda install trim-galore==0.6.10 -c bioconda -y && \
 	conda install bedtools==2.31.0 -c bioconda -y && \
 	conda install samtools==1.17 -c bioconda -y && \
@@ -184,7 +185,7 @@ RUN git clone https://github.com/pantherdb/pantherapi-pyclient.git && \
 
 WORKDIR /
 
-RUN wget --output-document sratoolkit.tar.gz https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-ubuntu64.tar.gz && \
+# RUN wget --output-document sratoolkit.tar.gz https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-ubuntu64.tar.gz && \
 	tar -vxzf sratoolkit.tar.gz
 
 RUN apt-get install bc -y
@@ -204,7 +205,7 @@ ENV PATH /evolinc_docker/cufflinks-2.2.1.Linux_x86_64/:$PATH
 ENV PATH /usr/bin/:$PATH
 ENV PATH /HAMR/hamr.py:$PATH
 ENV PATH /HAMR/:$PATH
-ENV PATH /sratoolkit.3.0.10-ubuntu64/bin:$PATH
+# ENV PATH /sratoolkit.3.0.10-ubuntu64/bin:$PATH
 
 # HAMRLINC wrapper script
 ADD HAMRLINC.sh $BINPATH
