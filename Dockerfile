@@ -157,7 +157,13 @@ RUN wget ftp://ftp.ebi.ac.uk/pub/databases/Rfam/CURRENT/Rfam.cm.gz && \
 RUN R -e "install.packages('tidyr')"
 
 # CPC2
-RUN git clone https://github.com/biocoder/CPC2.git
+RUN  wget https://github.com/gao-lab/CPC2_standalone/archive/refs/tags/v1.0.1.zip && \
+	gzip -dc CPC2_standalone-1.0.1.tar.gz | tar xf - && \
+	cd CPC2-beta && \
+ 	cd libs/libsvm && \
+  	gzip -dc libsvm-3.18.tar.gz | tar xf - && \
+   	cd libsvm-3.18 && \
+    	make clean && make 
 
 # evolinc-part-I wrapper script
 #RUN chmod +x /evolinc_docker/evolinc-part-I.sh && cp /evolinc_docker/evolinc-part-I.sh $BINPATH
