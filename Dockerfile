@@ -116,7 +116,7 @@ WORKDIR /
 ## evolinc-part-I
 #RUN git clone https://github.com/chosenobih/Evolinc-I.git
 #RUN cp -R /Evolinc-I /evolinc_docker
-#ENV BINPATH /usr/bin
+ENV BINPATH /usr/bin
 #WORKDIR /evolinc_docker
 
 # Cufflinks
@@ -159,7 +159,7 @@ RUN git clone https://github.com/biocoder/CPC2.git
 ## HAMR (python 3 compatible)
 RUN git clone https://github.com/harrlol/HAMR.git
 RUN chmod +x /HAMR/hamr.py
-RUN cp /HAMR/hamr.py /usr/bin
+RUN cp /HAMR/hamr.py $BINPATH
 
 # GATK (4.3.0.0)
 RUN wget https://github.com/broadinstitute/gatk/releases/download/4.3.0.0/gatk-4.3.0.0.zip && \
