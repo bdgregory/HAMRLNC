@@ -159,7 +159,7 @@ RUN git clone https://github.com/biocoder/CPC2.git
 ## HAMR (python 3 compatible)
 RUN git clone https://github.com/harrlol/HAMR.git
 RUN chmod +x /HAMR/hamr.py
-RUN cp /HAMR/hamr.py/ $BINPATH
+RUN cp /HAMR/hamr.py /usr/bin
 
 # GATK (4.3.0.0)
 RUN wget https://github.com/broadinstitute/gatk/releases/download/4.3.0.0/gatk-4.3.0.0.zip && \
