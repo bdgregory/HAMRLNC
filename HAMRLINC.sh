@@ -19,6 +19,7 @@ usage () {
 
   OPTIONAL: 
     -d  [input a directory of fastq]
+    -t  [trim input fastq files, default=false]
     -D  [input a directory of bam]
     -b  [sort input bam files, default=false]
     -I  [input genome annotation folder for STAR]
@@ -83,6 +84,7 @@ hsref=""
 fastq_in=""
 bam_in=""
 bam_sorted=true
+fastq_trimmed=true
 porg=""
 pterm=""
 ptest=""
@@ -94,7 +96,7 @@ gatk_dir=""
 
 
 ######################################################### Grab Arguments #########################################
-while getopts ":o:c:g:i:l:d:D:bI:hn:O:A:Y:R:yqG:kupH:U:W:S:M:J:f:m:Q:E:P:F:C:" opt; do
+while getopts ":o:c:g:i:l:d:D:btI:hn:O:A:Y:R:yqG:kupH:U:W:S:M:J:f:m:Q:E:P:F:C:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -164,6 +166,9 @@ while getopts ":o:c:g:i:l:d:D:bI:hn:O:A:Y:R:yqG:kupH:U:W:S:M:J:f:m:Q:E:P:F:C:" o
     ;;
     b)
     bam_sorted=false
+    ;;
+    t)
+    fastq_trimmed=false
     ;;
     C)
     coverage=$OPTARG
@@ -317,13 +322,21 @@ fastqGrabLocal () {
     sname=$(basename "$fq")
     tt=$(echo "$sname" | cut -d'.' -f1)
     echo "[$sname] performing fastqc on raw file..."
-    fastqc "$fq" -o "$dumpout"/fastqc_results &
+    if [[ "$fastq_trimmed" == true ]]; then
+        echo "[$sname] is already trimmed, skipping trimming step..."
 
-    echo "[$sname] trimming..."
-    trim_galore -o "$dumpout"/trimmed "$fq" --dont_gzip
+        cp "$fq" "$dumpout"/trimmed/"$tt""_trimmed.fq"
+        fastqc "$fq" -o "$dumpout"/fastqc_results
+    else
+        fastqc "$fq" -o "$dumpout"/fastqc_results &
 
-    echo "[$sname] trimming complete, performing fastqc..."
-    fastqc "$dumpout"/trimmed/"$tt""_trimmed.fq" -o "$dumpout"/fastqc_results
+        echo "[$sname] trimming..."
+        trim_galore -o "$dumpout"/trimmed "$fq" --dont_gzip
+
+        echo "[$sname] trimming complete, performing fastqc..."
+        fastqc "$dumpout"/trimmed/"$tt""_trimmed.fq" -o "$dumpout"/fastqc_results
+    fi
+    
     
     # choosing not to remove user provided raw fastq
 }
@@ -733,7 +746,7 @@ featureCountBranch () {
             -T 2 \
             -t transcript \
             -g $attribute_fc \
-            -a "$out"/final_combined.gtf \
+            -a "$smpout"/final_combined.gtf \
             -o "$smpout"/"$smpname"_transcript_abundance_lncRNA-included.txt \
             "$smpout"/sort_accepted.bam
 
