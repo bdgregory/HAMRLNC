@@ -21,6 +21,7 @@ Read the [doc](https://chosenobih.github.io/hamrlinc_docs/Tutorial/) for detaile
 | Optional |
 | -n | \[number of threads\] <br> default=4 |
 | -d | \[raw fastq folder\] <br> a path to a folder containing raw fastq files, doing so skips the downloading steps
+| -t | \[trim raw fastq\] <br> use this flag if you used -d and your fastq files are not trimmed
 | -D | \[raw bam folder\] <br> a path to a folder containing pre-mapped bam files, doing so shortcuts the program to post-mapping steps
 | -b | \[sort raw bam\] <br> use this flag if you used -D and your bam files are not sorted
 | `-I` | \[STAR genome index folder\] <br> a path to a folder containing indexed genome from using STAR genomeGenerate
