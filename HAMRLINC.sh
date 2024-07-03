@@ -1222,6 +1222,10 @@ fastq2rawHouseKeeping () {
     # Check if indexed files already present for STAR
     if [[ -e "$out/STARref/SAindex" ]] || [[ ! -z $path_to_STARref ]]; then
         echo "STAR Genome Directory with indexed genome detected, skipping STAR indexing"
+        # if the former case we need to set path
+        if [[ -e "$out/STARref/SAindex" ]]; then
+            path_to_STARref="$out/STARref/SAindex"
+        fi
     else
         # get genome length
         genomelength=$(bioawk -c fastx '{ print length($seq) }' < $genome | awk '{sum += $1} END {print sum}')
