@@ -694,10 +694,8 @@ lncCallBranch () {
             fi
         done < "$smpout"/parsed_rfam_out.tblout
 
-        # rename, combine
+        # combine
         cat $annotation "$smpout"/rfam_filtered_transcripts.txt > "$smpout"/final_combined.gtf
-        mv rfam_filtered_transcripts.txt "${smpname}".lnc.gtf
-
         echo "[$smpkey] finished lncRNA annotation (LNC 15/15)"
         echo ""
 
