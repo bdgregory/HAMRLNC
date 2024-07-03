@@ -17,13 +17,13 @@ Read the [doc](https://chosenobih.github.io/hamrlinc_docs/Tutorial/) for detaile
 | -c | \<filenames for each fastq.csv\> <br> a csv file that corresponds each srr code (or name of fastq file) to your desired nomenclature for each read |
 | -g | \<reference genome.fa> <br> a fasta file of the genome of the model organism |
 | -i | \<reference genome annotation.gff3> <br> a gff3 file of the genome of the model organism, note we require gff3 instead of gtf |
-| -l | \<read length\> <br> an integer, the read length of this sequencing experiment, if non-unanimous use the shortest length |
+| -_l_ | \<read length\> <br> an integer, the read length of this sequencing experiment, if non-unanimous use the shortest length |
 | Optional |
 | -n | \[number of threads\] <br> default=4 |
 | -d | \[raw fastq folder\] <br> a path to a folder containing raw fastq files, doing so skips the downloading steps
 | -D | \[raw bam folder\] <br> a path to a folder containing pre-mapped bam files, doing so shortcuts the program to post-mapping steps
 | -b | \[sort raw bam\] <br> use this flag if you used -D and your bam files are not sorted
-| -I | \[STAR genome index folder\] <br> a path to a folder containing indexed genome from using STAR genomeGenerate
+| -_I_ | \[STAR genome index folder\] <br> a path to a folder containing indexed genome from using STAR genomeGenerate
 | -k | \[activate modification annotation workflow, default=false\] |
 | -p | \[activate lncRNA annotation workflow, default=false\] |
 | -u | \[activate featurecount workflow, default=false\] |
