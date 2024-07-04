@@ -29,7 +29,7 @@ RUN apt-get update && apt-get install -y g++ \
 		python3-pip \
 		python-matplotlib \
 		python-numpy \
-       	python-pandas \
+       		python-pandas \
 		tzdata \ 
 		perl \
 		wget \
@@ -92,9 +92,9 @@ RUN conda install cutadapt -c bioconda -y && \
 	conda install hisat2==2.2.1 -c bioconda -y && \
 	conda install bowtie2==2.2.5 -c bioconda -y && \
  	conda install bedops==2.4.41 -c bioconda -y && \
-    conda install bedtools==2.31.1 -c bioconda -y && \
-    conda install htslib==1.19.1 -c bioconda -y && \
-    conda install sra-tools==3.0.10 -c bioconda -y && \
+    	conda install bedtools==2.31.1 -c bioconda -y && \
+    	conda install htslib==1.19.1 -c bioconda -y && \
+    	conda install sra-tools==3.0.10 -c bioconda -y && \
 	conda install trim-galore==0.6.10 -c bioconda -y && \
 	conda install bedtools==2.31.0 -c bioconda -y && \
 	conda install samtools==1.17 -c bioconda -y && \
