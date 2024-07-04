@@ -159,7 +159,7 @@ RUN R -e "install.packages('tidyr')"
 # CPC2
 RUN  wget https://github.com/gao-lab/CPC2_standalone/archive/refs/tags/v1.0.1.tar.gz && \
 	gzip -dc v1.0.1.tar.gz | tar xf - && \
-	cd CPC2-beta && \
+	cd CPC2_standalone-1.0.1 && \
  	cd libs/libsvm && \
   	gzip -dc libsvm-3.18.tar.gz | tar xf - && \
    	cd libsvm-3.18 && \
