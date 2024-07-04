@@ -747,27 +747,29 @@ lncCallBranch () {
             fi
         done < "$smpout"/parsed_rfam_out.tblout
 
-        # combine
-        cat $annotation "$smpout"/rfam_filtered_transcripts.txt > "$smpout"/final_combined.gtf
         echo "[$smpkey] finished lncRNA annotation (LNC 15/15)"
-        echo ""
 
         echo "16" > "$smpout"/progress_lnc.txt
         currProg_lnc="16"
     fi
-
-    cd
     
     if [[ $currProg_lnc == "16" ]]; then
         echo "[$smpkey] processing identified lncRNA into GTF..."
-        Rscript "$scripts"/lnc_processing.R \
-            "$smpout"/rfam_filtered_transcripts.txt \
-            "$smpout"/"${smpname}"
 
+        cat $annotation "$smpout"/rfam_filtered_transcripts.txt > "$smpout"/final_combined.gtf
+        cp "$smpout"/rfam_filtered_transcripts.txt "$smpout"/"${smpname}".lnc.gtf
         cp "$smpout"/"${smpname}".lnc.gtf "$lncout"
+
+        # this Rscript is broken, don't know why I kept it
+        # Rscript "$scripts"/lnc_processing.R \
+        #     "$smpout"/rfam_filtered_transcripts.txt \
+        #     "$smpout"/"${smpname}"
+        
     elif [[ $currProg_lnc == "7" ]]; then
         echo "[$smpkey] filtering by class codes -u -x in gtf yielded no entries, no lncRNA can be annotated"
     fi
+
+    cd
 
     echo "[$smpkey] done (LNC)"
     echo ""
