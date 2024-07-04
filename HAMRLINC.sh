@@ -486,6 +486,33 @@ hamrBranch () {
         echo "9" > "$smpout"/progress_mod.txt
         currProg_mod="9"
     fi
+
+    wait
+
+    # intermediate file clean up
+    if [[ $currProg_mod == "9" ]]; then
+
+        echo "[$smpkey] moving files around for depth analysis..."
+        # Move the unique_RG_ordered.bam and unique_RG_ordered.bai to a folder for read depth analysis
+        cp "$smpout"/sorted_RG_unique_endsIGN_reordered.bam "$out"/pipeline/depth/"$smpname".bam
+        cp "$smpout"/sorted_RG_unique_endsIGN_reordered.bai "$out"/pipeline/depth/"$smpname".bai
+        echo "[$smpkey] done"
+
+        # only delete intermediates if user didn't disable it
+        if [[ "$clean" == true ]]; then
+            # delete more intermediate files
+            echo "[$smpkey] removing large intermediate files..."
+            rm "$smpout"/sorted_RG.bam
+            rm "$smpout"/sorted_RG_unique.bam
+            rm "$smpout"/sorted_RG_unique_endsIGN.bam
+            rm "$smpout"/sorted_RG_unique_endsIGN_reordered.bam
+            rm "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC.bam
+            rm "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam
+        fi
+
+        echo "[$smpkey] finished cleaning (MOD 7/7)"
+        echo "10" > "$smpout"/progress_mod.txt
+    fi
 }
 
 # called upon completion of each sorted BAM files, takes the sorted BAM through lncRNA prediction pipeline
@@ -944,30 +971,6 @@ fastq2raw () {
 
     if [[ "$run_featurecount" = true ]]; then
         featureCountBranch
-    fi    
-
-    wait
-
-    # intermediate file clean up
-    if [[ $currProg_mod == "9" ]]; then
-        # Move the unique_RG_ordered.bam and unique_RG_ordered.bai to a folder for read depth analysis
-        cp "$smpout"/sorted_RG_unique_endsIGN_reordered.bam "$out"/pipeline/depth/"$smpname".bam
-        cp "$smpout"/sorted_RG_unique_endsIGN_reordered.bai "$out"/pipeline/depth/"$smpname".bai
-
-        # only delete intermediates if user didn't disable it
-        if [[ "$clean" == true ]]; then
-            # delete more intermediate files
-            echo "[$smpkey] removing large intermediate files..."
-            rm "$smpout"/sorted_RG.bam
-            rm "$smpout"/sorted_RG_unique.bam
-            rm "$smpout"/sorted_RG_unique_endsIGN.bam
-            rm "$smpout"/sorted_RG_unique_endsIGN_reordered.bam
-            rm "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC.bam
-            rm "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam
-        fi
-
-        echo "[$smpkey] finished cleaning (MOD 7/7)"
-        echo "10" > "$smpout"/progress_mod.txt
     fi
 }
 
@@ -1360,6 +1363,25 @@ bamEntranceHouseKeeping () {
         samtools faidx "$genome"
     fi
 
+    # create hamr out folders
+    if [[ "$run_mod" = true ]]; then
+        # Reassign hamr output directory
+        if [ ! -d "$out/hamr_out" ]; then
+            mkdir "$out"/hamr_out
+            echo "created path: $out/hamr_out"
+        fi
+        hamrout=$out/hamr_out
+    fi
+
+    # create lnc out folders
+    if [[ "$run_lnc" = true ]]; then
+        # Reassign lnc output directory
+        if [ ! -d "$out/lnc_out" ]; then
+            mkdir "$out"/lnc_out
+            echo "created path: $out/lnc_out"
+        fi
+        lncout=$out/lnc_out
+    fi
 
     if ! command -v gatk > /dev/null; then
         echo "Failed to call gatk command. Please check your installation."
