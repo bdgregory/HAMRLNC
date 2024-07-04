@@ -34,8 +34,8 @@ RUN apt-get update && apt-get install -y g++ \
 		perl \
 		wget \
 		bcftools \
-		python2.7 \
-		python2.7-dev \
+		# python2.7 \
+		# python2.7-dev \
 		curl
 
 RUN ldconfig
@@ -106,7 +106,7 @@ RUN conda install cutadapt -c bioconda -y && \
 	conda install bioawk==1.0 -c bioconda && \
 	conda install numpy -y && \
 	conda install pandas -y && \
- 	conda install pysam==0.22.1 -c bioconda -y && \
+ 	# conda install pysam==0.22.1 -c bioconda -y && \
 	conda install last==1454-0 -c bioconda -y && \
 	conda install diamond==0.9.10 -c bioconda -y && \
 	conda install transdecoder==5.5.0 -c bioconda -y && \
