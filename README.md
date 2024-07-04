@@ -42,6 +42,7 @@ Read the [doc](https://chosenobih.github.io/hamrlinc_docs/Tutorial/) for detaile
 | -y | \[keep intermediate bam files\] <br> default=false |
 | -q | \[halt program upon completion of checkpoint 2\] <br> default=false |
 | -G | \[attribute used for featurecount\] <br> default="gene_id" |
+| -x | \[max intron length for lncRNA-annotation-unique STAR mapping\] <br> default=NA |
 | -H | \[SERVER alt path for panther\] |
 | -U | \[SERVER alt path for HAMRLINC\] |
 | -W | \[SERVER alt path for GATK\]
