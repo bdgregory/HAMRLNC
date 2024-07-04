@@ -18,8 +18,9 @@ string_process <- function(str) {
 
 findConsensus <- function(in_dir, out_dir) {
   
-  in_dir <- "/Users/harrlol/Desktop/lnc_out"
-  out_dir <- "/Users/harrlol/Desktop"
+  # debug
+  # in_dir <- "/Users/harrlol/Desktop/lnc_out"
+  # out_dir <- "/Users/harrlol/Desktop"
   
   # Store all files in in_dir to a variable
   file_names <- list.files(path = in_dir)
