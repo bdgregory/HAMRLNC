@@ -78,6 +78,8 @@ mod_partial=false
 # other initialization
 threads=4
 attribute_fc="gene_id"
+# I hope this is an ok initialization
+lnc_max_intron_len=""
 clean=true
 #curdir=$(dirname "$0")
 hsref=""
@@ -96,7 +98,7 @@ gatk_dir=""
 
 
 ######################################################### Grab Arguments #########################################
-while getopts ":o:c:g:i:l:d:D:btI:hn:O:A:Y:R:yqG:kupH:U:W:S:M:J:f:m:Q:E:P:F:C:" opt; do
+while getopts ":o:c:g:i:l:d:D:btI:hn:O:A:Y:R:yqG:x:kupH:U:W:S:M:J:f:m:Q:E:P:F:C:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -145,6 +147,9 @@ while getopts ":o:c:g:i:l:d:D:btI:hn:O:A:Y:R:yqG:kupH:U:W:S:M:J:f:m:Q:E:P:F:C:" 
     ;;
     G)
     attribute_fc=$OPTARG
+    ;;
+    x)
+    lnc_max_intron_len=$OPTARG
     ;;
     A)
     pterm=$OPTARG
@@ -522,12 +527,20 @@ lncCallBranch () {
 
     if [[ $currProg_lnc == "2" ]]; then
         echo "[$smpkey] running stringtie for gtf conversion..."
-
         # turn bam into gtf
-        stringtie \
-            sort_accepted.bam \
-            -G $annotation -o stringtie_out.gtf \
-            -f 0.05 -j 9 -c 7 -s 20
+
+        # depends on if user supplied bam, if so, that's used and is called sort_accepted
+        if [[ -z "$bam_in" ]]; then
+            stringtie \
+                sort_accepted_lnc.bam \
+                -G $annotation -o stringtie_out.gtf \
+                -f 0.05 -j 9 -c 7 -s 20
+        else
+            stringtie \
+                sort_accepted.bam \
+                -G $annotation -o stringtie_out.gtf \
+                -f 0.05 -j 9 -c 7 -s 20
+        fi
 
         echo "[$smpkey] finished converting bam to gtf (LNC 1/15)"
         echo ""
@@ -879,34 +892,108 @@ fastq2raw () {
             cd "$smpout" || exit
             # maps the trimmed reads to provided annotated genome, can take ~1.5hr
             echo "--------Entering mapping step--------"
-            if [ "$det" -eq 1 ]; then
+            if [[ "$det" -eq 1 ]]; then
                 echo "[$smpkey] Using STAR for mapping with a single-end file."
-                STAR \
-                --runThreadN 2 \
-                --genomeDir "$path_to_STARref" \
-                --readFilesIn "$smp" \
-                --sjdbOverhang $overhang \
-                --sjdbGTFfile "$annotation" \
-                --sjdbGTFtagExonParentTranscript Parent \
-                --outFilterMultimapNmax 10 \
-                --outFilterMismatchNmax $mismatch \
-                --outSAMtype BAM SortedByCoordinate \
-                --outSAMstrandField intronMotif \
-                --outFilterIntronMotifs RemoveNoncanonical
+                # if lnc is activated, def use the extra flags for STAR
+                if [[ "$run_lnc" = true ]]; then
+                    # if user sprcifies intron length, map with the flag
+                    if [[ -z $lnc_max_intron_len ]]; then
+                        STAR \
+                            --runThreadN 2 \
+                            --genomeDir "$path_to_STARref" \
+                            --readFilesIn "$smp" \
+                            --outFileNamePrefix "$smpout"/lnc \
+                            --sjdbOverhang $overhang \
+                            --sjdbGTFfile "$annotation" \
+                            --sjdbGTFtagExonParentTranscript Parent \
+                            --outFilterMultimapNmax 10 \
+                            --outFilterMismatchNmax $mismatch \
+                            --outSAMtype BAM SortedByCoordinate \
+                            --outSAMstrandField intronMotif \
+                            --outFilterIntronMotifs RemoveNoncanonical
+                    # otherwise, map without the flag to use default
+                    else
+                        STAR \
+                            --runThreadN 2 \
+                            --genomeDir "$path_to_STARref" \
+                            --readFilesIn "$smp" \
+                            --outFileNamePrefix "$smpout"/lnc \
+                            --sjdbOverhang $overhang \
+                            --sjdbGTFfile "$annotation" \
+                            --sjdbGTFtagExonParentTranscript Parent \
+                            --outFilterMultimapNmax 10 \
+                            --outFilterMismatchNmax $mismatch \
+                            --outSAMtype BAM SortedByCoordinate \
+                            --outSAMstrandField intronMotif \
+                            --outFilterIntronMotifs RemoveNoncanonical \
+                            --alignIntronMax $lnc_max_intron_len
+                    fi
+                fi
+
+                # if any of the other arms are activated, def require STAR with vanilla mode
+                if [[ "$run_mod" = true ]] || [[ "$run_featurecount" = true ]]; then
+                    STAR \
+                        --runThreadN 2 \
+                        --genomeDir "$path_to_STARref" \
+                        --readFilesIn "$smp" \
+                        --sjdbOverhang $overhang \
+                        --sjdbGTFfile "$annotation" \
+                        --sjdbGTFtagExonParentTranscript Parent \
+                        --outFilterMultimapNmax 10 \
+                        --outFilterMismatchNmax $mismatch \
+                        --outSAMtype BAM SortedByCoordinate
+                fi
             else
                 echo "[$smpkey] Using STAR for mapping with a paired-end file."
-                STAR \
-                --runThreadN 2 \
-                --genomeDir "$path_to_STARref" \
-                --readFilesIn "$smp1" "$smp2" \
-                --sjdbOverhang $overhang \
-                --sjdbGTFfile "$annotation" \
-                --sjdbGTFtagExonParentTranscript Parent \
-                --outFilterMultimapNmax 10 \
-                --outFilterMismatchNmax $mismatch \
-                --outSAMtype BAM SortedByCoordinate \
-                --outSAMstrandField intronMotif \
-                --outFilterIntronMotifs RemoveNoncanonical
+                # if lnc is activated, def use the extra flags for STAR
+                if [[ "$run_lnc" = true ]]; then
+                    # if user sprcifies intron length, map with the flag
+                    if [[ -z $lnc_max_intron_len ]]; then
+                        STAR \
+                            --runThreadN 2 \
+                            --genomeDir "$path_to_STARref" \
+                            --readFilesIn "$smp1" "$smp2" \
+                            --outFileNamePrefix "$smpout"/lnc \
+                            --sjdbOverhang $overhang \
+                            --sjdbGTFfile "$annotation" \
+                            --sjdbGTFtagExonParentTranscript Parent \
+                            --outFilterMultimapNmax 10 \
+                            --outFilterMismatchNmax $mismatch \
+                            --outSAMtype BAM SortedByCoordinate \
+                            --outSAMstrandField intronMotif \
+                            --outFilterIntronMotifs RemoveNoncanonical
+                    # otherwise, map without the flag to use default
+                    else
+                        STAR \
+                            --runThreadN 2 \
+                            --genomeDir "$path_to_STARref" \
+                            --readFilesIn "$smp1" "$smp2" \
+                            --outFileNamePrefix "$smpout"/lnc \
+                            --sjdbOverhang $overhang \
+                            --sjdbGTFfile "$annotation" \
+                            --sjdbGTFtagExonParentTranscript Parent \
+                            --outFilterMultimapNmax 10 \
+                            --outFilterMismatchNmax $mismatch \
+                            --outSAMtype BAM SortedByCoordinate \
+                            --outSAMstrandField intronMotif \
+                            --outFilterIntronMotifs RemoveNoncanonical \
+                            --alignIntronMax $lnc_max_intron_len
+                    fi
+                fi
+
+                # if any of the other arms are activated, def require STAR with vanilla mode
+                if [[ "$run_mod" = true ]] || [[ "$run_featurecount" = true ]]; then
+                    STAR \
+                        --runThreadN 2 \
+                        --genomeDir "$path_to_STARref" \
+                        --readFilesIn "$smp1" "$smp2" \
+                        --sjdbOverhang $overhang \
+                        --sjdbGTFfile "$annotation" \
+                        --sjdbGTFtagExonParentTranscript Parent \
+                        --outFilterMultimapNmax 10 \
+                        --outFilterMismatchNmax $mismatch \
+                        --outSAMtype BAM SortedByCoordinate
+                fi
             fi
             cd || exit
         else 
@@ -937,8 +1024,16 @@ fastq2raw () {
     if [[ $currProg_mod == "1" || $currProg_lnc == "1" ]]; then
         if [[ -z $bam_in ]]; then
             echo "[$smpkey] renaming file"
-            # star already sorts its output
-            mv "$smpout"/Aligned.sortedByCoord.out.bam "$smpout"/sort_accepted.bam
+
+            # star already sorts its output, rename according to user specification
+            if [[ "$run_lnc" = true ]]; then
+                mv "$smpout"/lncAligned.sortedByCoord.out.bam "$smpout"/sort_accepted_lnc.bam
+            fi
+
+            if [[ "$run_mod" = true ]] || [[ "$run_featurecount" = true ]]; then
+                mv "$smpout"/Aligned.sortedByCoord.out.bam "$smpout"/sort_accepted.bam
+            fi
+            
             echo "[$smpkey] finished"
             echo ""
         else
