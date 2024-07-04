@@ -320,7 +320,7 @@ fastqGrabSRA () {
 # is repeated for each local file provided, performs fastqc and trimming; automatic paired-end recognition
 fastqGrabLocal () {
     sname=$(basename "$fq")
-    tt=$(echo "$sname" | cut -d'.' -f1)
+    tt=$(echo "$sname" | cut -d '.' -f1)
     echo "[$sname] performing fastqc on raw file..."
     if [[ "$fastq_trimmed" == true ]]; then
         echo "[$sname] is already trimmed, skipping trimming step..."
@@ -818,12 +818,6 @@ fastq2raw () {
     # sort out directories and progress info for mod
     currProg_mod="0"
     if [[ "$run_mod" = true ]]; then
-        # Reassign hamr output directory
-        if [ ! -d "$out/hamr_out" ]; then
-            mkdir "$out"/hamr_out
-            echo "created path: $out/hamr_out"
-        fi
-        hamrout=$out/hamr_out
         echo "[$smpkey] You can find the HAMR output file for $smpkey at $hamrout/$smpname.mod.txt"
 
         # check if progress_mod.txt exists, if not, create it with 0
@@ -838,12 +832,6 @@ fastq2raw () {
     # sort out directories and progress info for lnc
     currProg_lnc="0"
     if [[ "$run_lnc" = true ]]; then
-        # Reassign lnc output directory
-        if [ ! -d "$out/lnc_out" ]; then
-            mkdir "$out"/lnc_out
-            echo "created path: $out/lnc_out"
-        fi
-        lncout=$out/lnc_out
         echo "[$smpkey] You can find the lncRNA output file for $smpkey at $lncout/$smpname.mod.txt" 
 
         # check if progress_lnc.txt exists, if not, create it with 0
@@ -1177,11 +1165,6 @@ fastqGrabHouseKeeping () {
         echo "Failed to call trim_galore command. Please check your installation."
         exit 1
     fi
-
-    if ! command -v gatk > /dev/null; then
-        echo "Failed to call gatk command. Please check your installation."
-        exit 1
-    fi
     ##########fastqGrab housekeeping ends#########
 }
 
@@ -1259,6 +1242,27 @@ fastq2rawHouseKeeping () {
 
         path_to_STARref="$out"/STARref
     fi
+
+    # create hamr out folders
+    if [[ "$run_mod" = true ]]; then
+        # Reassign hamr output directory
+        if [ ! -d "$out/hamr_out" ]; then
+            mkdir "$out"/hamr_out
+            echo "created path: $out/hamr_out"
+        fi
+        hamrout=$out/hamr_out
+    fi
+
+    # create lnc out folders
+    if [[ "$run_lnc" = true ]]; then
+        # Reassign lnc output directory
+        if [ ! -d "$out/lnc_out" ]; then
+            mkdir "$out"/lnc_out
+            echo "created path: $out/lnc_out"
+        fi
+        lncout=$out/lnc_out
+    fi
+
 
     # Run a series of command checks to ensure fastq2raw can run smoothly
     if ! command -v mapfile > /dev/null; then
