@@ -398,7 +398,7 @@ hamrBranch () {
         wait
 
         # ignore read ends
-        python3 $execignoreends \
+        python $execignoreends \
             -5p 1 -3p 1 \
             "$smpout"/sorted_RG_unique.bam \
             "$smpout"/sorted_RG_unique_endsIGN.bam
@@ -476,7 +476,7 @@ hamrBranch () {
         #hamr step, can take ~1hr
         echo "[$smpkey] hamr..."
         #hamr_path=$(which hamr.py) 
-        python3 $exechamrpy \
+        python $exechamrpy \
             -fe "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam "$genome" "$model" "$smpout" $smpname $quality $coverage $err H4 $pvalue $fdr .05
         wait
 
