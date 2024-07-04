@@ -912,7 +912,7 @@ fastq2raw () {
         else 
             echo "relocating provided bam file..."
             if [[ "$bam_sorted" = true ]]; then
-                mv "$smp" "$smpout/sort_accepted.bam"
+                cp "$smp" "$smpout/sort_accepted.bam"
             else
                 echo "user requested sorting provided bam files..."
                 samtools sort \
