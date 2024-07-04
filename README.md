@@ -1,5 +1,5 @@
 # HAMRLINC: High-throughput Analysis of Modified Ribonucleotides and Long Intergenic Non-Coding RNAs
-![HAMRLINC_workflow](https://github.com/harrlol/HAMRLINC/assets/87460010/56518839-0a9a-425f-84f5-9097fed70665)
+![HAMRLINC_workflow](https://github.com/harrlol/HAMRLINC/assets/87460010/cb994f27-f48a-4210-b0e7-e3c270923eab)
 
 ## Overview
 - HAMRLINC is a multipurpose toolbox that expedites the analysis pipeline for [HAMR](https://github.com/GregoryLab/HAMR) and [Evolinc](https://github.com/Evolinc/Evolinc-I/tree/master). The former was developed by [Paul Ryvkin et al](https://rnajournal.cshlp.org/content/19/12/1684), and the latter by [Andrew D.L. Nelson et al](https://www.frontiersin.org/articles/10.3389/fgene.2017.00052/full). HAMRLINC aims to make the original methods more accessible by automating the tedious pre-processing steps and expanding on their functionalities with its built-in post-processing steps, allowing users to visualize epitranscriptomic analysis with experimental condition contexts.
