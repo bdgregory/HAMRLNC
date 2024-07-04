@@ -1,6 +1,6 @@
 FROM ubuntu:18.04
 
-LABEL This Dockerfile is for HAMRLINC. It is maintained by Harry Li <harrli02@sas.upenn.edu> & Chosen Obih <chosenobih@arizona.edu>
+LABEL This Dockerfile is for HAMRLNC. It is maintained by Harry Li <harrli02@sas.upenn.edu> & Chosen Obih <chosenobih@arizona.edu>
 ENV DEBIAN_FRONTEND=noninteractive
 
 USER root
@@ -218,8 +218,8 @@ ENV PATH /HAMR/hamr.py:$PATH
 ENV PATH /HAMR/:$PATH
 # ENV PATH /sratoolkit.3.0.10-ubuntu64/bin:$PATH
 
-# HAMRLINC wrapper script
-ADD HAMRLINC.sh $BINPATH
-RUN chmod +x $BINPATH/HAMRLINC.sh
+# HAMRLNC wrapper script
+ADD HAMRLNC.sh $BINPATH
+RUN chmod +x $BINPATH/HAMRLNC.sh
 
-ENTRYPOINT ["HAMRLINC.sh"]
+ENTRYPOINT ["HAMRLNC.sh"]
