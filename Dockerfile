@@ -201,6 +201,10 @@ WORKDIR /
 
 RUN apt-get install bc -y
 
+# fix to pysam not found
+RUN pip3 wheel pysam && pip3 install pysam*.whl
+
+
 ADD /scripts/*.R /scripts/
 RUN chmod +x /scripts/*.R && cp -r /scripts/ $BINPATH
 ENV scripts /scripts
