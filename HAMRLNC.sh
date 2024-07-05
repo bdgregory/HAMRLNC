@@ -67,7 +67,7 @@ path_to_STARref=""
 
 # hamr downstream
 execpthr="/pantherapi-pyclient/pthr_go_annots.py"
-execcpc="/CPC2/bin/CPC2.py"
+execcpc="/CPC2_standalone-1.0.1/bin/CPC2.py"
 
 # subprogram activation boolean
 run_lnc=false
