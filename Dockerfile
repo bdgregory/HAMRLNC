@@ -30,7 +30,7 @@ RUN apt-get update && apt-get install -y g++ \
 		python-matplotlib \
 		python-numpy \
        		python-pandas \
-	 	python-pysam \
+	 	# python-pysam \
 		tzdata \ 
 		perl \
 		wget \
@@ -86,7 +86,8 @@ ENV PATH /opt/conda/bin:$PATH
 
 # Conda channels
 RUN conda config --add channels conda-forge && \
-    conda config --add channels bioconda
+    conda config --add channels bioconda && \
+    conda config --add channels r
 
 # Conda packages
 RUN conda install cutadapt -c bioconda -y && \
@@ -107,7 +108,7 @@ RUN conda install cutadapt -c bioconda -y && \
 	conda install bioawk==1.0 -c bioconda && \
 	conda install numpy -y && \
 	conda install pandas -y && \
- 	# conda install pysam==0.22.1 -c bioconda -y && \
+ 	conda install pysam && \
 	conda install last==1454-0 -c bioconda -y && \
 	conda install diamond==0.9.10 -c bioconda -y && \
 	conda install transdecoder==5.5.0 -c bioconda -y && \
