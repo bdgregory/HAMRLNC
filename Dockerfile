@@ -30,6 +30,7 @@ RUN apt-get update && apt-get install -y g++ \
 		python-matplotlib \
 		python-numpy \
        		python-pandas \
+	 	python-pysam \
 		tzdata \ 
 		perl \
 		wget \
@@ -111,7 +112,7 @@ RUN conda install cutadapt -c bioconda -y && \
 	conda install diamond==0.9.10 -c bioconda -y && \
 	conda install transdecoder==5.5.0 -c bioconda -y && \
 	conda install matplotlib-base -c conda-forge -y && \
-	conda install python -y
+	# conda install python -y
 
 # Required files
 WORKDIR /
@@ -202,7 +203,7 @@ WORKDIR /
 RUN apt-get install bc -y
 
 # fix to pysam not found
-RUN pip3 wheel pysam && pip3 install pysam*.whl
+# RUN pip3 wheel pysam && pip3 install pysam*.whl
 
 
 ADD /scripts/*.R /scripts/
