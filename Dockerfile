@@ -43,9 +43,6 @@ RUN ldconfig
 RUN apt-get install -y locales && locale-gen en_US.UTF-8
 ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 
-#Install biopython
-RUN pip3 install biopython
-
 # Install system dependencies for R and R packages
 RUN apt-get update && apt-get install -y \
     software-properties-common \
@@ -115,6 +112,8 @@ RUN conda install cutadapt -c bioconda -y && \
 	conda install transdecoder==5.5.0 -c bioconda -y && \
 	conda install matplotlib-base -c conda-forge -y
 
+#Install biopython
+RUN pip3 install biopython
 
 # Required files
 WORKDIR /
