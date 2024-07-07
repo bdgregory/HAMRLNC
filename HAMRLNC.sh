@@ -399,11 +399,11 @@ hamrBranch () {
 
         # ignore read ends
         #######!!!!!!!!!debugging decision, change back later!!!!!!!!##########
-        mv "$smpout"/sorted_RG_unique.bam "$smpout"/sorted_RG_unique_endsIGN.bam
-        # python $execignoreends \
-        #     -5p 1 -3p 1 \
-        #     "$smpout"/sorted_RG_unique.bam \
-        #     "$smpout"/sorted_RG_unique_endsIGN.bam
+        # mv "$smpout"/sorted_RG_unique.bam "$smpout"/sorted_RG_unique_endsIGN.bam
+        python $execignoreends \
+            -5p 1 -3p 1 \
+            "$smpout"/sorted_RG_unique.bam \
+            "$smpout"/sorted_RG_unique_endsIGN.bam
         echo "[$smpkey] finished excluding (MOD 3/7)"
         echo ""
         ####################################################################
