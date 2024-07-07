@@ -64,9 +64,9 @@ Running HAMRLNC
 docker pull chosenobih/hamrlinc:v0.3
 ```
 ```
-# clone HAMRLINC repo
-git clone https://github.com/chosenobih/HAMRLINC.git
-cd HAMRLINC
+# clone HAMRLNC repo
+git clone https://github.com/chosenobih/HAMRLNC.git
+cd HAMRLNC
 ```
 ```
 # download the genome file for Arabidopsis thaliana from ENSEMBL
@@ -81,7 +81,7 @@ gunzip Arabidopsis_thaliana.TAIR10.59.gff3.gz
 ```
 # make sure your fa and gff3 files are in your working directory, and enter that directory
 cd /your/working/directory
-# run HAMRLINC with SRA IDs with all three arms activated
+# run HAMRLNC with SRA IDs with all three arms activated
 docker run \
   --rm -v $(pwd):/working-dir \
   -w /working-dir chosenobih/hamrlinc:v0.3 \
