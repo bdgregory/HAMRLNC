@@ -57,30 +57,39 @@ Running HAMRLNC
 ### Required dependencies
 1. Linux-based computer, server, or cluster.
 2. [Docker](https://docs.docker.com/engine/install/)
-3. Minimum memory of 32 GB and minimum disk space of 120 GB. 
+3. Minimum memory of 32 GB and minimum disk space of 120 GB, could require higher specs for organisms with larger genomes like human.
 
 ```
-#pull HAMRLNC docker image:  
+# pull HAMRLNC docker image:  
 docker pull chosenobih/hamrlinc:v0.3
 ```
 ```
-#clone HAMRLINC repo
+# clone HAMRLINC repo
 git clone https://github.com/chosenobih/HAMRLINC.git
 cd HAMRLINC
 ```
 ```
-#download the genome file for Arabidopsis thaliana from ENSEMBL
-wget https://ftp.ensemblgenomes.ebi.ac.uk/pub/plants/release-57/fasta/arabidopsis_thaliana/dna/Arabidopsis_thaliana.TAIR10.dna.toplevel.fa.gz
+# download the genome file for Arabidopsis thaliana from ENSEMBL
+wget https://ftp.ensemblgenomes.ebi.ac.uk/pub/plants/release-59/fasta/arabidopsis_thaliana/dna/Arabidopsis_thaliana.TAIR10.dna.toplevel.fa.gz
 gunzip Arabidopsis_thaliana.TAIR10.dna.toplevel.fa.gz
 ```
 ```
-#download the annotation file for Arabidopsis thaliana from ENSEMBL
-wget https://ftp.ensemblgenomes.ebi.ac.uk/pub/plants/release-57/gff3/arabidopsis_thaliana/Arabidopsis_thaliana.TAIR10.57.gff3.gz
-gunzip Arabidopsis_thaliana.TAIR10.57.gff3.gz
+# download the annotation file for Arabidopsis thaliana from ENSEMBL
+wget https://ftp.ensemblgenomes.ebi.ac.uk/pub/plants/release-59/gff3/arabidopsis_thaliana/Arabidopsis_thaliana.TAIR10.59.gff3.gz
+gunzip Arabidopsis_thaliana.TAIR10.59.gff3.gz
 ```
 ```
-#run HAMRLINC in SE mode with SRA IDs
-docker run --rm -v $(pwd):/working-dir -w /working-dir chosenobih/hamrlinc:v0.3 -o hamrlinc_test -c /demo/PRJNA478205.csv -g Arabidopsis_thaliana.TAIR10.dna.toplevel.fa -i Arabidopsis_thaliana.TAIR10.57.gff3 -l 50 -s 135000000 -n 8 -k
+# make sure your fa and gff3 files are in your working directory, and enter that directory
+cd /your/working/directory
+# run HAMRLINC with SRA IDs with all three arms activated
+docker run \
+  --rm -v $(pwd):/working-dir \
+  -w /working-dir chosenobih/hamrlinc:v0.3 \
+  -o test_run \
+  -c /demo/demo_filenames.csv \
+  -g Arabidopsis_thaliana.TAIR10.dna.toplevel.fa \
+  -i Arabidopsis_thaliana.TAIR10.59.gff3 \
+  -l 50 -n 8 -k -p -u
 ```
 
 Running HAMRLNC as an application on CyVerse's Discovery Environment
