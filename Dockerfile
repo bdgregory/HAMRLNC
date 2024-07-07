@@ -91,8 +91,8 @@ RUN conda config --add channels conda-forge && \
 
 # Conda packages
 RUN conda install cutadapt -c bioconda -y && \
-	conda install hisat2==2.2.1 -c bioconda -y && \
-	conda install bowtie2==2.2.5 -c bioconda -y && \
+	# conda install hisat2==2.2.1 -c bioconda -y && \
+	# conda install bowtie2==2.2.5 -c bioconda -y && \
  	conda install bedops==2.4.41 -c bioconda -y && \
     	conda install bedtools==2.31.1 -c bioconda -y && \
     	conda install htslib==1.16 -c bioconda -y && \
@@ -105,10 +105,10 @@ RUN conda install cutadapt -c bioconda -y && \
  	conda install gffcompare==0.12.6 -c bioconda -y && \
 	conda install subread==2.0.1 -c bioconda -y && \
 	conda install stringtie==2.1.5 -c bioconda -y && \
-	conda install bioawk==1.0 -c bioconda && \
+	conda install bioawk==1.0 -c bioconda -y && \
 	conda install numpy -y && \
 	conda install pandas -y && \
- 	conda install pysam && \
+ 	conda install pysam && -y \
 	conda install last==1454-0 -c bioconda -y && \
 	conda install diamond==0.9.10 -c bioconda -y && \
 	conda install transdecoder==5.5.0 -c bioconda -y && \
