@@ -892,7 +892,7 @@ fastq2raw () {
 
     
     # if 0, then either this run failed before mapping completion or this run just started
-    if [[ $currProg_mod == "0" || $currProg_lnc == "0" ]]; then
+    if [[ $currProg_mod == "0" && $currProg_lnc == "0" ]]; then
         if [[ -z $bam_in ]]; then
             cd "$smpout" || exit
             # maps the trimmed reads to provided annotated genome, can take ~1.5hr
@@ -1026,7 +1026,7 @@ fastq2raw () {
     wait
 
     # if 1, then either last run failed before sorting completion or this run just came out of mapping
-    if [[ $currProg_mod == "1" || $currProg_lnc == "1" ]]; then
+    if [[ $currProg_mod == "1" && $currProg_lnc == "1" ]]; then
         if [[ -z $bam_in ]]; then
             echo "[$smpkey] renaming file"
 
