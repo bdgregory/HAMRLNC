@@ -148,7 +148,7 @@ RUN rm /usr/bin/python && \
 
 # rFAM database
 #ADD https://de.cyverse.org/dl/d/12EF1A2F-B9FC-456D-8CD9-9F87197CACF2/rFAM_sequences.fasta /evolinc_docker/
-RUN apt install infernal
+RUN apt-get install infernal
 RUN mkdir Rfam && cd Rfam
 RUN wget ftp://ftp.ebi.ac.uk/pub/databases/Rfam/CURRENT/Rfam.cm.gz && \
 	gunzip Rfam.cm.gz && \
