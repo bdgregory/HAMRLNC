@@ -62,7 +62,7 @@ err=0.01
 pvalue=1
 fdr=0.05
 path_to_HAMR="/HAMR"
-path_to_rfam="Rfam"
+path_to_rfam="/"
 path_to_STARref=""
 
 # hamr downstream
