@@ -25,11 +25,11 @@ RUN apt-get update && apt-get install -y g++ \
 		lbzip2 \
 		unzip \
 		bzip2 \
-		python3 \
-		python3-pip \
-		python-matplotlib \
-		python-numpy \
-       		python-pandas \
+		# python3 \
+		# python3-pip \
+		# python-matplotlib \
+		# python-numpy \
+  		# python-pandas \
 	 	# python-pysam \
 		tzdata \ 
 		perl \
@@ -106,22 +106,23 @@ RUN conda install cutadapt -c bioconda -y && \
 	conda install subread==2.0.1 -c bioconda -y && \
 	conda install stringtie==2.1.5 -c bioconda -y && \
 	conda install bioawk==1.0 -c bioconda -y && \
+ 	conda install python -y && \
 	conda install numpy -y && \
 	conda install pandas -y && \
- 	conda install pysam && -y \
+ 	conda install pysam -y && \
 	conda install last==1454-0 -c bioconda -y && \
 	conda install diamond==0.9.10 -c bioconda -y && \
 	conda install transdecoder==5.5.0 -c bioconda -y && \
 	conda install matplotlib-base -c conda-forge -y
-	# conda install python -y
+
 
 # Required files
 WORKDIR /
+ENV BINPATH /usr/bin
 
 ## evolinc-part-I
 #RUN git clone https://github.com/chosenobih/Evolinc-I.git
 #RUN cp -R /Evolinc-I /evolinc_docker
-ENV BINPATH /usr/bin
 #WORKDIR /evolinc_docker
 
 # Cufflinks
@@ -136,10 +137,10 @@ RUN cpanm URI/Escape.pm
 
 # Remove the existing symbolic link (if it exists), create a symbolic link to make 'python' refer to 'python3',
 # And make Python 3 the default Python 
-RUN rm /usr/bin/python && \
-    ln -sf /usr/bin/python3 /usr/bin/python && \
-    apt-get update && apt-get install -y python3 && \
-    update-alternatives --install /usr/bin/python python /usr/bin/python3 1
+# RUN rm /usr/bin/python && \
+#     ln -sf /usr/bin/python3 /usr/bin/python && \
+#     apt-get update && apt-get install -y python3 && \
+#     update-alternatives --install /usr/bin/python python /usr/bin/python3 1
 
 # Uniprot database
 #ADD https://github.com/iPlantCollaborativeOpenSource/docker-builds/releases/download/evolinc-I/uniprot_sprot.dmnd.gz /evolinc_docker/
@@ -159,7 +160,7 @@ RUN wget ftp://ftp.ebi.ac.uk/pub/databases/Rfam/CURRENT/Rfam.cm.gz && \
 RUN R -e "install.packages('tidyr')"
 
 # CPC2
-RUN  wget https://github.com/gao-lab/CPC2_standalone/archive/refs/tags/v1.0.1.tar.gz && \
+RUN wget https://github.com/gao-lab/CPC2_standalone/archive/refs/tags/v1.0.1.tar.gz && \
 	gzip -dc v1.0.1.tar.gz | tar xf - && \
 	cd CPC2_standalone-1.0.1 && \
  	cd libs/libsvm && \
