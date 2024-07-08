@@ -72,7 +72,7 @@ RUN R -e "options(repos = list(CRAN = 'http://cran.rstudio.com')); install.packa
 RUN R -e "BiocManager::install('Biostrings', ask=FALSE)" \
     && R -e "packageVersion('Biostrings')"
 # Install additional R packages
-RUN R -e "install.packages(c('dplyr', 'RPostgreSQL', 'httr', 'openssl', 'splitstackshape', 'getopt'))"
+RUN R -e "install.packages(c('dplyr', 'RPostgreSQL', 'httr', 'openssl', 'splitstackshape', 'getopt', 'reshape2', 'janitor', 'ggplot2'))"
 
 # Downlaod and install conda
 RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh && \
