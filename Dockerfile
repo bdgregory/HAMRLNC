@@ -25,18 +25,10 @@ RUN apt-get update && apt-get install -y g++ \
 		lbzip2 \
 		unzip \
 		bzip2 \
-		# python3 \
-		# python3-pip \
-		# python-matplotlib \
-		# python-numpy \
-  		# python-pandas \
-	 	# python-pysam \
 		tzdata \ 
 		perl \
 		wget \
 		bcftools \
-		# python2.7 \
-		# python2.7-dev \
 		curl
 
 RUN ldconfig
@@ -88,15 +80,10 @@ RUN conda config --add channels conda-forge && \
 
 # Conda packages
 RUN conda install cutadapt -c bioconda -y && \
-	# conda install hisat2==2.2.1 -c bioconda -y && \
-	# conda install bowtie2==2.2.5 -c bioconda -y && \
  	conda install bedops==2.4.41 -c bioconda -y && \
-    	conda install bedtools==2.31.1 -c bioconda -y && \
-    	conda install htslib==1.19.1 -c bioconda -y && \
-    	conda install sra-tools==3.0.10 -c bioconda -y && \
+    conda install bedtools==2.31.1 -c bioconda -y && \
 	conda install trim-galore==0.6.10 -c bioconda -y && \
 	conda install bedtools==2.31.0 -c bioconda -y && \
-	conda install samtools==1.17 -c bioconda -y && \
 	conda install star==2.7.10a -c bioconda -y && \
 	conda install gffread -y && \
  	conda install gffcompare==0.12.6 -c bioconda -y && \
@@ -119,35 +106,11 @@ RUN pip3 install biopython
 WORKDIR /
 ENV BINPATH /usr/bin
 
-## evolinc-part-I
-#RUN git clone https://github.com/chosenobih/Evolinc-I.git
-#RUN cp -R /Evolinc-I /evolinc_docker
-#WORKDIR /evolinc_docker
-
-# Cufflinks
-# RUN wget http://cole-trapnell-lab.github.io/cufflinks/assets/downloads/cufflinks-2.2.1.Linux_x86_64.tar.gz && \
-#     tar -zxvf cufflinks-2.2.1.Linux_x86_64.tar.gz && \
-#     rm -rf cufflinks-2.2.1.Linux_x86_64.tar.gz
-# ENV PATH="/cufflinks-2.2.1.Linux_x86_64:${PATH}"
-
 # cpan
 RUN curl -L http://cpanmin.us | perl - App::cpanminus
 RUN cpanm URI/Escape.pm
 
-# Remove the existing symbolic link (if it exists), create a symbolic link to make 'python' refer to 'python3',
-# And make Python 3 the default Python 
-# RUN rm /usr/bin/python && \
-#     ln -sf /usr/bin/python3 /usr/bin/python && \
-#     apt-get update && apt-get install -y python3 && \
-#     update-alternatives --install /usr/bin/python python /usr/bin/python3 1
-
-# Uniprot database
-#ADD https://github.com/iPlantCollaborativeOpenSource/docker-builds/releases/download/evolinc-I/uniprot_sprot.dmnd.gz /evolinc_docker/
-#RUN gzip -d /evolinc_docker/uniprot_sprot.dmnd.gz && \
-#	chmod +r /evolinc_docker/uniprot_sprot.dmnd
-
 # rFAM database
-#ADD https://de.cyverse.org/dl/d/12EF1A2F-B9FC-456D-8CD9-9F87197CACF2/rFAM_sequences.fasta /evolinc_docker/
 RUN apt-get install infernal
 RUN mkdir Rfam && cd Rfam
 RUN wget ftp://ftp.ebi.ac.uk/pub/databases/Rfam/CURRENT/Rfam.cm.gz && \
@@ -166,9 +129,7 @@ RUN wget https://github.com/gao-lab/CPC2_standalone/archive/refs/tags/v1.0.1.tar
   	gzip -dc libsvm-3.18.tar.gz | tar xf - && \
    	cd libsvm-3.18 && \
     	make clean && make 
-
-# evolinc-part-I wrapper script
-#RUN chmod +x /evolinc_docker/evolinc-part-I.sh && cp /evolinc_docker/evolinc-part-I.sh $BINPATH
+WORKDIR /
 
 ## HAMR (python 3 compatible)
 RUN git clone https://github.com/harrlol/HAMR.git
@@ -198,18 +159,24 @@ RUN git clone https://github.com/pantherdb/pantherapi-pyclient.git && \
 
 WORKDIR /
 
-# RUN wget --output-document sratoolkit.tar.gz https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-ubuntu64.tar.gz && \
-# 	tar -vxzf sratoolkit.tar.gz
+RUN wget --output-document sratoolkit.tar.gz https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-ubuntu64.tar.gz && \
+ 	tar -vxzf sratoolkit.tar.gz
 
 RUN apt-get install bc -y
 
-# fix to pysam not found
-# RUN pip3 wheel pysam && pip3 install pysam*.whl
+#HTSLIB
+RUN wget https://github.com/samtools/htslib/releases/download/1.17/htslib-1.17.tar.bz2 && \
+	tar -xvjf htslib-1.17.tar.bz2 && \
+	cd htslib-1.17 && \
+	./configure --prefix=/usr/bin && \
+	make && \
+	make install
+WORKDIR /
 
 # additional R packages
 RUN R -e "install.packages(c('reshape2', 'janitor', 'ggplot2', 'readr', 'pheatmap'))"
 
-
+ADD /scripts/*.py /scripts/
 ADD /scripts/*.R /scripts/
 RUN chmod +x /scripts/*.R && cp -r /scripts/ $BINPATH
 ENV scripts /scripts
@@ -219,13 +186,10 @@ ENV util /util
 
 # Setting paths to all the softwares
 ENV PATH /evolinc_docker/cufflinks-2.2.1.Linux_x86_64/:$PATH
-#ENV PATH /evolinc_docker/bin/:$PATH
-#ENV PATH /evolinc_docker/CPC2-beta/bin/:$PATH
-#ENV PATH /evolinc_docker/:$PATH
 ENV PATH /usr/bin/:$PATH
 ENV PATH /HAMR/hamr.py:$PATH
 ENV PATH /HAMR/:$PATH
-# ENV PATH /sratoolkit.3.0.10-ubuntu64/bin:$PATH
+ENV PATH  /sratoolkit.3.1.1-ubuntu64/bin:$PATH
 
 # HAMRLNC wrapper script
 ADD HAMRLNC.sh $BINPATH
