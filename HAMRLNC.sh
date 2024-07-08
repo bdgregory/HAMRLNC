@@ -629,8 +629,6 @@ lncCallBranch () {
         # covnvert to gff3
         gffread UXfiltered_gffcmp_annotated.gtf -T -o UXfiltered_gffcmp_annotated.gff3
 
-        wait
-
         echo "[$smpkey] finished conversion (LNC 8/15)"
         echo ""
 
@@ -644,8 +642,6 @@ lncCallBranch () {
         
         # write gtf to fasta
         gffread -w transcripts.fa -g $genome UXfiltered_gffcmp_annotated.gtf 
-
-        wait
 
         echo "[$smpkey] finished writing (LNC 9/15)"
         echo ""
@@ -1392,11 +1388,6 @@ fastq2rawHouseKeeping () {
         exit 1
     fi
 
-    if ! command -v cuffcompare > /dev/null; then
-        echo "Failed to call cuffcompare command. Please check your installation."
-        exit 1
-    fi
-
     if ! command -v gffcompare > /dev/null; then
         echo "Failed to call gffcompare command. Please check your installation."
         exit 1
@@ -1504,11 +1495,6 @@ bamEntranceHouseKeeping () {
 
     if ! command -v stringtie > /dev/null; then
         echo "Failed to call stringtie command. Please check your installation."
-        exit 1
-    fi
-
-    if ! command -v cuffcompare > /dev/null; then
-        echo "Failed to call cuffcompare command. Please check your installation."
         exit 1
     fi
 
