@@ -629,6 +629,8 @@ lncCallBranch () {
         # covnvert to gff3
         gffread UXfiltered_gffcmp_annotated.gtf -T -o UXfiltered_gffcmp_annotated.gff3
 
+        wait
+
         echo "[$smpkey] finished conversion (LNC 8/15)"
         echo ""
 
@@ -641,7 +643,9 @@ lncCallBranch () {
         echo "[$smpkey] writing fa file from filtered gtf..."
         
         # write gtf to fasta
-        gffread UXfiltered_gffcmp_annotated.gtf -g $genome -w transcripts.fa
+        gffread -w transcripts.fa -g $genome UXfiltered_gffcmp_annotated.gtf 
+
+        wait
 
         echo "[$smpkey] finished writing (LNC 9/15)"
         echo ""
