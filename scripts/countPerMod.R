@@ -63,5 +63,5 @@ for (ant in all_annotations) {
   segs <- strsplit(ant, "_")[[1]]
   lap_type <- sub("\\..*", "", segs[length(segs)])
   abundByLap1(args[1], lap_type)
-  ggsave(paste0(args[3],"/mod_abundance_by_mod_",lap_type,".png"), width = 12, height = 8, units = "in")
+  ggsave(paste0(args[3],"/mod_abundance_by_mod_",lap_type,".png"), width = 18, height = 12, units = "in")
 }

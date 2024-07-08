@@ -107,7 +107,7 @@ if (!is.null(frame)) {
     scale_x_discrete(labels = abbreviate)
   
   suppressWarnings(print(p1))
-  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_bar.png"), width = 12, height = 8, units = "in"))
+  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_bar.png"), width = 18, height = 12, units = "in"))
   
   # creates the rel pos gene map
   p2 <- frame%>%
@@ -131,7 +131,7 @@ if (!is.null(frame)) {
     scale_color_manual(values=cbPalette)
   
   suppressWarnings(print(p2))
-  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_map_sep.png"), width = 12, height = 8, units = "in"))
+  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_map_sep.png"), width = 18, height = 12, units = "in"))
   
   p3 <- frame%>%
     ggplot(aes(p.norm))+
@@ -154,7 +154,7 @@ if (!is.null(frame)) {
     scale_color_manual(values=cbPalette)
   
   suppressWarnings(print(p3))
-  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_map_tot.png"), width = 12, height = 8, units = "in"))
+  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_map_tot.png"), width = 18, height = 12, units = "in"))
 } else {
   cat("No region information can be extracted. Exiting... \n")
 }

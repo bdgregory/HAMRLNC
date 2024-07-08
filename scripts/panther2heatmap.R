@@ -114,5 +114,5 @@ if (is.null(go)){
                 main = "Gene Ontology Enrichment Analysis of Modified Transcripts", legend_labels = c(blue.text, half.text, 
                                              red.text, "-log10(P-value)\n"),
                 legend = TRUE, cluster_cols = FALSE)
-  save_pheatmap_png(p, paste0(out, "/GOheatmap_mod.png"), width = 10, height = 8)
+  save_pheatmap_png(p, paste0(out, "/GOheatmap_mod.png"), width = 15, height = 12)
 }

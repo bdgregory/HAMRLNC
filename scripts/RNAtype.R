@@ -54,4 +54,4 @@ subviz <- function(indf) {
 # trying to eliminate pdf
 pdf(NULL)
 subviz(tb)
-ggsave(paste0(dir,"/RNAsubtype.png"), width = 12, height = 8, units = "in")
+ggsave(paste0(dir,"/RNAsubtype.png"), width = 18, height = 12, units = "in")
