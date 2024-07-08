@@ -48,7 +48,7 @@ allLapPrep <- function(in_dir) {
       if (lap_type == "threeUTR" || lap_type == "fiveUTR" || lap_type == "CDS" | lap_type == "primarymRNA") {
         # Add experimental information alongside hamr predictions and bind to long df
         to_add <- data.frame(isoUnsensitive(temp_clean))
-        } else if (lap_type == "ncRNA" || lap_type == "gene" || lap_type == "exon") {
+        } else if (lap_type == "ncRNA" || lap_type == "gene" || lap_type == "exon" || lap_type == "lncRNAPred") {
       # these will have bio as their actual biological function inherited from bed file
         to_add <- data.frame(temp_clean)
         } else {
@@ -68,5 +68,6 @@ allLapPrep <- function(in_dir) {
   }
 
 project <- allLapPrep(args[1])
+
 
 write.table(project, paste0(args[2], "/mod_long.csv"), sep='\t', row.names=F, col.names=T, quote=F)

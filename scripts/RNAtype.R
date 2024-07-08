@@ -20,11 +20,29 @@ a <- unique(df$sample_group)
 b <- unique(df$seq_tech)
 g <- expand.grid(a,b)
 
-tb <- NULL
+tb1 <- NULL
 suppressWarnings(for (i in (1:nrow(g))) {
   # Create Data
   d <- df%>%
-    filter(sample_group == g[i,1] & seq_tech == g[i,2] & lap_type %in% c("ncRNA", "gene"))%>%
+    filter(sample_group == g[i,1] & seq_tech == g[i,2] & lap_type %in% c("ncRNA", "gene", "lncRNAPred"))%>%
+    mutate(lap_type = ifelse(lap_type == "lncRNAPred", "ncRNA", lap_type))%>%
+    group_by(lap_type)%>%
+    summarize(count=n())%>%
+    mutate(group=paste(g[i,1], g[i,2], sep="_"))
+  
+  # If the geno+seq parameter combo yields an empty table, skip the rest and proceed to next iteration
+  if (nrow(d)<1) next
+  
+  # add new data to large table
+  tb1 <- rbind(tb, d)
+})
+
+tb2 <- NULL
+suppressWarnings(for (i in (1:nrow(g))) {
+  # Create Data
+  d <- df%>%
+    filter(sample_group == g[i,1] & seq_tech == g[i,2] & lap_type %in% c("ncRNA", "lncRNAPred"))%>%
+    mutate(bio = ifelse(lap_type == "lncRNAPred", "lncRNAPred", bio))%>%
     group_by(bio)%>%
     summarize(count=n())%>%
     mutate(group=paste(g[i,1], g[i,2], sep="_"))
@@ -33,15 +51,29 @@ suppressWarnings(for (i in (1:nrow(g))) {
   if (nrow(d)<1) next
   
   # add new data to large table
-  tb <- rbind(tb, d)
+  tb2 <- rbind(tb, d)
 })
 
-# Creating ggplot of RNA subtype visualization
-subviz <- function(indf) {
+# Overall RNA subttype breakdown
+subviz1 <- function(indf) {
+  indf%>%
+    ggplot(aes(x=group, y=count))+
+    geom_col(aes(fill=lap_type), position = "stack")+
+    labs(title="HAMR Predicted Modification in RNA Subtypes", fill="RNA Type")+
+    xlab("Sample Group")+
+    ylab("Counts of Modifications Predicted")+
+    scale_fill_manual(values=cbPalette)+
+    theme_bw()+
+    theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+    theme(text = element_text(size=20))
+}
+# Creating ggplot of ncRNA subtype visualization
+subviz2 <- function(indf) {
   indf%>%
     ggplot(aes(x=group, y=count))+
     geom_col(aes(fill=bio), position = "stack")+
-    labs(title="HAMR Predicted Modification Broken Down by RNA Subtype", fill="RNA Type")+
+    labs(title="HAMR Predicted Modification in non-coding Fraction", fill="ncRNA Type")+
     xlab("Sample Group")+
     ylab("Counts of Modifications Predicted")+
     scale_fill_manual(values=cbPalette)+
@@ -53,5 +85,8 @@ subviz <- function(indf) {
 
 # trying to eliminate pdf
 pdf(NULL)
-subviz(tb)
+subviz1(tb1)
 ggsave(paste0(dir,"/RNAsubtype.png"), width = 18, height = 12, units = "in")
+subviz2(tb2)
+ggsave(paste0(dir,"/ncRNAsubtype.png"), width = 18, height = 12, units = "in")
+
