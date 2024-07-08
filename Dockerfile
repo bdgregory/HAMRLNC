@@ -207,7 +207,7 @@ RUN apt-get install bc -y
 # RUN pip3 wheel pysam && pip3 install pysam*.whl
 
 # additional R packages
-RUN R -e "install.packages(c('reshape2', 'janitor', 'ggplot2', 'readr'))"
+RUN R -e "install.packages(c('reshape2', 'janitor', 'ggplot2', 'readr', 'pheatmap'))"
 
 
 ADD /scripts/*.R /scripts/
