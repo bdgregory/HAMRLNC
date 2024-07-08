@@ -98,7 +98,7 @@ HAMRLNC has been integrated as an app on [CyVerse's Discovery Environment (DE)](
 
 Step-by-step walkthrough
 ------------------------
-For more detailed documentation and step-by-step tutorial for running HAMRLNC using docker, please visit [HAMRLINC Documentation page](https://chosenobih.github.io/hamrlinc_docs/)
+For more detailed documentation and step-by-step tutorial for running HAMRLNC using docker, please visit the [Wiki](https://github.com/harrlol/HAMRLNC/wiki)
 
 Issues
 ------
