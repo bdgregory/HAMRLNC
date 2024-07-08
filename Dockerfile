@@ -92,11 +92,11 @@ RUN conda install cutadapt -c bioconda -y && \
 	# conda install bowtie2==2.2.5 -c bioconda -y && \
  	conda install bedops==2.4.41 -c bioconda -y && \
     	conda install bedtools==2.31.1 -c bioconda -y && \
-    	conda install htslib==1.16 -c bioconda -y && \
+    	conda install htslib==1.19.1 -c bioconda -y && \
     	conda install sra-tools==3.0.10 -c bioconda -y && \
 	conda install trim-galore==0.6.10 -c bioconda -y && \
 	conda install bedtools==2.31.0 -c bioconda -y && \
-	conda install samtools==1.16.1 -c bioconda -y && \
+	conda install samtools==1.17 -c bioconda -y && \
 	conda install star==2.7.10a -c bioconda -y && \
 	conda install gffread -y && \
  	conda install gffcompare==0.12.6 -c bioconda -y && \
