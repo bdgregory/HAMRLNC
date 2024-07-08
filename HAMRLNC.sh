@@ -1726,52 +1726,62 @@ elif [ "$last_checkpoint" = "checkpoint2" ]; then
     wait
     echo "done"
 
-    # The case where no consensus file is found, prevents *.bed from being created
-    if [ -z "$(ls -A "$out"/hamr_consensus)" ]; then
-    echo "No consensus mods found within any sequencing group. Please see check individual rep for analysis. "
-    exit 1
-    fi
-
-    # Add depth columns with info from each rep alignment, mutate in place
-    for f in "$out"/hamr_consensus/*.bed
-    do
-        t=$(basename "$f")
-        d=$(dirname "$f")
-        n=${t%.*}
-        echo "starting depth analysis on $n"
-        for ff in "$out"/pipeline/depth/*.bam
-        do
-            if echo "$ff" | grep -q "$n"
-            then
-                tt=$(basename "$ff")
-                nn=${tt%.*}
-                echo "[$n] extracting depth information from $nn"
-                for i in $(seq 1 $(wc -l < "$f"))
-                do
-                    chr=$(sed "${i}q;d" "$f" | sed 's/\t/\n/g' | sed '1q;d')
-                    pos=$(sed "${i}q;d" "$f" | sed 's/\t/\n/g' | sed '2q;d')
-                    dph=$(samtools coverage \
-                        -r "$chr":"$pos"-"$pos" \
-                        "$ff" \
-                        | awk 'NR==2' | awk -F'\t' '{print $7}')
-                    awk -v "i=$i" 'NR==i {print $0"\t"var; next} 1' var="$dph" "$f" > "$d"/"${nn}"_new.bed && mv "$d"/"${nn}"_new.bed "$f" 
-                done
-                echo "[$n] finished $nn"
-            fi
-        done &
-    done
-    wait
-
-    for f in "$out"/hamr_consensus/*.bed
-    do
-        if [ -s "$f" ]; then
-        # The file is not-empty.
-            t=$(basename "$f")
-            n=${t%.*}
-            echo "computing depth across reps for $n"
-            Rscript "$scripts"/depthHelperAverage.R "$f"
+    # the below is relevant only if we activated mod analysis
+    if [[ "$run_mod" = true ]]; then
+        # The case where no consensus file is found, prevents *.bed from being created
+        if [[ -z "$(ls -A "$out"/hamr_consensus)" ]]; then
+        echo "No consensus mods found within any sequencing group. Please see check individual rep for analysis. "
+        exit 1
         fi
-    done
+
+        # Add depth columns with info from each rep alignment, mutate in place
+        for f in "$out"/hamr_consensus/*.bed
+        do
+            t=$(basename "$f")
+            d=$(dirname "$f")
+            n=${t%.*}
+            echo "starting depth analysis on $n"
+            for ff in "$out"/pipeline/depth/*.bam
+            do
+                if echo "$ff" | grep -q "$n"
+                then
+                    tt=$(basename "$ff")
+                    nn=${tt%.*}
+                    echo "[$n] extracting depth information from $nn"
+                    for i in $(seq 1 $(wc -l < "$f"))
+                    do
+                        chr=$(sed "${i}q;d" "$f" | sed 's/\t/\n/g' | sed '1q;d')
+                        pos=$(sed "${i}q;d" "$f" | sed 's/\t/\n/g' | sed '2q;d')
+                        dph=$(samtools coverage \
+                            -r "$chr":"$pos"-"$pos" \
+                            "$ff" \
+                            | awk 'NR==2' | awk -F'\t' '{print $7}')
+                        awk -v "i=$i" 'NR==i {print $0"\t"var; next} 1' var="$dph" "$f" > "$d"/"${nn}"_new.bed && mv "$d"/"${nn}"_new.bed "$f" 
+                    done
+                    echo "[$n] finished $nn"
+                fi
+            done &
+        done
+        wait
+
+        for f in "$out"/hamr_consensus/*.bed
+        do
+            if [ -s "$f" ]; then
+            # The file is not-empty.
+                t=$(basename "$f")
+                n=${t%.*}
+                echo "computing depth across reps for $n"
+                Rscript "$scripts"/depthHelperAverage.R "$f"
+            fi
+        done
+    # if mod not activated, just quit here
+    else
+        echo ""
+        echo "#################################### HAMRLINC has finished running #######################################"
+        date '+%d/%m/%Y %H:%M:%S'
+        echo ""
+        exit 1
+    fi
 
     wait
 
@@ -1781,6 +1791,7 @@ elif [ "$last_checkpoint" = "checkpoint2" ]; then
     last_checkpoint="checkpoint3"
     checkpoint $last_checkpoint
 fi
+
 
 # run overlap when checkpoint agrees
 if [ "$last_checkpoint" = "checkpoint3" ]; then 
