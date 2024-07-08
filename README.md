@@ -8,7 +8,7 @@
 
 ## Command Line Arguments and Description
 
-Read the [Wiki](https://github.com/harrlol/HAMRLNC/wiki)) for detailed descriptions on selected flags.
+Read the [Wiki](https://github.com/harrlol/HAMRLNC/wiki) for detailed descriptions on selected flags.
 
 | Command | Description |
 | :---: | :---: |
