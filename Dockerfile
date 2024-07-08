@@ -98,7 +98,7 @@ RUN conda install cutadapt -c bioconda -y && \
 	conda install bedtools==2.31.0 -c bioconda -y && \
 	conda install samtools==1.16.1 -c bioconda -y && \
 	conda install star==2.7.10a -c bioconda -y && \
-	# conda install gffread==0.12.7 -c bioconda -y && \
+	conda install gffread -y && \
  	conda install gffcompare==0.12.6 -c bioconda -y && \
 	conda install subread==2.0.1 -c bioconda -y && \
 	conda install stringtie==2.1.5 -c bioconda -y && \
@@ -125,10 +125,10 @@ ENV BINPATH /usr/bin
 #WORKDIR /evolinc_docker
 
 # Cufflinks
-RUN wget http://cole-trapnell-lab.github.io/cufflinks/assets/downloads/cufflinks-2.2.1.Linux_x86_64.tar.gz && \
-    tar -zxvf cufflinks-2.2.1.Linux_x86_64.tar.gz && \
-    rm -rf cufflinks-2.2.1.Linux_x86_64.tar.gz
-ENV PATH="/cufflinks-2.2.1.Linux_x86_64:${PATH}"
+# RUN wget http://cole-trapnell-lab.github.io/cufflinks/assets/downloads/cufflinks-2.2.1.Linux_x86_64.tar.gz && \
+#     tar -zxvf cufflinks-2.2.1.Linux_x86_64.tar.gz && \
+#     rm -rf cufflinks-2.2.1.Linux_x86_64.tar.gz
+# ENV PATH="/cufflinks-2.2.1.Linux_x86_64:${PATH}"
 
 # cpan
 RUN curl -L http://cpanmin.us | perl - App::cpanminus
