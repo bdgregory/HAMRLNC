@@ -1205,12 +1205,16 @@ consensusOverlap () {
     ######## this is from the lncRNA identification steps ##########
     # given lines of lncRNA region in gtf, see if any mod can be found there
     if [[ "$run_lnc" = true ]]; then
-        # intersectBed \
-        #     -a "$smpout"/"$smpname".lnc.gtf \
-        #     -b "$smp" \
-        #     -wa -wb \
-        #     > "$out"/lap/"$smpname"_overlapped_lnc.bed
-        echo "finished finding overlap with lncRNA predictions"
+        for mod_consensus in "$out"/hamr_consensus/*.bed; do
+            bn=$(basename "$mod_consensus" .bed)
+            to_overlap=$bn.gtf
+        intersectBed \
+            -a "$mod_consensus" \
+            -b "$out/lnc_consensus/$to_overlap" \
+            -wa -wb \
+            > "$out"/lap/"$bn""_lncRNAPred".bed
+        echo "finished finding overlap with de novo lncRNA library"
+        done
     fi
 
     echo ""
