@@ -1008,7 +1008,7 @@ fastq2raw () {
             else
                 echo "user requested sorting provided bam files..."
                 samtools sort \
-                    -n "$smp" \
+                    "$smp" \
                     -o "$smpout"/sort_accepted.bam
                 echo "[$smpkey] finished sorting"
             fi
