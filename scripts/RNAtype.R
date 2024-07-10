@@ -34,7 +34,7 @@ suppressWarnings(for (i in (1:nrow(g))) {
   if (nrow(d)<1) next
   
   # add new data to large table
-  tb1 <- rbind(tb, d)
+  tb1 <- rbind(tb1, d)
 })
 
 tb2 <- NULL
@@ -51,7 +51,7 @@ suppressWarnings(for (i in (1:nrow(g))) {
   if (nrow(d)<1) next
   
   # add new data to large table
-  tb2 <- rbind(tb, d)
+  tb2 <- rbind(tb2, d)
 })
 
 # Overall RNA subttype breakdown
