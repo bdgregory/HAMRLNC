@@ -50,7 +50,7 @@ findConsensus <- function(in_dir, out_dir) {
       
       # If only 1 rep, then that rep is the consensus
       if (length(variables_to_process)==1) {
-        curr_df <- fread(file.path(in_dir, variables_to_process[i]))
+        curr_df <- fread(file.path(in_dir, variables_to_process[1]))
         write.table(curr_df, paste0(out_dir, "/", common_part, ".gtf"), sep='\t', row.names=F, col.names=F, quote=F)
       } else {
         # If >1 rep, go through the reps
