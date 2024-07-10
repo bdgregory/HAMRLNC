@@ -6,6 +6,13 @@ options(dplyr.summarise.inform = FALSE)
 
 args=commandArgs(trailingOnly=TRUE)
 
+bed2modtbl <- function(bed) {
+  out <- bed%>%
+    mutate(start=bp, end=bp, seqname=as.character(chr), name=as.character(pred.mod), strand=as.character(strand))%>%
+    select(seqname, start, end, name, strand)
+  return(out)
+}
+
 string_process <- function(str) {
   eg <- unlist(str)
   tem <- unlist(strsplit(eg, split = "; ", fixed = TRUE))
