@@ -78,7 +78,7 @@ longdf%>%
   melt(id.vars = c("sample_group", "seq_tech","mod"))%>%
   ggplot(aes(x=sample_group, y=value, fill=mod))+
   geom_bar(stat = "identity", position = "dodge")+
-  labs(title=paste0("Abundance of HAMR Predicted Modifications in ", lib, " by Sample Groups"))+
+  labs(title=paste0("Abundance of HAMR Predicted Modifications in ncRNA by Sample Groups"))+
   xlab("Sample Group") +
   ylab("Counts of Modifications Predicted")+
   guides(fill=guide_legend(title="Modification Type"))+
