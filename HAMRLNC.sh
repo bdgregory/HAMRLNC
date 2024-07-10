@@ -1316,7 +1316,7 @@ fastq2rawHouseKeeping () {
     # create fai index file using fasta genome
     # same as above, note fai by convention has .fa in file name
     fai="$genomedir"/"$fafilestem".fa.fai
-    if [[ ! -f "$dict" ]]; then
+    if [[ ! -f "$fai" ]]; then
         samtools faidx "$genome"
     fi
 
