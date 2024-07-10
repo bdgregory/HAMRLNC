@@ -1208,11 +1208,11 @@ consensusOverlap () {
         for mod_consensus in "$out"/hamr_consensus/*.bed; do
             bn=$(basename "$mod_consensus" .bed)
             to_overlap=$bn.gtf
-        intersectBed \
-            -a "$mod_consensus" \
-            -b "$out/lnc_consensus/$to_overlap" \
-            -wa -wb \
-            > "$out"/lap/"$bn""_lncRNAPred".bed
+            intersectBed \
+                -a "$mod_consensus" \
+                -b "$out/lnc_consensus/$to_overlap" \
+                -wa -wb \
+                > "$out"/lap/"$bn""_lncRNAPred".bed
         echo "finished finding overlap with de novo lncRNA library"
         done
     fi
