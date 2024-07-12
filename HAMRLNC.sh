@@ -87,6 +87,7 @@ fastq_in=""
 bam_in=""
 bam_sorted=true
 fastq_trimmed=true
+do_fastqc=false
 porg=""
 pterm=""
 ptest=""
@@ -98,7 +99,7 @@ gatk_dir=""
 
 
 ######################################################### Grab Arguments #########################################
-while getopts ":o:c:g:i:l:d:D:btI:hn:O:A:Y:R:yqG:x:kupH:U:W:S:M:J:f:m:Q:E:P:F:C:" opt; do
+while getopts ":o:c:g:i:l:d:D:btI:hn:O:A:Y:R:yqrG:x:kupH:U:W:S:M:J:f:m:Q:E:P:F:C:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -138,6 +139,9 @@ while getopts ":o:c:g:i:l:d:D:btI:hn:O:A:Y:R:yqG:x:kupH:U:W:S:M:J:f:m:Q:E:P:F:C:
     ;;
     y)
     clean=false
+    ;;
+    r)
+    do_fastqc=true
     ;;
     Q)
     quality=$OPTARG
@@ -288,30 +292,38 @@ fastqGrabSRA () {
   fi
 
   if [[ "$PE" = false ]]; then  
-    echo "[$line] performing fastqc on raw file..."
-    fastqc "$dumpout"/raw/"$line"."$suf" -o "$dumpout"/fastqc_results &
+    if [[ "$do_fastqc" == true ]]; then
+        echo "[$line] performing fastqc on raw file..."
+        fastqc "$dumpout"/raw/"$line"."$suf" -o "$dumpout"/fastqc_results &
+    fi
 
     echo "[$line] trimming..."
     trim_galore -o "$dumpout"/trimmed "$dumpout"/raw/"$line"."$suf"
 
-    echo "[$line] trimming complete, performing fastqc..."
-    fastqc "$dumpout"/trimmed/"$line""_trimmed.fq" -o "$dumpout"/fastqc_results
+    if [[ "$do_fastqc" == true ]]; then
+        echo "[$line] trimming complete, performing fastqc..."
+        fastqc "$dumpout"/trimmed/"$line""_trimmed.fq" -o "$dumpout"/fastqc_results
+    fi
 
     # remove unneeded raw
     rm "$dumpout"/raw/"$line"."$suf"
 
   else 
-    echo "[$line] performing fastqc on raw file..."
-    fastqc "$dumpout"/raw/"$line""_1.$suf" -o "$dumpout"/fastqc_results &
-    fastqc "$dumpout"/raw/"$line""_2.$suf" -o "$dumpout"/fastqc_results &
+    if [[ "$do_fastqc" == true ]]; then
+        echo "[$line] performing fastqc on raw file..."
+        fastqc "$dumpout"/raw/"$line""_1.$suf" -o "$dumpout"/fastqc_results &
+        fastqc "$dumpout"/raw/"$line""_2.$suf" -o "$dumpout"/fastqc_results &
+    fi
 
     echo "[$line] trimming..."
     trim_galore -o "$dumpout"/trimmed "$dumpout"/raw/"$line""_1.$suf"
     trim_galore -o "$dumpout"/trimmed "$dumpout"/raw/"$line""_2.$suf"
 
-    echo "[$line] trimming complete, performing fastqc..."
-    fastqc "$dumpout"/trimmed/"$line""_1_trimmed.fq" -o "$dumpout"/fastqc_results
-    fastqc "$dumpout"/trimmed/"$line""_2_trimmed.fq" -o "$dumpout"/fastqc_results
+    if [[ "$do_fastqc" == true ]]; then
+        echo "[$line] trimming complete, performing fastqc..."
+        fastqc "$dumpout"/trimmed/"$line""_1_trimmed.fq" -o "$dumpout"/fastqc_results
+        fastqc "$dumpout"/trimmed/"$line""_2_trimmed.fq" -o "$dumpout"/fastqc_results
+    fi
 
     # remove unneeded raw
     rm "$dumpout"/raw/"$line""_1.$suf"
@@ -326,20 +338,26 @@ fastqGrabSRA () {
 fastqGrabLocal () {
     sname=$(basename "$fq")
     tt=$(echo "$sname" | cut -d '.' -f1)
-    echo "[$sname] performing fastqc on raw file..."
     if [[ "$fastq_trimmed" == true ]]; then
         echo "[$sname] is already trimmed, skipping trimming step..."
 
         cp "$fq" "$dumpout"/trimmed/"$tt""_trimmed.fq"
-        fastqc "$fq" -o "$dumpout"/fastqc_results
-    else
-        fastqc "$fq" -o "$dumpout"/fastqc_results &
 
+        if [[ "$do_fastqc" == true ]]; then
+            echo "[$sname] performing fastqc on raw file..."
+            fastqc "$fq" -o "$dumpout"/fastqc_results
+        fi
+    else
+        if [[ "$do_fastqc" == true ]]; then
+            fastqc "$fq" -o "$dumpout"/fastqc_results &
+        fi
         echo "[$sname] trimming..."
         trim_galore -o "$dumpout"/trimmed "$fq" --dont_gzip
 
-        echo "[$sname] trimming complete, performing fastqc..."
-        fastqc "$dumpout"/trimmed/"$tt""_trimmed.fq" -o "$dumpout"/fastqc_results
+        if [[ "$do_fastqc" == true ]]; then
+            echo "[$sname] trimming complete, performing fastqc..."
+            fastqc "$dumpout"/trimmed/"$tt""_trimmed.fq" -o "$dumpout"/fastqc_results
+        fi
     fi
     
     
@@ -1085,7 +1103,7 @@ parallelWrap () {
     # this function will be split into bam route and fastq route, 6/30/24
     if [[ -z $bam_in ]]; then
         # always run the below to ensure necessary variables are assigned
-        if [[ $smpkey == *_1 ]]; then
+        if [[ $smpkey == *_1* ]]; then
             smpkey="${smpkey%_1*}"
             smp1="$smpdir/${smpkey}_1_trimmed.$original_ext"
             smp2="$smpdir/${smpkey}_2_trimmed.$original_ext"
@@ -1093,7 +1111,7 @@ parallelWrap () {
             det=0
             echo "$smpext is a part of a paired-end sequencing file"
             fastq2raw
-        elif [[ $smpkey == *_2 ]]; then
+        elif [[ $smpkey == *_2* ]]; then
             # If _2 is in the filename, this file was processed along with its corresponding _1 so we skip
             echo "$smpext has already been processed with its _1 counter part. Skipped."
             echo ""
