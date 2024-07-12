@@ -20,6 +20,7 @@ Read the [Wiki](https://github.com/harrlol/HAMRLNC/wiki) for detailed descriptio
 | `-l` | \<read length\> <br> an integer, the read length of this sequencing experiment, if non-unanimous use the shortest length |
 | Optional |
 | -n | \[number of threads\] <br> default=4 |
+| -r | \[perform fastqc\] <br> default=false |
 | -d | \[raw fastq folder\] <br> default=NA |
 | -t | \[trim raw fastq\] <br> default=false |
 | -D | \[raw bam folder\] <br> default=NA |
