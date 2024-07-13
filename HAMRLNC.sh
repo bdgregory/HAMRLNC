@@ -297,12 +297,19 @@ fastqGrabSRA () {
         fastqc "$dumpout"/raw/"$line"."$suf" -o "$dumpout"/fastqc_results &
     fi
 
-    echo "[$line] trimming..."
-    trim_galore -o "$dumpout"/trimmed "$dumpout"/raw/"$line"."$suf"
-
-    if [[ "$do_fastqc" == true ]]; then
-        echo "[$line] trimming complete, performing fastqc..."
-        fastqc "$dumpout"/trimmed/"$line""_trimmed.fq" -o "$dumpout"/fastqc_results
+    if [[ "$fastq_trimmed" == false ]]; then
+        echo "[$line] trimming..."
+        trim_galore -o "$dumpout"/trimmed "$dumpout"/raw/"$line"."$suf"
+    else
+        echo "[$sname] is already trimmed, skipping trimming step..."
+        cp "$fq" "$dumpout"/trimmed/"$tt""_trimmed.fq"
+    fi
+        
+    if [[ "$fastq_trimmed" == false ]]; then
+        if [[ "$do_fastqc" == true ]]; then
+            echo "[$line] trimming complete, performing fastqc..."
+            fastqc "$dumpout"/trimmed/"$line""_trimmed.fq" -o "$dumpout"/fastqc_results
+        fi
     fi
 
     # remove unneeded raw
