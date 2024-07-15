@@ -97,7 +97,8 @@ RUN conda install cutadapt -c bioconda -y && \
 	conda install last==1454-0 -c bioconda -y && \
 	conda install diamond==0.9.10 -c bioconda -y && \
 	conda install transdecoder==5.5.0 -c bioconda -y && \
-	conda install matplotlib-base -c conda-forge -y
+	conda install matplotlib-base -c conda-forge -y && \
+	conda install seqkit==2.8.2 -c bioconda -y
 
 #Install biopython
 RUN pip3 install biopython
