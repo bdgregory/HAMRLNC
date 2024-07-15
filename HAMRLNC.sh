@@ -15,10 +15,10 @@ usage () {
     -c  <filenames with key and name>
     -g  <reference genome.fa>
     -i  <reference genome annotation.gff3>
-    -l  <read length>
 
   OPTIONAL: 
     -d  [input a directory of fastq]
+    -l  <read length>
     -t  [trim input fastq files, default=false]
     -D  [input a directory of bam]
     -b  [sort input bam files, default=false]
@@ -76,6 +76,7 @@ run_featurecount=false
 mod_partial=false
 
 # other initialization
+length=0
 threads=4
 attribute_fc="gene_id"
 # I hope this is an ok initialization
@@ -115,7 +116,7 @@ while getopts ":o:c:g:i:l:d:D:btI:hn:O:A:Y:R:yzqrG:x:kupH:U:W:S:M:J:f:m:Q:E:P:F:
     annotation=$OPTARG # reference genome annotation
     ;;
     l)
-    length+=$OPTARG # read length 
+    length=$OPTARG # read length 
     ;;
     f)
     filter=$OPTARG
@@ -239,8 +240,6 @@ csv="$user_dir"/"$csv"
 # assigning additional variables
 dumpout=$out/datasets
 ttop=$((threads/2))
-mismatch=$((length*6/100))
-overhang=$((mismatch-1))
 genomedir=$(dirname "$genome")
 last_checkpoint=""
 
@@ -273,7 +272,7 @@ fastqGrabSRA () {
     fasterq-dump "$line" -O "$dumpout"/raw --verbose
 
     # automatically detects the suffix
-    echo "$dumpout"/raw/"$line"
+    # echo "$dumpout"/raw/"$line"
     if [[ -f $dumpout/raw/$line"_1.fastq" ]]; then
         suf="fastq"
         PE=true
@@ -304,16 +303,13 @@ fastqGrabSRA () {
         if [[ "$fastq_trimmed" == false ]]; then
             echo "[$line] trimming..."
             trim_galore -o "$dumpout"/trimmed "$dumpout"/raw/"$line"."$suf"
-        else
-            echo "[$line] is already trimmed, skipping trimming step..."
-            cp "$fq" "$dumpout"/trimmed/"$tt""_trimmed.fq"
-        fi
-            
-        if [[ "$fastq_trimmed" == false ]]; then
             if [[ "$do_fastqc" == true ]]; then
                 echo "[$line] trimming complete, performing fastqc..."
                 fastqc "$dumpout"/trimmed/"$line""_trimmed.fq" -o "$dumpout"/fastqc_results
             fi
+        else
+            echo "[$line] is already trimmed, skipping trimming step..."
+            cp "$dumpout"/raw/"$line"."$suf" "$dumpout"/trimmed/"$line""_trimmed.fq"
         fi
 
         # remove unneeded raw
@@ -1313,6 +1309,12 @@ fastqGrabHouseKeeping () {
         echo "Failed to call trim_galore command. Please check your installation."
         exit 1
     fi
+
+    if ! command -v seqkit > /dev/null; then
+        echo "Failed to call seqkit command. Please check your installation."
+        exit 1
+    fi
+
     ##########fastqGrab housekeeping ends#########
 }
 
@@ -1331,6 +1333,34 @@ fastq2rawHouseKeeping () {
         exit 1
     fi
 
+    # /trimmed is located so we get length here
+    if [[ "$length" -eq 0 ]]; then
+        echo "Using seqkit to determine approprate read lengths..."
+        length=$(seqkit stats $hamrin/*.fq | awk '{ print $7 }' | sort -n | tail -n +2 | head -1)
+        echo "minimum average read length detected: $length"
+        echo ""
+        
+        # notify if read length seems too short
+        if [[ ( "$length" < 50 ) ]]; then
+            echo ""
+            echo "######## WARNING!!!!!!! #######"
+            echo "A minimum average read length of $length bp was detected, which is less than the typical minimum of 50 bp"
+            echo "If this seems abnormal, please check your input samples"
+            echo "###############################"
+            echo ""
+        fi
+    else
+        echo "User provided sequencing read length: $length"
+    fi
+
+    # define other length related var
+    mismatch=$((length*6/100))
+    overhang=$((mismatch-1))
+    echo "calculated mismatch: $mismatch"
+    echo "calculated overhang: $overhang"
+    echo ""
+
+    
     # Creating some folders
     if [ ! -d "$out/pipeline" ]; then mkdir "$out"/pipeline; echo "created path: $out/pipeline"; fi
 
@@ -1574,11 +1604,13 @@ mainHouseKeeping () {
     elif [ -z "$annotation" ]; then
         echo "model organism genmome annotation gff3 not detected, exiting..."
         exit 1
-    elif [ -z "$length" ]; then
-        echo "read length not detected, exiting..."
-        exit 1
     else
         echo "all required arguments provided, proceding..."
+    fi
+
+    # announce length detection
+    if [[ -z "$length" ]]; then
+        echo "User did not specify sequencing read length, will use seqkit to auto detect"
     fi
 
     # check that the user didn't suppress all three programs -- if so, there's no need to run anything
