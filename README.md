@@ -41,6 +41,7 @@ Read the [Wiki](https://github.com/harrlol/HAMRLNC/wiki) for detailed descriptio
 | -Y | \[Panther test type: FISHER or BINOMIAL\] <br> default="FISHER" |
 | -R | \[Panther correction type: FDR, BONFERRONI, or NONE\] <br> default="FDR" |
 | -y | \[keep intermediate bam files\] <br> default=false |
+| -z | \[keep raw fastq files downloaded from SRA\] <br> default=false |
 | -q | \[halt program upon completion of checkpoint 2\] <br> default=false |
 | -G | \[attribute used for featurecount\] <br> default="gene_id" |
 | -x | \[max intron length for lncRNA-annotation-unique STAR mapping\] <br> default=NA |
