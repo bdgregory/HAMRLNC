@@ -17,8 +17,8 @@ Read the [Wiki](https://github.com/harrlol/HAMRLNC/wiki) for detailed descriptio
 | -c | \<filenames for each fastq.csv\> <br> a csv file that corresponds each srr code (or name of fastq file) to your desired nomenclature for each read |
 | -g | \<reference genome.fa> <br> a fasta file of the genome of the model organism |
 | -i | \<reference genome annotation.gff3> <br> a gff3 file of the genome of the model organism, note we require gff3 instead of gtf |
-| `-l` | \<read length\> <br> an integer, the read length of this sequencing experiment, if non-unanimous use the shortest length |
 | Optional |
+| `-l` | \<minimum average read length\> <br> default: auto-detect |
 | -n | \[number of threads\] <br> default=4 |
 | -r | \[perform fastqc\] <br> default=false |
 | -d | \[raw fastq folder\] <br> default=NA |
