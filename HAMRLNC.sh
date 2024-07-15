@@ -1777,8 +1777,13 @@ if [[ "$mod_partial" = true ]]; then
 elif [ "$last_checkpoint" = "checkpoint2" ]; then 
     ##############consensus finding begins##############
     # Produce consensus bam files based on filename (per extracted from name.csv) and store in ~/consensus
-    if [ ! -d "$out/hamr_consensus" ]; then mkdir "$out"/hamr_consensus; echo "created path: $out/hamr_consensus"; fi
-    if [ ! -d "$out/lnc_consensus" ]; then mkdir "$out"/lnc_consensus; echo "created path: $out/lnc_consensus"; fi
+    if [[ "$run_mod" = true ]]; then
+        if [ ! -d "$out/hamr_consensus" ]; then mkdir "$out"/hamr_consensus; echo "created path: $out/hamr_consensus"; fi
+    fi
+
+    if [[ "$run_mod" = true ]]; then
+        if [ ! -d "$out/lnc_consensus" ]; then mkdir "$out"/lnc_consensus; echo "created path: $out/lnc_consensus"; fi
+    fi
 
     # Run a series of command checks to ensure findConsensus can run smoothly
     if ! command -v Rscript > /dev/null; then
