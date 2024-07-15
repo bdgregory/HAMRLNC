@@ -305,7 +305,7 @@ fastqGrabSRA () {
             echo "[$line] trimming..."
             trim_galore -o "$dumpout"/trimmed "$dumpout"/raw/"$line"."$suf"
         else
-            echo "[$sname] is already trimmed, skipping trimming step..."
+            echo "[$line] is already trimmed, skipping trimming step..."
             cp "$fq" "$dumpout"/trimmed/"$tt""_trimmed.fq"
         fi
             
@@ -333,7 +333,7 @@ fastqGrabSRA () {
             trim_galore -o "$dumpout"/trimmed "$dumpout"/raw/"$line""_1.$suf"
             trim_galore -o "$dumpout"/trimmed "$dumpout"/raw/"$line""_2.$suf"
         else
-            echo "[$sname] is already trimmed, skipping trimming step..."
+            echo "[$line] is already trimmed, skipping trimming step..."
             cp "$dumpout"/raw/"$line""_1.$suf" "$dumpout"/trimmed/"$line""_1_trimmed.fq"
             cp "$dumpout"/raw/"$line""_2.$suf" "$dumpout"/trimmed/"$line""_2_trimmed.fq"
         fi
