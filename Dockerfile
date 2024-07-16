@@ -79,21 +79,21 @@ RUN conda config --add channels conda-forge && \
     conda config --add channels r
 
 # Conda packages
-RUN conda install cutadapt -c bioconda -y && \
+RUN conda install cutadapt==4.9 -c bioconda -y && \
  	conda install bedops==2.4.41 -c bioconda -y && \
     conda install bedtools==2.31.1 -c bioconda -y && \
 	conda install trim-galore==0.6.10 -c bioconda -y && \
 	conda install bedtools==2.31.0 -c bioconda -y && \
 	conda install star==2.7.10a -c bioconda -y && \
-	conda install gffread -y && \
+	conda install gffread==0.12.7 -y && \
  	conda install gffcompare==0.12.6 -c bioconda -y && \
 	conda install subread==2.0.1 -c bioconda -y && \
 	conda install stringtie==2.1.5 -c bioconda -y && \
 	conda install bioawk==1.0 -c bioconda -y && \
  	conda install python -y && \
-	conda install numpy -y && \
-	conda install pandas -y && \
- 	conda install pysam -y && \
+	conda install numpy==1.21.5 -y && \
+	conda install pandas==1.3.5 -y && \
+ 	conda install pysam==0.22.1 -y && \
 	conda install last==1454-0 -c bioconda -y && \
 	conda install diamond==0.9.10 -c bioconda -y && \
 	conda install transdecoder==5.5.0 -c bioconda -y && \
@@ -114,9 +114,9 @@ RUN cpanm URI/Escape.pm
 # rFAM database
 RUN apt-get install infernal
 RUN mkdir Rfam && cd Rfam
-RUN wget ftp://ftp.ebi.ac.uk/pub/databases/Rfam/CURRENT/Rfam.cm.gz && \
+RUN wget http://ftp.ebi.ac.uk/pub/databases/Rfam/14.10/Rfam.cm.gz && \
 	gunzip Rfam.cm.gz && \
-	wget ftp://ftp.ebi.ac.uk/pub/databases/Rfam/CURRENT/Rfam.clanin && \
+	wget http://ftp.ebi.ac.uk/pub/databases/Rfam/14.10/Rfam.clanin && \
 	cmpress Rfam.cm && \
 	cd ..
 
@@ -160,7 +160,7 @@ RUN git clone https://github.com/pantherdb/pantherapi-pyclient.git && \
 
 WORKDIR /
 
-RUN wget --output-document sratoolkit.tar.gz https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-ubuntu64.tar.gz && \
+RUN wget --output-document sratoolkit.tar.gz https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/3.1.1/sratoolkit.3.1.1-ubuntu64.tar.gz && \
  	tar -vxzf sratoolkit.tar.gz
 
 RUN apt-get install bc -y
