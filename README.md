@@ -86,12 +86,12 @@ cd /your/working/directory
 # run HAMRLNC with SRA IDs with all three arms activated
 docker run \
   --rm -v $(pwd):/working-dir \
-  -w /working-dir chosenobih/hamrlnc:v0.01 \
+  -w /working-dir chosenobih/hamrlnc:v0.02 \
   -o test_run \
   -c /demo/demo_filenames.csv \
   -g Arabidopsis_thaliana.TAIR10.dna.toplevel.fa \
   -i Arabidopsis_thaliana.TAIR10.59.gff3 \
-  -l 50 -n 8 -k -p -u
+  -l 50 -n 4 -k -p -u
 ```
 
 Running HAMRLNC as an application on CyVerse's Discovery Environment
