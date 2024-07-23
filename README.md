@@ -3,8 +3,8 @@
 
 
 ## Overview
-- HAMRLNC is a multipurpose toolbox that expedites the analysis pipeline for [HAMR](https://github.com/GregoryLab/HAMR) and [Evolinc](https://github.com/Evolinc/Evolinc-I/tree/master). The former was developed by [Paul Ryvkin et al](https://rnajournal.cshlp.org/content/19/12/1684), and the latter by [Andrew D.L. Nelson et al](https://www.frontiersin.org/articles/10.3389/fgene.2017.00052/full). HAMRLNC aims to make the original methods more accessible by automating the tedious pre-processing steps and expanding on their functionalities with its built-in post-processing steps, allowing users to visualize epitranscriptomic analysis with experimental condition contexts.
-- HAMRLNC is high-throughput and performs RNA-modification annotation and long intergenic non-coding RNAs(lincRNA) annotation at a bioproject scale. HAMRLNC performs constitutive trimming of acquired reads using Trim-Galore, and makes use of STAR as the default aligning tool; mapped reads are pre-processed using selected methods from [GATK](https://gatk.broadinstitute.org/hc/en-us), [gffread](https://ccb.jhu.edu/software/stringtie/gff.shtml#gffread), [CPC2](https://cpc2.gao-lab.org), [infernal](http://eddylab.org/infernal/), [samtools](http://www.htslib.org/doc/samtools.html), etc. Users can also opt to quantify transcripts alongside these steps. 
+- HAMRLNC is a multipurpose toolbox that expedites the analysis pipeline for [HAMR](https://github.com/GregoryLab/HAMR) developed by [Paul Ryvkin et al](https://rnajournal.cshlp.org/content/19/12/1684). HAMRLNC aims to make the original method more accessible by automating the tedious pre-processing steps and expanding on their functionalities with its built-in post-processing steps, allowing users to visualize epitranscriptomic analysis with experimental condition contexts.
+- HAMRLNC is high-throughput and performs RNA-modification annotation and long non-coding RNAs(lncRNA) annotation at a bioproject scale. HAMRLNC performs constitutive trimming of acquired reads using Trim-Galore, and makes use of STAR as the default aligning tool; mapped reads are pre-processed using selected methods from [GATK](https://gatk.broadinstitute.org/hc/en-us), [gffread](https://ccb.jhu.edu/software/stringtie/gff.shtml#gffread), [CPC2](https://cpc2.gao-lab.org), [infernal](http://eddylab.org/infernal/), [samtools](http://www.htslib.org/doc/samtools.html), etc. Users can also opt to quantify transcripts alongside these steps. 
 - HAMRLNC is optimized for partial parallel processing and modularization. Specifying a larger thread count where hardware permits will greatly increase the speed of a single run. If only partial functionality is needed (e.g. only analyzing modified ribonucleotides), users can implement flags to activate the function modules desired. See below for more details. 
 
 ## Command Line Arguments and Description
@@ -64,7 +64,7 @@ Running HAMRLNC
 
 ```
 # pull HAMRLNC docker image:  
-docker pull chosenobih/hamrlnc:v0.01
+docker pull chosenobih/hamrlnc:v0.02
 ```
 ```
 # clone HAMRLNC repo
