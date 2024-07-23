@@ -1100,7 +1100,7 @@ fastq2raw () {
                     # if user sprcifies intron length, map with the flag
                     if [[ -z $lnc_max_intron_len ]]; then
                         STAR \
-                            --runThreadN $threads \
+                            --runThreadN 2 \
                             --genomeDir "$path_to_STARref" \
                             --readFilesIn "$smp" \
                             --outFileNamePrefix "$smpout"/lnc \
@@ -1115,7 +1115,7 @@ fastq2raw () {
                     # otherwise, map without the flag to use default
                     else
                         STAR \
-                            --runThreadN $threads \
+                            --runThreadN 2 \
                             --genomeDir "$path_to_STARref" \
                             --readFilesIn "$smp" \
                             --outFileNamePrefix "$smpout"/lnc \
@@ -1134,7 +1134,7 @@ fastq2raw () {
                 # if any of the other arms are activated, def require STAR with vanilla mode
                 if [[ "$run_mod" = true ]] || [[ "$run_featurecount" = true ]]; then
                     STAR \
-                        --runThreadN $threads \
+                        --runThreadN 2 \
                         --genomeDir "$path_to_STARref" \
                         --readFilesIn "$smp" \
                         --sjdbOverhang $overhang \
@@ -1151,7 +1151,7 @@ fastq2raw () {
                     # if user sprcifies intron length, map with the flag
                     if [[ -z $lnc_max_intron_len ]]; then
                         STAR \
-                            --runThreadN $threads \
+                            --runThreadN 2 \
                             --genomeDir "$path_to_STARref" \
                             --readFilesIn "$smp1" "$smp2" \
                             --outFileNamePrefix "$smpout"/lnc \
@@ -1166,7 +1166,7 @@ fastq2raw () {
                     # otherwise, map without the flag to use default
                     else
                         STAR \
-                            --runThreadN $threads \
+                            --runThreadN 2 \
                             --genomeDir "$path_to_STARref" \
                             --readFilesIn "$smp1" "$smp2" \
                             --outFileNamePrefix "$smpout"/lnc \
@@ -1185,7 +1185,7 @@ fastq2raw () {
                 # if any of the other arms are activated, def require STAR with vanilla mode
                 if [[ "$run_mod" = true ]] || [[ "$run_featurecount" = true ]]; then
                     STAR \
-                        --runThreadN $threads \
+                        --runThreadN 2 \
                         --genomeDir "$path_to_STARref" \
                         --readFilesIn "$smp1" "$smp2" \
                         --sjdbOverhang $overhang \
