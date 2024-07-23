@@ -320,14 +320,16 @@ fastqGrabSRA () {
     else 
         if [[ "$do_fastqc" == true ]]; then
             echo "[$line] performing fastqc on raw file..."
-            fastqc "$dumpout"/raw/"$line""_1.$suf" -o "$dumpout"/fastqc_results &
-            fastqc "$dumpout"/raw/"$line""_2.$suf" -o "$dumpout"/fastqc_results &
+            fastqc \
+                -o "$dumpout"/fastqc_results\
+                "$dumpout"/raw/"$line""_1.$suf" "$dumpout"/raw/"$line""_2.$suf"
         fi
 
         if [[ "$fastq_trimmed" == false ]]; then
             echo "[$line] trimming..."
-            trim_galore -o "$dumpout"/trimmed "$dumpout"/raw/"$line""_1.$suf"
-            trim_galore -o "$dumpout"/trimmed "$dumpout"/raw/"$line""_2.$suf"
+            trim_galore --paired \
+                -o "$dumpout"/trimmed \
+                "$dumpout"/raw/"$line""_1.$suf" "$dumpout"/raw/"$line""_2.$suf"
         else
             echo "[$line] is already trimmed, skipping trimming step..."
             cp "$dumpout"/raw/"$line""_1.$suf" "$dumpout"/trimmed/"$line""_1_trimmed.fq"
@@ -337,8 +339,9 @@ fastqGrabSRA () {
         if [[ "$fastq_trimmed" == false ]]; then
             if [[ "$do_fastqc" == true ]]; then
             echo "[$line] trimming complete, performing fastqc..."
-            fastqc "$dumpout"/trimmed/"$line""_1_trimmed.fq" -o "$dumpout"/fastqc_results
-            fastqc "$dumpout"/trimmed/"$line""_2_trimmed.fq" -o "$dumpout"/fastqc_results
+            fastqc \
+                -o "$dumpout"/fastqc_results \
+                "$dumpout"/trimmed/"$line""_1_trimmed.fq" "$dumpout"/trimmed/"$line""_2_trimmed.fq"
             fi
         fi
 
@@ -355,27 +358,87 @@ fastqGrabSRA () {
 
 # is repeated for each local file provided, performs fastqc and trimming; automatic paired-end recognition
 fastqGrabLocal () {
+    
     sname=$(basename "$fq")
     tt=$(echo "$sname" | cut -d '.' -f1)
-    if [[ "$fastq_trimmed" == true ]]; then
-        echo "[$sname] is already trimmed, skipping trimming step..."
 
-        cp "$fq" "$dumpout"/trimmed/"$tt""_trimmed.fq"
-
-        if [[ "$do_fastqc" == true ]]; then
-            echo "[$sname] performing fastqc on raw file..."
-            fastqc "$fq" -o "$dumpout"/fastqc_results
-        fi
+    # automatically detects the suffix
+    if [[ -f $fastq_in/$tt"_1.fastq" ]]; then
+        suf="fastq"
+        PE=true
+        echo "$tt is a paired-end file ending in .fastq"
+    elif [[ -f $fastq_in/$tt"_1.fq" ]]; then
+        suf="fq"
+        PE=true
+        echo "$tt is a paired-end file ending in .fq"
+    elif [[ -f $fastq_in/$tt".fastq" ]]; then
+        suf="fastq"
+        PE=false
+        echo "$tt is a single-end file ending in .fastq"
+    elif [[ -f $fastq_in/$tt".fq" ]]; then
+        suf="fq"
+        PE=false
+        echo "$tt is a single-end file ending in .fq"
     else
-        if [[ "$do_fastqc" == true ]]; then
-            fastqc "$fq" -o "$dumpout"/fastqc_results &
-        fi
-        echo "[$sname] trimming..."
-        trim_galore -o "$dumpout"/trimmed "$fq" --dont_gzip
+        echo "suffix not recognized, please check your datasets"
+        exit 1
+    fi
 
-        if [[ "$do_fastqc" == true ]]; then
-            echo "[$sname] trimming complete, performing fastqc..."
-            fastqc "$dumpout"/trimmed/"$tt""_trimmed.fq" -o "$dumpout"/fastqc_results
+    
+
+    if [[ "$PE" = false ]]; then  
+        if [[ "$fastq_trimmed" == true ]]; then
+            echo "[$sname] is already trimmed, skipping trimming step..."
+            cp "$fq" "$dumpout"/trimmed/"$tt""_trimmed.fq"
+
+            if [[ "$do_fastqc" == true ]]; then
+                echo "[$sname] performing fastqc on raw file..."
+                fastqc "$fq" -o "$dumpout"/fastqc_results
+            fi
+        else
+            if [[ "$do_fastqc" == true ]]; then
+                fastqc "$fq" -o "$dumpout"/fastqc_results &
+            fi
+            echo "[$sname] trimming..."
+            trim_galore -o "$dumpout"/trimmed "$fq" --dont_gzip
+
+            if [[ "$do_fastqc" == true ]]; then
+                echo "[$sname] trimming complete, performing fastqc..."
+                fastqc "$dumpout"/trimmed/"$tt""_trimmed.fq" -o "$dumpout"/fastqc_results
+            fi
+        fi
+    else 
+        if [[ "$fastq_trimmed" == true ]]; then
+            echo "[$sname] is already trimmed, skipping trimming step..."
+            cp "$dumpout"/trimmed/"$tt""_1_trimmed.fq"
+            cp "$fastq_in"/"$tt""_2.$suf" "$dumpout"/trimmed/"$tt""_2_trimmed.fq"
+
+            if [[ "$do_fastqc" == true ]]; then
+                echo "[$sname] performing fastqc on raw file..."
+                fastqc \
+                    -o "$dumpout"/fastqc_results \
+                    "$fastq_in"/"$tt""_1.$suf" "$fastq_in"/"$tt""_2.$suf"
+            fi
+        else
+            if [[ "$do_fastqc" == true ]]; then
+                echo "[$sname] performing fastqc on raw file..."
+                fastqc \
+                    -o "$dumpout"/fastqc_results \
+                    "$fastq_in"/"$tt""_1.$suf" "$fastq_in"/"$tt""_2.$suf"
+            fi
+            
+            echo "[$sname] trimming..."
+            trim_galore \
+                -o "$dumpout"/trimmed "$fq" \
+                "$fastq_in"/"$tt""_1.$suf" "$fastq_in"/"$tt""_2.$suf" \
+                --dont_gzip
+
+            if [[ "$do_fastqc" == true ]]; then
+                echo "[$sname] trimming complete, performing fastqc..."
+                fastqc \
+                    -o "$dumpout"/fastqc_results \
+                    "$dumpout"/trimmed/"$tt""_1_trimmed.fq" "$dumpout"/trimmed/"$tt""_2_trimmed.fq"
+            fi
         fi
     fi
     
