@@ -302,24 +302,24 @@ fastqGrabSRA () {
     if [[ "$PE" = false ]]; then  
         if [[ "$do_fastqc" == true ]]; then
             echo "[$line] performing fastqc on raw file..."
-            fastqc "$dumpout"/raw/"$line"."$suf" -o "$dumpout"/fastqc_results &
+            fastqc "$dumpout"/raw/"$line".* -o "$dumpout"/fastqc_results &
         fi
 
         if [[ "$fastq_trimmed" == false ]]; then
             echo "[$line] trimming..."
-            trim_galore -o "$dumpout"/trimmed "$dumpout"/raw/"$line"."$suf"
+            trim_galore -o "$dumpout"/trimmed "$dumpout"/raw/"$line".*
             if [[ "$do_fastqc" == true ]]; then
                 echo "[$line] trimming complete, performing fastqc..."
                 fastqc "$dumpout"/trimmed/"$line""_trimmed.fq" -o "$dumpout"/fastqc_results
             fi
         else
             echo "[$line] is already trimmed, skipping trimming step..."
-            cp "$dumpout"/raw/"$line"."$suf" "$dumpout"/trimmed/"$line""_trimmed.fq"
+            cp "$dumpout"/raw/"$line".* "$dumpout"/trimmed/"$line""_trimmed.fq"
         fi
 
         # remove unneeded raw
         if [[ "$clean_fastq_raw" == true ]]; then
-            rm "$dumpout"/raw/"$line"."$suf"
+            rm "$dumpout"/raw/"$line".*
         fi
 
     else 
@@ -327,18 +327,18 @@ fastqGrabSRA () {
             echo "[$line] performing fastqc on raw file..."
             fastqc \
                 -o "$dumpout"/fastqc_results\
-                "$dumpout"/raw/"$line""_1.$suf" "$dumpout"/raw/"$line""_2.$suf"
+                "$dumpout"/raw/"$line""_1.*" "$dumpout"/raw/"$line""_2.*"
         fi
 
         if [[ "$fastq_trimmed" == false ]]; then
             echo "[$line] trimming..."
             trim_galore --paired \
                 -o "$dumpout"/trimmed \
-                "$dumpout"/raw/"$line""_1.$suf" "$dumpout"/raw/"$line""_2.$suf"
+                "$dumpout"/raw/"$line""_1.*" "$dumpout"/raw/"$line""_2.*"
         else
             echo "[$line] is already trimmed, skipping trimming step..."
-            cp "$dumpout"/raw/"$line""_1.$suf" "$dumpout"/trimmed/"$line""_1_trimmed.fq"
-            cp "$dumpout"/raw/"$line""_2.$suf" "$dumpout"/trimmed/"$line""_2_trimmed.fq"
+            cp "$dumpout"/raw/"$line""_1.*" "$dumpout"/trimmed/"$line""_1_trimmed.fq"
+            cp "$dumpout"/raw/"$line""_2.*" "$dumpout"/trimmed/"$line""_2_trimmed.fq"
         fi
 
         if [[ "$fastq_trimmed" == false ]]; then
@@ -352,8 +352,8 @@ fastqGrabSRA () {
 
         # remove unneeded raw
         if [[ "$clean_fastq_raw" == true ]]; then
-            rm "$dumpout"/raw/"$line""_1.$suf"
-            rm "$dumpout"/raw/"$line""_2.$suf"
+            rm "$dumpout"/raw/"$line""_1.*"
+            rm "$dumpout"/raw/"$line""_2.*"
         fi
     fi
 
@@ -431,26 +431,26 @@ fastqGrabLocal () {
         if [[ "$fastq_trimmed" == true ]]; then
             echo "[$sname] is already trimmed, skipping trimming step..."
             cp "$dumpout"/trimmed/"$tt""_1_trimmed.fq"
-            cp "$fastq_in"/"$tt""_2.$suf" "$dumpout"/trimmed/"$tt""_2_trimmed.fq"
+            cp "$fastq_in"/"$tt""_2.*" "$dumpout"/trimmed/"$tt""_2_trimmed.fq"
 
             if [[ "$do_fastqc" == true ]]; then
                 echo "[$sname] performing fastqc on raw file..."
                 fastqc \
                     -o "$dumpout"/fastqc_results \
-                    "$fastq_in"/"$tt""_1.$suf" "$fastq_in"/"$tt""_2.$suf"
+                    "$fastq_in"/"$tt""_1.*" "$fastq_in"/"$tt""_2.*"
             fi
         else
             if [[ "$do_fastqc" == true ]]; then
                 echo "[$sname] performing fastqc on raw file..."
                 fastqc \
                     -o "$dumpout"/fastqc_results \
-                    "$fastq_in"/"$tt""_1.$suf" "$fastq_in"/"$tt""_2.$suf"
+                    "$fastq_in"/"$tt""_1.*" "$fastq_in"/"$tt""_2.*"
             fi
             
             echo "[$sname] trimming..."
             trim_galore \
                 -o "$dumpout"/trimmed "$fq" \
-                "$fastq_in"/"$tt""_1.$suf" "$fastq_in"/"$tt""_2.$suf" \
+                "$fastq_in"/"$tt""_1.*" "$fastq_in"/"$tt""_2.*" \
                 --dont_gzip
 
             if [[ "$do_fastqc" == true ]]; then
