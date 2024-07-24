@@ -379,7 +379,7 @@ fastqGrabLocal () {
         suf="fq"
         PE=false
         echo "$tt is a single-end file ending in .fq"
-    if [[ -f $fastq_in/$tt"_1.fastq.gz" ]]; then
+    elif [[ -f $fastq_in/$tt"_1.fastq.gz" ]]; then
         suf="fastq.gz"
         PE=true
         echo "$tt is a paired-end file ending in .fastq"
