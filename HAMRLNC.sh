@@ -438,20 +438,20 @@ fastqGrabLocal () {
                 echo "[$sname] performing fastqc on raw file..."
                 fastqc \
                     -o "$dumpout"/fastqc_results \
-                    "$fastq_in"/"$tt"".*"
+                    "$fastq_in"/"$tt""*"
             fi
         else
             if [[ "$do_fastqc" == true ]]; then
                 echo "[$sname] performing fastqc on raw file..."
                 fastqc \
                     -o "$dumpout"/fastqc_results \
-                    "$fastq_in"/"$tt"".*"
+                    "$fastq_in"/"$tt""*"
             fi
             
             echo "[$sname] trimming..."
             trim_galore \
                 -o "$dumpout"/trimmed "$fq" \
-                "$fastq_in"/"$tt"".*" \
+                "$fastq_in"/"$tt""*" \
                 --dont_gzip
 
             if [[ "$do_fastqc" == true ]]; then
