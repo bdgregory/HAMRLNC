@@ -365,7 +365,8 @@ fastqGrabSRA () {
 fastqGrabLocal () {
     
     sname=$(basename "$fq")
-    tt=$(echo "$sname" | cut -d '.' -f1)
+    t=$(echo "$sname" | cut -d '.' -f1)
+    tt=$(echo "$t" | cut -d '_' -f1)
 
     # # automatically detects the suffix
     # if [[ -f $fastq_in/$tt"_1.fastq" ]]; then
@@ -430,27 +431,27 @@ fastqGrabLocal () {
     else 
         if [[ "$fastq_trimmed" == true ]]; then
             echo "[$sname] is already trimmed, skipping trimming step..."
-            cp "$dumpout"/trimmed/"$tt""_1_trimmed.fq"
-            cp "$fastq_in"/"$tt""_2.*" "$dumpout"/trimmed/"$tt""_2_trimmed.fq"
+            cp "$fastq_in"/"$tt""*_1*" "$dumpout"/trimmed/"$tt""_1_trimmed.fq"
+            cp "$fastq_in"/"$tt""*_2*" "$dumpout"/trimmed/"$tt""_2_trimmed.fq"
 
             if [[ "$do_fastqc" == true ]]; then
                 echo "[$sname] performing fastqc on raw file..."
                 fastqc \
                     -o "$dumpout"/fastqc_results \
-                    "$fastq_in"/"$tt""_1.*" "$fastq_in"/"$tt""_2.*"
+                    "$fastq_in"/"$tt"".*"
             fi
         else
             if [[ "$do_fastqc" == true ]]; then
                 echo "[$sname] performing fastqc on raw file..."
                 fastqc \
                     -o "$dumpout"/fastqc_results \
-                    "$fastq_in"/"$tt""_1.*" "$fastq_in"/"$tt""_2.*"
+                    "$fastq_in"/"$tt"".*"
             fi
             
             echo "[$sname] trimming..."
             trim_galore \
                 -o "$dumpout"/trimmed "$fq" \
-                "$fastq_in"/"$tt""_1.*" "$fastq_in"/"$tt""_2.*" \
+                "$fastq_in"/"$tt"".*" \
                 --dont_gzip
 
             if [[ "$do_fastqc" == true ]]; then
