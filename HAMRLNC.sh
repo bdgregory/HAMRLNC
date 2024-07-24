@@ -25,6 +25,7 @@ usage () {
     -I  [input genome annotation folder for STAR]
     -h  [help message] 
     -n  number of threads (default=4)
+    -p  [run in paired end mode]
     -O  [Panther: organism taxon ID, default=3702]
     -A  [Panther: annotation dataset, default="GO:0008150"]
     -Y  [Panther: test type, default="FISHER"]
@@ -32,11 +33,11 @@ usage () {
     -y  [keep intermediate bam files, default=false]
     -q  [halt program upon completion of checkpoint 2, default=false]
     -G  [attribute used for featurecount, default="gene_id"]
-    -k  [activate modification annotation workflow, default=false]
-    -p  [activate lncRNA annotation workflow, default=false]
-    -u  [activate featurecount workflow, default=false]
+    -K  [activate modification annotation workflow, default=false]
+    -L  [activate lncRNA annotation workflow, default=false]
+    -U  [activate featurecount workflow, default=false]
     -H  [SERVER alt path for panther]
-    -U  [SERVER alt path for HAMRLINC]
+    -Z  [SERVER alt path for HAMRLINC]
     -W  [SERVER alt path for GATK]
     -S  [SERVER alt path for HAMR]
     -J  [SERVER alt path for CPC2]
@@ -90,6 +91,7 @@ bam_in=""
 bam_sorted=true
 fastq_trimmed=true
 do_fastqc=false
+PE=false
 porg=""
 pterm=""
 ptest=""
@@ -101,7 +103,7 @@ gatk_dir=""
 
 
 ######################################################### Grab Arguments #########################################
-while getopts ":o:c:g:i:l:d:D:btI:hn:O:A:Y:R:yzqrG:x:kupH:U:W:S:M:J:f:m:Q:E:P:F:C:" opt; do
+while getopts ":o:c:g:i:l:d:D:btI:hn:O:A:Y:R:yzqrG:x:pKULH:Z:W:S:M:J:f:m:Q:E:P:F:C:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -128,12 +130,15 @@ while getopts ":o:c:g:i:l:d:D:btI:hn:O:A:Y:R:yzqrG:x:kupH:U:W:S:M:J:f:m:Q:E:P:F:
     threads=$OPTARG
     ;;
     p)
+    PE=true
+    ;;
+    L)
     run_lnc=true
     ;;
-    k)
+    K)
     run_mod=true
     ;;
-    u)
+    U)
     run_featurecount=true
     ;;
     q)
@@ -208,7 +213,7 @@ while getopts ":o:c:g:i:l:d:D:btI:hn:O:A:Y:R:yzqrG:x:kupH:U:W:S:M:J:f:m:Q:E:P:F:
     F)
     fdr=$OPTARG
     ;;
-    U)
+    Z)
     hamrlinc_dir=$OPTARG
     ;;
     W)
@@ -273,26 +278,26 @@ fastqGrabSRA () {
 
     # automatically detects the suffix
     # echo "$dumpout"/raw/"$line"
-    if [[ -f $dumpout/raw/$line"_1.fastq" ]]; then
-        suf="fastq"
-        PE=true
-        echo "$line is a paired-end file ending in .fastq"
-    elif [[ -f $dumpout/raw/$line"_1.fq" ]]; then
-        suf="fq"
-        PE=true
-        echo "$line is a paired-end file ending in .fq"
-    elif [[ -f $dumpout/raw/$line".fastq" ]]; then
-        suf="fastq"
-        PE=false
-        echo "$line is a single-end file ending in .fastq"
-    elif [[ -f $dumpout/raw/$line".fq" ]]; then
-        suf="fq"
-        PE=false
-        echo "$line is a single-end file ending in .fq"
-    else
-        echo "suffix not recognized, please check your datasets"
-        exit 1
-    fi
+    # if [[ -f $dumpout/raw/$line"_1.fastq" ]]; then
+    #     suf="fastq"
+    #     PE=true
+    #     echo "$line is a paired-end file ending in .fastq"
+    # elif [[ -f $dumpout/raw/$line"_1.fq" ]]; then
+    #     suf="fq"
+    #     PE=true
+    #     echo "$line is a paired-end file ending in .fq"
+    # elif [[ -f $dumpout/raw/$line".fastq" ]]; then
+    #     suf="fastq"
+    #     PE=false
+    #     echo "$line is a single-end file ending in .fastq"
+    # elif [[ -f $dumpout/raw/$line".fq" ]]; then
+    #     suf="fq"
+    #     PE=false
+    #     echo "$line is a single-end file ending in .fq"
+    # else
+    #     echo "suffix not recognized, please check your datasets"
+    #     exit 1
+    # fi
 
     if [[ "$PE" = false ]]; then  
         if [[ "$do_fastqc" == true ]]; then
@@ -362,45 +367,44 @@ fastqGrabLocal () {
     sname=$(basename "$fq")
     tt=$(echo "$sname" | cut -d '.' -f1)
 
-    # automatically detects the suffix
-    if [[ -f $fastq_in/$tt"_1.fastq" ]]; then
-        suf="fastq"
-        PE=true
-        echo "$tt is a paired-end file ending in .fastq"
-    elif [[ -f $fastq_in/$tt"_1.fq" ]]; then
-        suf="fq"
-        PE=true
-        echo "$tt is a paired-end file ending in .fq"
-    elif [[ -f $fastq_in/$tt".fastq" ]]; then
-        suf="fastq"
-        PE=false
-        echo "$tt is a single-end file ending in .fastq"
-    elif [[ -f $fastq_in/$tt".fq" ]]; then
-        suf="fq"
-        PE=false
-        echo "$tt is a single-end file ending in .fq"
-    elif [[ -f $fastq_in/$tt"_1.fastq.gz" ]]; then
-        suf="fastq.gz"
-        PE=true
-        echo "$tt is a paired-end file ending in .fastq"
-    elif [[ -f $fastq_in/$tt"_1.fq.gz" ]]; then
-        suf="fq.gz"
-        PE=true
-        echo "$tt is a paired-end file ending in .fq"
-    elif [[ -f $fastq_in/$tt".fastq.gz" ]]; then
-        suf="fastq.gz"
-        PE=false
-        echo "$tt is a single-end file ending in .fastq"
-    elif [[ -f $fastq_in/$tt".fq.gz" ]]; then
-        suf="fq.gz"
-        PE=false
-        echo "$tt is a single-end file ending in .fq"
-    else
-        echo "suffix not recognized, please check your datasets"
-        exit 1
-    fi
+    # # automatically detects the suffix
+    # if [[ -f $fastq_in/$tt"_1.fastq" ]]; then
+    #     suf="fastq"
+    #     PE=true
+    #     echo "$tt is a paired-end file ending in .fastq"
+    # elif [[ -f $fastq_in/$tt"_1.fq" ]]; then
+    #     suf="fq"
+    #     PE=true
+    #     echo "$tt is a paired-end file ending in .fq"
+    # elif [[ -f $fastq_in/$tt".fastq" ]]; then
+    #     suf="fastq"
+    #     PE=false
+    #     echo "$tt is a single-end file ending in .fastq"
+    # elif [[ -f $fastq_in/$tt".fq" ]]; then
+    #     suf="fq"
+    #     PE=false
+    #     echo "$tt is a single-end file ending in .fq"
+    # if [[ -f $fastq_in/$tt"_1.fastq.gz" ]]; then
+    #     suf="fastq.gz"
+    #     PE=true
+    #     echo "$tt is a paired-end file ending in .fastq"
+    # elif [[ -f $fastq_in/$tt"_1.fq.gz" ]]; then
+    #     suf="fq.gz"
+    #     PE=true
+    #     echo "$tt is a paired-end file ending in .fq"
+    # elif [[ -f $fastq_in/$tt".fastq.gz" ]]; then
+    #     suf="fastq.gz"
+    #     PE=false
+    #     echo "$tt is a single-end file ending in .fastq"
+    # elif [[ -f $fastq_in/$tt".fq.gz" ]]; then
+    #     suf="fq.gz"
+    #     PE=false
+    #     echo "$tt is a single-end file ending in .fq"
+    # else
+    #     echo "suffix not recognized, please check your datasets"
+    #     exit 1
+    # fi
 
-    
 
     if [[ "$PE" = false ]]; then  
         if [[ "$fastq_trimmed" == true ]]; then
@@ -1360,7 +1364,7 @@ parallelWrap () {
     # this function will be split into bam route and fastq route, 6/30/24
     if [[ -z $bam_in ]]; then
         # always run the below to ensure necessary variables are assigned
-        if [[ $smpkey == *_1* ]]; then
+        if [[ $PE == true ]]; then
             smpkey="${smpkey%_1*}"
             smp1="$smpdir/${smpkey}_1_trimmed.$original_ext"
             smp2="$smpdir/${smpkey}_2_trimmed.$original_ext"
@@ -1368,10 +1372,6 @@ parallelWrap () {
             det=0
             echo "$smpext is a part of a paired-end sequencing file"
             fastq2raw
-        elif [[ $smpkey == *_2* ]]; then
-            # If _2 is in the filename, this file was processed along with its corresponding _1 so we skip
-            echo "$smpext has already been processed with its _1 counter part. Skipped."
-            echo ""
         else
             det=1
             echo "$smpext is a single-end sequencing file"
