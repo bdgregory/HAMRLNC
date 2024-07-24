@@ -445,7 +445,7 @@ fastqGrabLocal () {
             fi
             
             echo "[$sname] trimming..."
-            trim_galore \
+            trim_galore --paired \
                 -o "$dumpout"/trimmed "$fq" \
                 "$fastq_in"/"$tt""_1.$suf" "$fastq_in"/"$tt""_2.$suf" \
                 --dont_gzip
