@@ -21,16 +21,15 @@ Read the [Wiki](https://github.com/harrlol/HAMRLNC/wiki) for detailed descriptio
 | Optional |
 | `-l` | \<minimum average read length\> <br> default: auto-detect |
 | -n | \[number of threads\] <br> default=4 |
-| -p | \[input is paired end\] <br> default=false |
 | -r | \[perform fastqc\] <br> default=false |
 | -d | \[raw fastq folder\] <br> default=NA |
 | -t | \[trim raw fastq\] <br> default=false |
 | -D | \[raw bam folder\] <br> default=NA |
 | -b | \[sort raw bam\] <br> default=false |
 | `-I` | \[STAR genome index folder\] <br> default=NA |
-| -K | \[activate modification annotation workflow\] <br> default=false |
-| -L | \[activate lncRNA annotation workflow\] <br> default=false |
-| -U | \[activate featurecount workflow\] <br> default=false |
+| -k | \[activate modification annotation workflow\] <br> default=false |
+| -p | \[activate lncRNA annotation workflow\] <br> default=false |
+| -u | \[activate featurecount workflow\] <br> default=false |
 | -f | \[HAMR filter\] <br> default=filter_SAM_number_hits.pl |
 | -m | \[HAMR model\] <br> default=euk_trna_mods.Rdata |
 | -Q | \[HAMR minimum quality score: 0-40\] <br> default=30 |
@@ -48,7 +47,7 @@ Read the [Wiki](https://github.com/harrlol/HAMRLNC/wiki) for detailed descriptio
 | -G | \[attribute used for featurecount\] <br> default="gene_id" |
 | -x | \[max intron length for lncRNA-annotation-unique STAR mapping\] <br> default=NA |
 | -H | \[SERVER alt path for panther\] |
-| -Z | \[SERVER alt path for HAMRLNC\] |
+| -U | \[SERVER alt path for HAMRLNC\] |
 | -W | \[SERVER alt path for GATK\]
 | -S | \[SERVER alt path for HAMR\]
 | -J | \[SERVER alt path for CPC2\]
