@@ -360,7 +360,8 @@ fastqGrabSRA () {
 fastqGrabLocal () {
     
     sname=$(basename "$fq")
-    tt=$(echo "$sname" | cut -d '.' -f1)
+    t=$(echo "$sname" | cut -d '.' -f1)
+    tt=$(echo "$t" | cut -d '_' -f1)
 
     # automatically detects the suffix
     if [[ -f $fastq_in/$tt"_1.fastq" ]]; then
