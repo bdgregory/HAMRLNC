@@ -379,6 +379,22 @@ fastqGrabLocal () {
         suf="fq"
         PE=false
         echo "$tt is a single-end file ending in .fq"
+    if [[ -f $fastq_in/$tt"_1.fastq.gz" ]]; then
+        suf="fastq.gz"
+        PE=true
+        echo "$tt is a paired-end file ending in .fastq"
+    elif [[ -f $fastq_in/$tt"_1.fq.gz" ]]; then
+        suf="fq.gz"
+        PE=true
+        echo "$tt is a paired-end file ending in .fq"
+    elif [[ -f $fastq_in/$tt".fastq.gz" ]]; then
+        suf="fastq.gz"
+        PE=false
+        echo "$tt is a single-end file ending in .fastq"
+    elif [[ -f $fastq_in/$tt".fq.gz" ]]; then
+        suf="fq.gz"
+        PE=false
+        echo "$tt is a single-end file ending in .fq"
     else
         echo "suffix not recognized, please check your datasets"
         exit 1
