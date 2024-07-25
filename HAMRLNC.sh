@@ -329,6 +329,10 @@ fastqGrabSRA () {
             trim_galore --paired \
                 -o "$dumpout"/trimmed \
                 "$dumpout"/raw/"$line""_1.$suf" "$dumpout"/raw/"$line""_2.$suf"
+
+                # dealing with trim galore naming convention under pe
+                mv "$dumpout"/trimmed/"$tt""_1_val_1.fq" "$dumpout"/trimmed/"$tt""_1_trimmed.fq"
+                mv "$dumpout"/trimmed/"$tt""_2_val_2.fq" "$dumpout"/trimmed/"$tt""_2_trimmed.fq"
         else
             echo "[$line] is already trimmed, skipping trimming step..."
             cp "$dumpout"/raw/"$line""_1.$suf" "$dumpout"/trimmed/"$line""_1_trimmed.fq"
@@ -445,6 +449,10 @@ fastqGrabLocal () {
                 -o "$dumpout"/trimmed \
                 "$fastq_in"/"$tt""_1.$suf" "$fastq_in"/"$tt""_2.$suf" \
                 --dont_gzip
+
+                # dealing with trim galore naming convention under pe
+                mv "$dumpout"/trimmed/"$tt""_1_val_1.fq" "$dumpout"/trimmed/"$tt""_1_trimmed.fq"
+                mv "$dumpout"/trimmed/"$tt""_2_val_2.fq" "$dumpout"/trimmed/"$tt""_2_trimmed.fq"
 
             if [[ "$do_fastqc" == true ]]; then
                 echo "[$sname] trimming complete, performing fastqc..."
