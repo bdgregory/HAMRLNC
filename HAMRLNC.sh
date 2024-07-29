@@ -1596,8 +1596,8 @@ fastq2rawHouseKeeping () {
     fi
 
     # define other length related var
-    mismatch=$((length*6/100))
-    overhang=$((mismatch-1))
+    mismatch=$(echo "0.08 * $length" | bc | awk '{print int($1+0.5)}')
+    overhang=$((length-1))
     echo "calculated mismatch: $mismatch"
     echo "calculated overhang: $overhang"
     echo ""
