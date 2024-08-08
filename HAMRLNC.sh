@@ -2325,7 +2325,7 @@ if [ "$last_checkpoint" = "checkpoint4" ]; then
     fi
 
     echo ""
-    echo "#################################### HAMRLINC has finished running #######################################"
+    echo "#################################### HAMRLNC has finished running #######################################"
     date '+%d/%m/%Y %H:%M:%S'
     echo ""
 fi

@@ -12,10 +12,6 @@ args=commandArgs(trailingOnly=TRUE)
 df <- fread(args[1])
 dir <- dirname(args[1])
 
-# debugging
-# df <- fread("/Users/harrlol/Desktop/HAMRLINC_test/test_short/results/mod_long.csv")
-# dir <- dirname("/Users/harrlol/Desktop/HAMRLINC_test/test_short/results/mod_long.csv")
-
 a <- unique(df$sample_group)
 b <- unique(df$seq_tech)
 g <- expand.grid(a,b)
@@ -59,34 +55,50 @@ subviz1 <- function(indf) {
   indf%>%
     ggplot(aes(x=group, y=count))+
     geom_col(aes(fill=lap_type), position = "stack")+
-    labs(title="HAMR Predicted Modification in RNA Subtypes", fill="RNA Type")+
+    labs(title="Predicted Modification in RNA Subtypes", fill="RNA Type")+
     xlab("Sample Group")+
-    ylab("Counts of Modifications Predicted")+
+    ylab("Number of Modifications Predicted")+
     scale_fill_manual(values=cbPalette)+
     theme_bw()+
     theme(panel.border = element_blank(), panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
-    theme(text = element_text(size=20))
+    theme(
+      axis.title.x = element_text(size = 40), # x-axis title text size
+      axis.title.y = element_text(size = 40), # y-axis title text size
+      axis.text.x = element_text(size = 30),  # x-axis text size
+      axis.text.y = element_text(size = 30),  # y-axis text size
+      plot.title = element_text(size = 40, hjust = 0.5),    # plot title text size)
+      legend.text = element_text(size = 22),  # legend text size
+      legend.title = element_text(size = 22)  # legend title text size
+    )    # plot title text size
 }
 # Creating ggplot of ncRNA subtype visualization
 subviz2 <- function(indf) {
   indf%>%
     ggplot(aes(x=group, y=count))+
     geom_col(aes(fill=bio), position = "stack")+
-    labs(title="HAMR Predicted Modification in non-coding Fraction", fill="ncRNA Type")+
+    labs(title="Predicted Modification in non-coding Fraction", fill="ncRNA Type")+
     xlab("Sample Group")+
-    ylab("Counts of Modifications Predicted")+
+    ylab("Number of Modifications Predicted")+
     scale_fill_manual(values=cbPalette)+
     theme_bw()+
     theme(panel.border = element_blank(), panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
-    theme(text = element_text(size=20))
+    theme(
+      axis.title.x = element_text(size = 40), # x-axis title text size
+      axis.title.y = element_text(size = 40), # y-axis title text size
+      axis.text.x = element_text(size = 30),  # x-axis text size
+      axis.text.y = element_text(size = 30),  # y-axis text size
+      plot.title = element_text(size = 40, hjust = 0.5),    # plot title text size)
+      legend.text = element_text(size = 22),  # legend text size
+      legend.title = element_text(size = 22)  # legend title text size
+    )    # plot title text size
 }
 
 # trying to eliminate pdf
 pdf(NULL)
 subviz1(tb1)
-ggsave(paste0(dir,"/RNAsubtype.png"), width = 18, height = 12, units = "in")
+ggsave(paste0(dir,"/RNAsubtype.png"), width = 20, height = 15, units = "in", dpi = 600)
 subviz2(tb2)
-ggsave(paste0(dir,"/ncRNAsubtype.png"), width = 18, height = 12, units = "in")
+ggsave(paste0(dir,"/ncRNAsubtype.png"), width = 20, height = 15, units = "in", dpi = 600)
 
