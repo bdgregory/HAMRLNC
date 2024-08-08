@@ -14,7 +14,7 @@ dir <- args[1]
 out <- args[2]
 
 # source: https://stackoverflow.com/questions/43051525/how-to-draw-pheatmap-plot-to-screen-and-also-save-to-file
-save_pheatmap_png <- function(x, filename, width=7, height=7) {
+save_pheatmap_png <- function(x, filename, width=15, height=12) {
   stopifnot(!missing(x))
   stopifnot(!missing(filename))
   png(filename, width=width, height=height, units="in", res=1200)

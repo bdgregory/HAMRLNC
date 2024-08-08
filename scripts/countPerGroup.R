@@ -19,17 +19,22 @@ abundByGroup <- function(ldf, lib) {
     melt(id.vars = c("sample_group", "seq_tech"))%>%
     ggplot(aes(x=sample_group, y=value))+
     geom_bar(stat = "identity", position = "dodge")+
-    labs(title=paste0("Total Abundance of HAMR Predicted Modifications in ", lib, " by Sample Groups"))+
+    labs(title=paste0("Total of Predicted Modifications in ", lib, " by Sample Groups"))+
     xlab("Sample Group") +
-    ylab("Counts of Modifications Predicted")+
+    ylab("Number of Modifications Predicted")+
     scale_x_discrete(drop=FALSE, guide = guide_axis(n.dodge=2))+
-    geom_text(aes(label=value), position=position_dodge(width=0.9), vjust=-0.25, size=10)+
+    geom_text(aes(label=value), position=position_dodge(width=0.9), vjust=-0.25, size=15)+
     facet_wrap(~seq_tech)+
     scale_fill_manual(values=cbPalette)+
     theme_bw()+
     theme(panel.border = element_blank(), panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
-    theme(text = element_text(size=20))
+    theme(
+      axis.title.x = element_text(size = 40), # x-axis title text size
+      axis.title.y = element_text(size = 40), # y-axis title text size
+      axis.text.x = element_text(size = 40),  # x-axis text size
+      axis.text.y = element_text(size = 40),  # y-axis text size
+      plot.title = element_text(size = 40, hjust = 0.5))    # plot title text size)
 } 
 
 # Takes in the directory where all annotation beds are located
@@ -45,7 +50,7 @@ for (ant in regular_graphs) {
   segs <- strsplit(ant, "_")[[1]]
   lap_type <- sub("\\..*", "", segs[length(segs)])
   abundByGroup(args[1], lap_type)
-  ggsave(paste0(args[3],"/mod_abundance_by_group_",lap_type,".png"), width = 18, height = 12, units = "in")
+  ggsave(paste0(args[3],"/mod_abundance_by_group_",lap_type,".png"), width = 23, height = 18, units = "in", dpi = 600)
 }
 
 unique_groups <- unique(unlist(lapply(nc_subset, function(x) sub("_[^_]*$", "", x))))
@@ -58,16 +63,21 @@ longdf%>%
   melt(id.vars = c("sample_group", "seq_tech"))%>%
   ggplot(aes(x=sample_group, y=value))+
   geom_bar(stat = "identity", position = "dodge")+
-  labs(title=paste0("Total Abundance of HAMR Predicted Modifications in ncRNAs by Sample Groups"))+
+  labs(title=paste0("Total of Predicted Modifications in ncRNAs by Sample Groups"))+
   xlab("Sample Group") +
-  ylab("Counts of Modifications Predicted")+
+  ylab("Number of Modifications Predicted")+
   scale_x_discrete(drop=FALSE, guide = guide_axis(n.dodge=2))+
-  geom_text(aes(label=value), position=position_dodge(width=0.9), vjust=-0.25, size=10)+
+  geom_text(aes(label=value), position=position_dodge(width=0.9), vjust=-0.25, size=15)+
   facet_wrap(~seq_tech)+
   scale_fill_manual(values=cbPalette)+
   theme_bw()+
   theme(panel.border = element_blank(), panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
-  theme(text = element_text(size=20))
-ggsave(paste0(args[3],"/mod_abundance_by_group_ncRNA.png"), width = 18, height = 12, units = "in")
+  theme(
+    axis.title.x = element_text(size = 40), # x-axis title text size
+    axis.title.y = element_text(size = 40), # y-axis title text size
+    axis.text.x = element_text(size = 40),  # x-axis text size
+    axis.text.y = element_text(size = 40),  # y-axis text size
+    plot.title = element_text(size = 40, hjust = 0.5))    # plot title text size)
+ggsave(paste0(args[3],"/mod_abundance_by_group_ncRNA.png"), width = 23, height = 18, units = "in", dpi = 600)
 

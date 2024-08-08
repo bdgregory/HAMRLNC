@@ -96,18 +96,27 @@ if (!is.null(frame)) {
     geom_col(position = "stack", aes(fill = region))+
     labs(title="Modification Distribution in Gene Regions", caption="(Modification types maybe abbreviated for clarity)")+
     xlab("Modification Type")+
-    ylab("Counts of Modifications Predicted")+
+    ylab("Number of Modifications Predicted")+
     guides(fill=guide_legend(title="RNA Region"))+
     theme_bw()+
     theme(panel.border = element_blank(), panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
-    theme(text = element_text(size=20))+
+    theme(
+      axis.title.x = element_text(size = 40), # x-axis title text size
+      axis.title.y = element_text(size = 40), # y-axis title text size
+      plot.caption = element_text(size = 20),  # Increase caption text size
+      axis.text.x = element_text(size = 30),  # x-axis text size
+      axis.text.y = element_text(size = 30),  # y-axis text size
+      plot.title = element_text(size = 40, hjust = 0.5),    # plot title text size)
+    legend.text = element_text(size = 25),  # legend text size
+    legend.title = element_text(size = 25)  # legend title text size
+    )+    # plot title text size+
     scale_fill_manual(values=cbPalette)+
     facet_wrap(~smp.grp)+
     scale_x_discrete(labels = abbreviate)
   
   suppressWarnings(print(p1))
-  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_bar.png"), width = 18, height = 12, units = "in"))
+  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_bar.png"), width = 20, height = 15, units = "in", dpi = 600))
   
   # creates the rel pos gene map
   p2 <- frame%>%
@@ -122,7 +131,8 @@ if (!is.null(frame)) {
     theme_bw()+
     theme(panel.border = element_blank(), panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
-    theme(text = element_text(size=20),
+    theme(text = element_text(size=30),
+          plot.title = element_text(size = 30, hjust = 0.5),
           axis.text.y = element_blank(),
           axis.ticks.y = element_blank(),
           axis.title.y = element_blank())+
@@ -131,7 +141,7 @@ if (!is.null(frame)) {
     scale_color_manual(values=cbPalette)
   
   suppressWarnings(print(p2))
-  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_map_sep.png"), width = 18, height = 12, units = "in"))
+  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_map_sep.png"), width = 25, height = 15, units = "in", dpi = 600))
   
   p3 <- frame%>%
     ggplot(aes(p.norm))+
@@ -145,7 +155,8 @@ if (!is.null(frame)) {
     theme_bw()+
     theme(panel.border = element_blank(), panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
-    theme(text = element_text(size=20),
+    theme(text = element_text(size=30),
+          plot.title = element_text(size = 30, hjust = 0.5),
           axis.text.y = element_blank(),
           axis.ticks.y = element_blank(),
           axis.title.y = element_blank())+
@@ -154,7 +165,8 @@ if (!is.null(frame)) {
     scale_color_manual(values=cbPalette)
   
   suppressWarnings(print(p3))
-  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_map_tot.png"), width = 18, height = 12, units = "in"))
+  suppressWarnings(ggsave(paste0(dir,"/mod_distribution_map_tot.png"), width = 25, height = 15, units = "in", dpi = 600))
 } else {
   cat("No region information can be extracted. Exiting... \n")
 }
+
