@@ -993,7 +993,9 @@ lncCallBranch () {
     if [[ $currProg_lnc == "16" ]]; then
         echo "[$smpkey] processing identified lncRNA into GTF..."
 
-        cat $annotation "$smpout"/rfam_filtered_transcripts.txt > "$smpout"/final_combined.gtf
+        cat $annotation "$smpout"/rfam_filtered_transcripts.txt > "$smpout"/final_combined_unsorted.gtf
+        sort "$smpout"/final_combined_unsorted.gtf -o "$smpout"/final_combined.gtf
+        
         status=$?
         if [[ "$status" -eq 0 ]]; then
             echo "[$smpkey] finished processing lncRNA annotations (LNC 15/15)"
