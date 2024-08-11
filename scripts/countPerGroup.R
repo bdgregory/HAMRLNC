@@ -34,7 +34,8 @@ abundByGroup <- function(ldf, lib) {
       axis.title.y = element_text(size = 40), # y-axis title text size
       axis.text.x = element_text(size = 40),  # x-axis text size
       axis.text.y = element_text(size = 40),  # y-axis text size
-      plot.title = element_text(size = 40, hjust = 0.5))    # plot title text size)
+      plot.title = element_text(size = 40, hjust = 0.5), # plot title text size
+      strip.text.x = element_text(size = 15))
 } 
 
 # Takes in the directory where all annotation beds are located

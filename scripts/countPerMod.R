@@ -37,8 +37,9 @@ abundByLap1 <- function(ldf, lib) {
       axis.text.y = element_text(size = 40),  # y-axis text size
       plot.title = element_text(size = 40, hjust = 0.5),   # plot title text size)
       legend.text = element_text(size = 25),  # legend text size
-      legend.title = element_text(size = 25)  # legend title text size
-    )    # plot title text size)
+      legend.title = element_text(size = 25),
+      strip.text.x = element_text(size = 15)# legend title text size
+    )    # plot title text size
 }
 
 ## not used 
