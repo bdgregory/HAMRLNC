@@ -1494,6 +1494,15 @@ consensusOverlap () {
                 -b "$out/lnc_consensus/$to_overlap" \
                 -wa -wb \
                 > "$out"/lap/"$bn""_lncRNAPred".bed
+
+            # pull out transcript info
+            if [[ ! -z "$out"/lap/"$bn""_lncRNAPred".bed ]]; then
+                cut -f 15 "$out"/lap/"$bn""_lncRNAPred".bed | awk -F 'transcript_id "' '{print $2}' | awk -F '"' '{print $1}' > "$out"/lap/"$bn""_temp".txt
+                paste -d'\t' "$out"/lap/"$bn""_lncRNAPred".bed "$out"/lap/"$bn""_temp".txt > "$out"/lap/"$bn""new_out".txt
+                rm "$out"/lap/"$bn""_lncRNAPred".bed
+                rm "$out"/lap/"$bn""_temp".txt
+                mv "$out"/lap/"$bn""new_out".txt "$out"/lap/"$bn""_lncRNAPred".bed
+            fi
         echo "finished finding overlap with de novo lncRNA library"
         done
     fi
