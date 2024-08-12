@@ -10,6 +10,11 @@ lap.clean <- function(bed) {
   return(out)
 }
 
+lap.clean.predln <- function(bed) {
+  out <- select(bed, seq=V1, pos=V2, mod=V4, bio="lncRNA", gene=V16, strand=V5, depth=V6)
+  return(out)
+}
+
 isoUnsensitive <- function (modtbl) {
   modtbl%>%
     group_by(across(c(-gene)))%>%
@@ -42,7 +47,11 @@ allLapPrep <- function(in_dir) {
     if (file.size(fpath)!=0) {
       # Import the file as a variable and pipe through the cleaning steps 
       temp <- assign(file_name, fread(file.path(in_dir, file_name), stringsAsFactors = TRUE))
-      temp_clean <- lap.clean(temp)
+      if (lap_type == "lncRNAPred") {
+        temp_clean <- lap.clean.predln(temp)
+      } else {
+        temp_clean <- lap.clean(temp)
+      }
       
       # these needs a bit more work because isoform cleaning
       if (lap_type == "threeUTR" || lap_type == "fiveUTR" || lap_type == "CDS" | lap_type == "primarymRNA") {
