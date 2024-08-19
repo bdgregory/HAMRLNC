@@ -97,7 +97,7 @@ docker run \
 
 Running HAMRLNC as an application on CyVerse's Discovery Environment
 ---------------------------------------------------------------------
-HAMRLNC has been integrated as an app on [CyVerse's Discovery Environment (DE)](https://de.cyverse.org/), and it is available for use by researchers. Search for “HAMRLINC" and then select the 1.0.0 version. A short tutorial on how to run the app is available at this [CyVerse wiki](https://cyverse.atlassian.net/wiki/spaces/DEapps/pages/1819639809/HAMRLINC+v1.0). CyVerse's DE provides an easy-to-use graphic user interphase for running several Life Sciences computational pipelines.
+HAMRLNC has been integrated as an app on [CyVerse's Discovery Environment (DE)](https://de.cyverse.org/), and it is available for use by researchers. Search for “HAMRLNC" and then select the 1.0.0 version. A short tutorial on how to run the app is available at this [CyVerse wiki](https://cyverse.atlassian.net/wiki/spaces/DEapps/pages/1819639809/HAMRLINC+v1.0). CyVerse's DE provides an easy-to-use graphic user interphase for running several Life Sciences computational pipelines.
 
 Step-by-step walkthrough
 ------------------------
