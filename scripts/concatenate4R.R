@@ -11,7 +11,6 @@ lap.clean <- function(bed) {
 }
 
 lap.clean.predln <- function(bed) {
-  bed <- fread("/Users/harrlol/Downloads/additional_files (1)/lap/D_Mid_Drought_lncRNAPred.bed")
   out <- select(bed, seq=V1, pos=V2, mod=V4, gene=V16, strand=V5, depth=V6)%>%
     mutate(bio="lncRNA")
   return(out)
