@@ -27,7 +27,7 @@ abundByLap1 <- function(ldf, lib) {
     geom_text(aes(label=value), position=position_dodge(width=0.9), vjust=-0.25, size=15)+
     facet_wrap(~seq_tech)+
     scale_fill_manual(values=cbPalette)+
-    theme_bw()+
+    theme_classic()+
     theme(panel.border = element_blank(), panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
     theme(
@@ -38,7 +38,7 @@ abundByLap1 <- function(ldf, lib) {
       plot.title = element_text(size = 40, hjust = 0.5),   # plot title text size)
       legend.text = element_text(size = 25),  # legend text size
       legend.title = element_text(size = 25),
-      strip.text.x = element_text(size = 15)# legend title text size
+      strip.text.x = element_text(size = 40)# legend title text size
     )    # plot title text size
 }
 
@@ -95,7 +95,7 @@ longdf%>%
   geom_text(aes(label=value), position=position_dodge(width=0.9), vjust=-0.25, size=15)+
   facet_wrap(~seq_tech)+
   scale_fill_manual(values=cbPalette)+
-  theme_bw()+
+  theme_classic()+
   theme(panel.border = element_blank(), panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
   theme(
@@ -105,7 +105,8 @@ longdf%>%
     axis.text.y = element_text(size = 40),  # y-axis text size
     plot.title = element_text(size = 40, hjust = 0.5),    # plot title text size)
     legend.text = element_text(size = 25),  # legend text size
-    legend.title = element_text(size = 25)  # legend title text size
+    legend.title = element_text(size = 25),
+    strip.text.x = element_text(size = 40)# legend title text size
   )    # plot title text size)
 
 ggsave(paste0(args[3],"/mod_abundance_by_mod_ncRNA.png"), width = 23, height = 18, units = "in", dpi = 600)
