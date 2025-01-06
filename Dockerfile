@@ -80,6 +80,7 @@ RUN conda config --add channels conda-forge && \
 
 # Conda packages
 RUN conda install cutadapt==4.9 -c bioconda -y && \
+	conda install fastp==0.23.4 -c bioconda -y && \
  	conda install bedops==2.4.41 -c bioconda -y && \
     conda install bedtools==2.31.1 -c bioconda -y && \
 	conda install trim-galore==0.6.10 -c bioconda -y && \

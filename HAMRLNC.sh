@@ -302,7 +302,8 @@ fastqGrabSRA () {
 
         if [[ "$fastq_trimmed" == false ]]; then
             echo "[$line] trimming..."
-            trim_galore -o "$dumpout"/trimmed "$dumpout"/raw/"$line"."$suf"
+            # trim_galore -o "$dumpout"/trimmed "$dumpout"/raw/"$line"."$suf"
+            fastp -i "$dumpout"/raw/"$line"."$suf" -o "$dumpout"/trimmed/"$line""_trimmed.fq"
             if [[ "$do_fastqc" == true ]]; then
                 echo "[$line] trimming complete, performing fastqc..."
                 fastqc "$dumpout"/trimmed/"$line""_trimmed.fq" -o "$dumpout"/fastqc_results
@@ -326,13 +327,13 @@ fastqGrabSRA () {
 
         if [[ "$fastq_trimmed" == false ]]; then
             echo "[$line] trimming..."
-            trim_galore --paired \
-                -o "$dumpout"/trimmed \
-                "$dumpout"/raw/"$line""_1.$suf" "$dumpout"/raw/"$line""_2.$suf"
-
+            fastp -i "$dumpout"/raw/"$line""_1.$suf" -I "$dumpout"/raw/"$line""_2.$suf" -o "$dumpout"/trimmed/"$tt""_1_trimmed.fq" -O out.R2.fq.gz
+            # trim_galore --paired \
+            #     -o "$dumpout"/trimmed \
+            #     "$dumpout"/raw/"$line""_1.$suf" "$dumpout"/raw/"$line""_2.$suf" \
                 # dealing with trim galore naming convention under pe
-                mv "$dumpout"/trimmed/"$tt""_1_val_1.fq" "$dumpout"/trimmed/"$tt""_1_trimmed.fq"
-                mv "$dumpout"/trimmed/"$tt""_2_val_2.fq" "$dumpout"/trimmed/"$tt""_2_trimmed.fq"
+                # mv "$dumpout"/trimmed/"$tt""_1_val_1.fq" "$dumpout"/trimmed/"$tt""_1_trimmed.fq"
+                # mv "$dumpout"/trimmed/"$tt""_2_val_2.fq" "$dumpout"/trimmed/"$tt""_2_trimmed.fq"
         else
             echo "[$line] is already trimmed, skipping trimming step..."
             cp "$dumpout"/raw/"$line""_1.$suf" "$dumpout"/trimmed/"$line""_1_trimmed.fq"
@@ -419,7 +420,8 @@ fastqGrabLocal () {
                 fastqc "$fq" -o "$dumpout"/fastqc_results &
             fi
             echo "[$sname] trimming..."
-            trim_galore -o "$dumpout"/trimmed "$fq" --dont_gzip
+            # trim_galore -o "$dumpout"/trimmed "$fq" --dont_gzip
+            fastp -i "$fq" -o "$dumpout"/trimmed/"$tt""_trimmed.fq"
 
             if [[ "$do_fastqc" == true ]]; then
                 echo "[$sname] trimming complete, performing fastqc..."
@@ -445,14 +447,14 @@ fastqGrabLocal () {
             fi
             
             echo "[$sname] trimming..."
-            trim_galore --paired \
-                -o "$dumpout"/trimmed \
-                "$fastq_in"/"$tt""_1.$suf" "$fastq_in"/"$tt""_2.$suf" \
-                --dont_gzip
-
+            fastp -i "$fastq_in"/"$tt""_1.$suf" -I "$fastq_in"/"$tt""_2.$suf" -o "$dumpout"/trimmed/"$tt""_1_trimmed.fq" -O "$dumpout"/trimmed/"$tt""_2_trimmed.fq"
+            # trim_galore --paired \
+            #     -o "$dumpout"/trimmed \
+            #     "$fastq_in"/"$tt""_1.$suf" "$fastq_in"/"$tt""_2.$suf" \
+            #     --dont_gzip
                 # dealing with trim galore naming convention under pe
-                mv "$dumpout"/trimmed/"$tt""_1_val_1.fq" "$dumpout"/trimmed/"$tt""_1_trimmed.fq"
-                mv "$dumpout"/trimmed/"$tt""_2_val_2.fq" "$dumpout"/trimmed/"$tt""_2_trimmed.fq"
+                # mv "$dumpout"/trimmed/"$tt""_1_val_1.fq" "$dumpout"/trimmed/"$tt""_1_trimmed.fq"
+                # mv "$dumpout"/trimmed/"$tt""_2_val_2.fq" "$dumpout"/trimmed/"$tt""_2_trimmed.fq"
 
             if [[ "$do_fastqc" == true ]]; then
                 echo "[$sname] trimming complete, performing fastqc..."
@@ -470,18 +472,16 @@ fastqGrabLocal () {
 hamrBranch () {
     if [[ $currProg_mod == "2" ]]; then
         #adds read groups using picard, note the RG arguments are disregarded here
-        echo "[$smpkey] adding/replacing read groups..."
-        gatk AddOrReplaceReadGroups \
-            I="$smpout"/sort_accepted.bam \
-            O="$smpout"/sorted_RG.bam \
-            RGPU=HWI-ST1395:97:d29b4acxx:8 \
-            RGID=1 \
-            RGSM=xxx \
-            RGLB=xxx \
-            RGPL=illumina 
+        echo "[$smpkey] filtering uniquely mapped reads..."
+        samtools view \
+            -h "$smpout"/sorted_RG.bam \
+            | perl "$filter" 1 \
+            | samtools view -bS - \
+            | samtools sort \
+            -o "$smpout"/sorted_RG_unique.bam
         status=$?
         if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished adding/replacing read groups (MOD 1/7)"
+            echo "[$smpkey] finished filtering (MOD 1/7)"
             echo ""
         else
             echo "[$smpkey] returned non-zero exit status at MOD 1/7, pipeline halted"
@@ -497,16 +497,18 @@ hamrBranch () {
 
     if [[ $currProg_mod == "3" ]]; then
         #filter the accepted hits by uniqueness
-        echo "[$smpkey] filtering uniquely mapped reads..."
-        samtools view \
-            -h "$smpout"/sorted_RG.bam \
-            | perl "$filter" 1 \
-            | samtools view -bS - \
-            | samtools sort \
-            -o "$smpout"/sorted_RG_unique.bam
+        echo "[$smpkey] adding/replacing read groups..."
+        gatk AddOrReplaceReadGroups \
+            I="$smpout"/sort_accepted.bam \
+            O="$smpout"/sorted_RG.bam \
+            RGPU=HWI-ST1395:97:d29b4acxx:8 \
+            RGID=1 \
+            RGSM=xxx \
+            RGLB=xxx \
+            RGPL=illumina 
         status=$?
         if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished filtering (MOD 2/7)"
+            echo "[$smpkey] finished adding/replacing read groups (MOD 2/7)"
             echo ""
         else
             echo "[$smpkey] returned non-zero exit status at MOD 2/7, pipeline halted"
@@ -1560,6 +1562,11 @@ fastqGrabHouseKeeping () {
 
     if ! command -v trim_galore > /dev/null; then
         echo "Failed to call trim_galore command. Please check your installation."
+        exit 1
+    fi
+
+    if ! command -v fastp > /dev/null; then
+        echo "Failed to call fastp command. Please check your installation."
         exit 1
     fi
 
