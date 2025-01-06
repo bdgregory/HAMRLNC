@@ -98,7 +98,7 @@ subviz2 <- function(indf) {
 # trying to eliminate pdf
 pdf(NULL)
 subviz1(tb1)
-ggsave(paste0(dir,"/RNAsubtype.png"), width = 20, height = 15, units = "in", dpi = 600)
+ggsave(paste0(dir,"/RNAsubtype.pdf"), width = 20, height = 15, units = "in", dpi = 600)
 subviz2(tb2)
-ggsave(paste0(dir,"/ncRNAsubtype.png"), width = 20, height = 15, units = "in", dpi = 600)
+ggsave(paste0(dir,"/ncRNAsubtype.pdf"), width = 20, height = 15, units = "in", dpi = 600)
 

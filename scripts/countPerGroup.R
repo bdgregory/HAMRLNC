@@ -51,7 +51,7 @@ for (ant in regular_graphs) {
   segs <- strsplit(ant, "_")[[1]]
   lap_type <- sub("\\..*", "", segs[length(segs)])
   abundByGroup(args[1], lap_type)
-  ggsave(paste0(args[3],"/mod_abundance_by_group_",lap_type,".png"), width = 23, height = 18, units = "in", dpi = 600)
+  ggsave(paste0(args[3],"/mod_abundance_by_group_",lap_type,".pdf"), width = 23, height = 18, units = "in", dpi = 600)
 }
 
 unique_groups <- unique(unlist(lapply(nc_subset, function(x) sub("_[^_]*$", "", x))))
@@ -80,5 +80,5 @@ longdf%>%
     axis.text.x = element_text(size = 40),  # x-axis text size
     axis.text.y = element_text(size = 40),  # y-axis text size
     plot.title = element_text(size = 40, hjust = 0.5))    # plot title text size)
-ggsave(paste0(args[3],"/mod_abundance_by_group_ncRNA.png"), width = 23, height = 18, units = "in", dpi = 600)
+ggsave(paste0(args[3],"/mod_abundance_by_group_ncRNA.pdf"), width = 23, height = 18, units = "in", dpi = 600)
 

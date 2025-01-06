@@ -105,6 +105,6 @@ for (i in (1:nrow(g))) {
   # only proceed if there are at least 1 observation for this smp+seq combo
   if (nrow(filter(longdf, sample_group == g[i,1] & seq_tech == g[i,2]))>0) {
     refRelation(longdf, "gene", g[i,2], g[i,1], ref)
-    ggsave(paste(dir,"/dist_to_ant_", g[i,1], "_", g[i,2], ".png", sep=""), width = 10, height = 8, units = "in", dpi = 600)
+    ggsave(paste(dir,"/dist_to_ant_", g[i,1], "_", g[i,2], ".pdf", sep=""), width = 10, height = 8, units = "in", dpi = 600)
   }
 }
