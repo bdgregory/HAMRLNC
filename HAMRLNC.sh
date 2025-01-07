@@ -1660,7 +1660,7 @@ fastq2rawHouseKeeping () {
         fi
     else
         # get genome length
-        genomelength=$(bioawk -c fastx '{ print length($seq) }' < $genome | awk '{sum += $1} END {print sum}')
+        genomelength=$(bioawk -c fastx '{ print length($seq) }' < $genome | awk '{sum += $1} END {printf "%.0f\n", sum}')
         echo "For reference, your provided genome length is $genomelength long"
 
         # Define the SA index number argument
