@@ -93,6 +93,17 @@ docker run \
   -g Arabidopsis_thaliana.TAIR10.dna.toplevel.fa \
   -i Arabidopsis_thaliana.TAIR10.59.gff3 \
   -l 50 -n 4 -k -p -u -r -t
+
+# if your system uses Apple Silicon chip
+docker run \
+  --platform linux/amd64 \
+  --rm -v $(pwd):/working-dir \
+  -w /working-dir chosenobih/hamrlnc:v0.05 \
+  -o test_run \
+  -c demo/demo_filenames.csv \
+  -g Arabidopsis_thaliana.TAIR10.dna.toplevel.fa \
+  -i Arabidopsis_thaliana.TAIR10.59.gff3 \
+  -l 50 -n 4 -k -p -u -r -t
 ```
 
 Running HAMRLNC as an application on CyVerse's Discovery Environment
