@@ -64,7 +64,7 @@ Running HAMRLNC
 
 ```
 # pull HAMRLNC docker image:  
-docker pull chosenobih/hamrlnc:v0.04
+docker pull chosenobih/hamrlnc:v0.05
 ```
 ```
 # clone HAMRLNC repo
