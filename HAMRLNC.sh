@@ -1596,7 +1596,8 @@ fastq2rawHouseKeeping () {
     # /trimmed is located so we get length here
     if [[ "$length" -eq 0 ]]; then
         echo "Using seqkit to determine approprate read lengths..."
-        length=$(seqkit stats $hamrin/*.fq | awk '{ print $7 }' | sort -n | tail -n +2 | head -1)
+        raw_length=$(seqkit stats $hamrin/*.fq | awk '{ print $7 }' | sort -n | tail -n +2 | head -1)
+        length=$(printf "%.0f" "$raw_length")
         echo "minimum average read length detected: $length"
         echo ""
         
