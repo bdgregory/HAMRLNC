@@ -327,7 +327,7 @@ fastqGrabSRA () {
 
         if [[ "$fastq_trimmed" == false ]]; then
             echo "[$line] trimming..."
-            fastp -i "$dumpout"/raw/"$line""_1.$suf" -I "$dumpout"/raw/"$line""_2.$suf" -o "$dumpout"/trimmed/"$tt""_1_trimmed.fq" -O out.R2.fq.gz
+            fastp -i "$dumpout"/raw/"$line""_1.$suf" -I "$dumpout"/raw/"$line""_2.$suf" -o "$dumpout"/trimmed/"$line""_1_trimmed.fq" -O "$dumpout"/trimmed/"$line""_2_trimmed.fq"
             # trim_galore --paired \
             #     -o "$dumpout"/trimmed \
             #     "$dumpout"/raw/"$line""_1.$suf" "$dumpout"/raw/"$line""_2.$suf" \
@@ -474,11 +474,11 @@ hamrBranch () {
         #adds read groups using picard, note the RG arguments are disregarded here
         echo "[$smpkey] filtering uniquely mapped reads..."
         samtools view \
-            -h "$smpout"/sorted_RG.bam \
+            -h "$smpout"/sort_accepted.bam \
             | perl "$filter" 1 \
             | samtools view -bS - \
             | samtools sort \
-            -o "$smpout"/sorted_RG_unique.bam
+            -o "$smpout"/sorted_unique.bam
         status=$?
         if [[ "$status" -eq 0 ]]; then
             echo "[$smpkey] finished filtering (MOD 1/7)"
@@ -499,8 +499,8 @@ hamrBranch () {
         #filter the accepted hits by uniqueness
         echo "[$smpkey] adding/replacing read groups..."
         gatk AddOrReplaceReadGroups \
-            I="$smpout"/sort_accepted.bam \
-            O="$smpout"/sorted_RG.bam \
+            I="$smpout"/sorted_unique.bam \
+            O="$smpout"/sorted_RG_unique.bam \
             RGPU=HWI-ST1395:97:d29b4acxx:8 \
             RGID=1 \
             RGSM=xxx \
