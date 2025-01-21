@@ -102,7 +102,6 @@ RUN conda install -y -c conda-forge libstdcxx-ng && \
  	conda install bedops==2.4.41 -c bioconda -y && \
     conda install bedtools==2.31.1 -c bioconda -y && \
 	conda install trim-galore==0.6.10 -c bioconda -y && \
-	conda install bedtools==2.31.0 -c bioconda -y && \
 	conda install star==2.7.10a -c bioconda -y && \
 	conda install gffread==0.12.7 -y && \
  	conda install gffcompare==0.12.6 -c bioconda -y && \
