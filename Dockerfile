@@ -14,12 +14,20 @@ RUN apt-get update && apt-get install -y g++ \
 		libssl-dev \
 		libncurses5-dev \
 		libsodium-dev \
-		libmariadb-client-lgpl-dev \
+		libmariadb-dev \
 		libbz2-dev \
 		liblzma-dev \
 		libssl-dev \
 		zlib1g-dev \
-		libcurl4-openssl-dev \ 
+		libxml2-dev \
+		libfontconfig1-dev \
+		libharfbuzz-dev \
+		libfribidi-dev \
+		libfreetype6-dev \
+		libpng-dev \
+		libtiff5-dev \
+		libjpeg-dev \
+		libpq-dev \
 		openssl \
 		default-jdk \
 		lbzip2 \
@@ -35,36 +43,46 @@ RUN ldconfig
 RUN apt-get install -y locales && locale-gen en_US.UTF-8
 ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 
-# Install system dependencies for R and R packages
+# Install additional system dependencies for R and R packages
+RUN apt-get update && apt-get install -y software-properties-common
+RUN add-apt-repository universe
 RUN apt-get update && apt-get install -y \
-    software-properties-common \
+#    software-properties-common \
     dirmngr \
-    gnupg \
-    libxml2-dev \
-    libfontconfig1-dev \
-    libharfbuzz-dev \
-    libfribidi-dev \
-    libfreetype6-dev \
-    libpng-dev \
-    libtiff5-dev \
-    libjpeg-dev \
-    libpq-dev
+	pkgconf \
+    gnupg
 
 # Manually add the GPG key for the CRAN repository
 RUN apt-key adv --fetch-keys https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc
-RUN add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran40/'
+RUN add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran40/' #18.04
+#RUN add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu jammy-cran40/'   #22.04
+
+#RUN add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu focal-cran40/'
+#RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 51716619E084DAB9
+#RUN add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu focal-cran40/'
+
 
 # Install R
-RUN apt-get update && apt-get install -y r-base
+#RUN apt-get update && apt-get install -y r-base
+RUN apt-get update && apt-get install -y --no-install-recommends \
+r-base
+
+#r-base=4.1.2-1ubuntu2 \
+#r-base-dev=4.1.2-1ubuntu2 \
+#r-recommended=4.1.2-1ubuntu2
+
+RUN echo "r-base hold" | dpkg --set-selections
+
 
 # Install BiocManager in R
 RUN R -e "options(repos = list(CRAN = 'http://cran.rstudio.com')); install.packages('BiocManager')"
 
 # Install Biostrings package using BiocManager and log the output
-RUN R -e "BiocManager::install('Biostrings', ask=FALSE)" \
-    && R -e "packageVersion('Biostrings')"
+RUN R -e "BiocManager::install('Biostrings', ask=FALSE)"
 # Install additional R packages
 RUN R -e "install.packages(c('dplyr', 'RPostgreSQL', 'httr', 'openssl', 'splitstackshape', 'getopt'))"
+# additional R packages
+RUN R -e "options(repos = c(CRAN = 'https://cloud.r-project.org')); install.packages(c('reshape2', 'janitor', 'ggplot2', 'readr', 'tidyr', 'pheatmap'))"
 
 # Downlaod and install conda
 RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh && \
@@ -75,12 +93,12 @@ ENV PATH /opt/conda/bin:$PATH
 
 # Conda channels
 RUN conda config --add channels conda-forge && \
-    conda config --add channels bioconda && \
-    conda config --add channels r
+    conda config --add channels bioconda
+    #conda config --add channels r
 
 # Conda packages
-RUN conda install cutadapt==4.9 -c bioconda -y && \
-	conda install fastp==0.23.4 -c bioconda -y && \
+RUN conda install -y -c conda-forge libstdcxx-ng && \
+	conda install cutadapt==4.9 -c bioconda -y && \
  	conda install bedops==2.4.41 -c bioconda -y && \
     conda install bedtools==2.31.1 -c bioconda -y && \
 	conda install trim-galore==0.6.10 -c bioconda -y && \
@@ -99,6 +117,7 @@ RUN conda install cutadapt==4.9 -c bioconda -y && \
 	conda install diamond==0.9.10 -c bioconda -y && \
 	conda install transdecoder==5.5.0 -c bioconda -y && \
 	conda install matplotlib-base -c conda-forge -y && \
+	conda install fastp==0.23.4 -c bioconda -y && \
 	conda install seqkit==2.8.2 -c bioconda -y
 
 #Install biopython
@@ -121,8 +140,6 @@ RUN wget http://ftp.ebi.ac.uk/pub/databases/Rfam/14.10/Rfam.cm.gz && \
 	cmpress Rfam.cm && \
 	cd ..
 
-RUN R -e "install.packages('tidyr')"
-
 # CPC2
 RUN wget https://github.com/gao-lab/CPC2_standalone/archive/refs/tags/v1.0.1.tar.gz && \
 	gzip -dc v1.0.1.tar.gz | tar xf - && \
@@ -130,7 +147,7 @@ RUN wget https://github.com/gao-lab/CPC2_standalone/archive/refs/tags/v1.0.1.tar
  	cd libs/libsvm && \
   	gzip -dc libsvm-3.18.tar.gz | tar xf - && \
    	cd libsvm-3.18 && \
-    	make clean && make 
+    make clean && make 
 WORKDIR /
 
 ## HAMR (python 3 compatible)
@@ -175,8 +192,6 @@ RUN wget https://github.com/samtools/htslib/releases/download/1.17/htslib-1.17.t
 	make install
 WORKDIR /
 
-# additional R packages
-RUN R -e "install.packages(c('reshape2', 'janitor', 'ggplot2', 'readr', 'pheatmap'))"
 
 ADD /scripts/*.py /scripts/
 ADD /scripts/*.R /scripts/
@@ -187,7 +202,6 @@ RUN chmod +x /util/*.pl && cp -r /util/ $BINPATH
 ENV util /util
 
 # Setting paths to all the softwares
-ENV PATH /evolinc_docker/cufflinks-2.2.1.Linux_x86_64/:$PATH
 ENV PATH /usr/bin/:$PATH
 ENV PATH /HAMR/hamr.py:$PATH
 ENV PATH /HAMR/:$PATH
