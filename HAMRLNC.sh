@@ -20,6 +20,8 @@ usage () {
     -d  [input a directory of fastq]
     -l  <read length>
     -t  [trim input fastq files, default=false]
+    -s  [adapter sequence for trimming R1 or single end]
+    -a  [adapter sequence for trimming R2]
     -D  [input a directory of bam]
     -b  [sort input bam files, default=false]
     -I  [input genome annotation folder for STAR]
@@ -79,6 +81,8 @@ mod_partial=false
 length=0
 threads=4
 attribute_fc="gene_id"
+adapter=""
+adapter_r2=""
 # I hope this is an ok initialization
 lnc_max_intron_len=""
 clean=true
@@ -101,7 +105,7 @@ gatk_dir=""
 
 
 ######################################################### Grab Arguments #########################################
-while getopts ":o:c:g:i:l:d:D:btI:hn:O:A:Y:R:yzqrG:x:kupH:U:W:S:M:J:f:m:Q:E:P:F:C:" opt; do
+while getopts ":o:c:g:i:l:d:D:btI:s:a:hn:O:A:Y:R:yzqrG:x:kupH:U:W:S:M:J:f:m:Q:E:P:F:C:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -174,6 +178,12 @@ while getopts ":o:c:g:i:l:d:D:btI:hn:O:A:Y:R:yzqrG:x:kupH:U:W:S:M:J:f:m:Q:E:P:F:
     ;;
     D)
     bam_in=$OPTARG
+    ;;
+    s)
+    adapter=$OPTARG
+    ;;
+    a)
+    adapter_r2=$OPTARG
     ;;
     I)
     path_to_STARref=$OPTARG
@@ -303,7 +313,12 @@ fastqGrabSRA () {
         if [[ "$fastq_trimmed" == false ]]; then
             echo "[$line] trimming..."
             # trim_galore -o "$dumpout"/trimmed "$dumpout"/raw/"$line"."$suf"
-            fastp -i "$dumpout"/raw/"$line"."$suf" -o "$dumpout"/trimmed/"$line""_trimmed.fq"
+            if [[ "$adapter" == "" ]]; then
+                fastp -i "$dumpout"/raw/"$line"."$suf" -o "$dumpout"/trimmed/"$line""_trimmed.fq" -h "$dumpout"/trimming_reports/"$line"".html" 
+            else
+                fastp -i "$dumpout"/raw/"$line"."$suf" -o "$dumpout"/trimmed/"$line""_trimmed.fq" -h "$dumpout"/trimming_reports/"$line"".html" --adapter_sequence "$adapter"
+            fi
+
             if [[ "$do_fastqc" == true ]]; then
                 echo "[$line] trimming complete, performing fastqc..."
                 fastqc "$dumpout"/trimmed/"$line""_trimmed.fq" -o "$dumpout"/fastqc_results
@@ -327,7 +342,12 @@ fastqGrabSRA () {
 
         if [[ "$fastq_trimmed" == false ]]; then
             echo "[$line] trimming..."
-            fastp -i "$dumpout"/raw/"$line""_1.$suf" -I "$dumpout"/raw/"$line""_2.$suf" -o "$dumpout"/trimmed/"$line""_1_trimmed.fq" -O "$dumpout"/trimmed/"$line""_2_trimmed.fq"
+            if [[ "$adapter" == "" ]]; then
+                fastp -i "$dumpout"/raw/"$line""_1.$suf" -I "$dumpout"/raw/"$line""_2.$suf" -o "$dumpout"/trimmed/"$line""_1_trimmed.fq" -O "$dumpout"/trimmed/"$line""_2_trimmed.fq" -h "$dumpout"/trimming_reports/"$line"".html"
+            else
+                fastp -i "$dumpout"/raw/"$line""_1.$suf" -I "$dumpout"/raw/"$line""_2.$suf" -o "$dumpout"/trimmed/"$line""_1_trimmed.fq" -O "$dumpout"/trimmed/"$line""_2_trimmed.fq" -h "$dumpout"/trimming_reports/"$line"".html" --adapter_sequence "$adapter" --adapter_sequence_r2 "$adapter_r2"
+            fi
+            
             # trim_galore --paired \
             #     -o "$dumpout"/trimmed \
             #     "$dumpout"/raw/"$line""_1.$suf" "$dumpout"/raw/"$line""_2.$suf" \
@@ -421,8 +441,11 @@ fastqGrabLocal () {
             fi
             echo "[$sname] trimming..."
             # trim_galore -o "$dumpout"/trimmed "$fq" --dont_gzip
-            fastp -i "$fq" -o "$dumpout"/trimmed/"$tt""_trimmed.fq"
-
+            if [[ "$adapter" == "" ]]; then
+                fastp -i "$fq" -o "$dumpout"/trimmed/"$tt""_trimmed.fq" -h "$dumpout"/trimming_reports/"$tt"".html"
+            else
+                fastp -i "$fq" -o "$dumpout"/trimmed/"$tt""_trimmed.fq" -h "$dumpout"/trimming_reports/"$tt"".html" --adapter_sequence "$adapter"
+            fi
             if [[ "$do_fastqc" == true ]]; then
                 echo "[$sname] trimming complete, performing fastqc..."
                 fastqc "$dumpout"/trimmed/"$tt""_trimmed.fq" -o "$dumpout"/fastqc_results
@@ -447,7 +470,11 @@ fastqGrabLocal () {
             fi
             
             echo "[$sname] trimming..."
-            fastp -i "$fastq_in"/"$tt""_1.$suf" -I "$fastq_in"/"$tt""_2.$suf" -o "$dumpout"/trimmed/"$tt""_1_trimmed.fq" -O "$dumpout"/trimmed/"$tt""_2_trimmed.fq"
+            if [[ "$adapter" == "" ]]; then
+                fastp -i "$fastq_in"/"$tt""_1.$suf" -I "$fastq_in"/"$tt""_2.$suf" -o "$dumpout"/trimmed/"$tt""_1_trimmed.fq" -O "$dumpout"/trimmed/"$tt""_2_trimmed.fq" -h "$dumpout"/trimming_reports/"$tt"".html"
+            else
+                fastp -i "$fastq_in"/"$tt""_1.$suf" -I "$fastq_in"/"$tt""_2.$suf" -o "$dumpout"/trimmed/"$tt""_1_trimmed.fq" -O "$dumpout"/trimmed/"$tt""_2_trimmed.fq" -h "$dumpout"/trimming_reports/"$tt"".html" --adapter_sequence "$adapter" --adapter_sequence_r2 "$adapter_r2"
+            fi   
             # trim_galore --paired \
             #     -o "$dumpout"/trimmed \
             #     "$fastq_in"/"$tt""_1.$suf" "$fastq_in"/"$tt""_2.$suf" \
@@ -1545,9 +1572,17 @@ fastqGrabHouseKeeping () {
     if [ ! -d "$out/datasets/trimmed" ]; then mkdir "$out"/datasets/trimmed; fi
     echo "You can find your trimmed fastq files at $out/datasets/trimmed"
 
-    # Create directory to store fastqc results
-    if [ ! -d "$out/datasets/fastqc_results" ]; then mkdir "$out"/datasets/fastqc_results; fi
-    echo "You can find all the fastqc test results at $out/datasets/fastqc_results"
+    if [[ "$fastq_trimmed" == false ]]; then
+        # Create directory to store trimmed fastq file reports
+        if [ ! -d "$out/datasets/trimming_reports" ]; then mkdir "$out"/datasets/trimming_reports; fi
+        echo "You can find your trimming reports $out/datasets/trimming_reports"
+    fi
+
+    if [[ "$do_fastqc" == true ]]; then
+        # Create directory to store fastqc results
+        if [ ! -d "$out/datasets/fastqc_results" ]; then mkdir "$out"/datasets/fastqc_results; fi
+        echo "You can find all the fastqc test results at $out/datasets/fastqc_results"
+    fi
 
     # Run a series of command checks to ensure the entire script can run smoothly
     if ! command -v fasterq-dump > /dev/null; then
@@ -1621,7 +1656,6 @@ fastq2rawHouseKeeping () {
     echo "calculated overhang: $overhang"
     echo ""
 
-    
     # Creating some folders
     if [ ! -d "$out/pipeline" ]; then mkdir "$out"/pipeline; echo "created path: $out/pipeline"; fi
 
