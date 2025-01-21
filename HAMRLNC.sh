@@ -36,7 +36,7 @@ usage () {
     -p  [activate lncRNA annotation workflow, default=false]
     -u  [activate featurecount workflow, default=false]
     -H  [SERVER alt path for panther]
-    -U  [SERVER alt path for HAMRLINC]
+    -U  [SERVER alt path for HAMRLNC]
     -W  [SERVER alt path for GATK]
     -S  [SERVER alt path for HAMR]
     -J  [SERVER alt path for CPC2]
@@ -2052,6 +2052,7 @@ elif [ "$last_checkpoint" = "checkpoint2" ]; then
         exit 1
     fi
 
+    
     echo "Producing consensus file across biological replicates..."
     # Find consensus accross all reps of a given sample group
     if [[ "$run_mod" = true ]]; then
