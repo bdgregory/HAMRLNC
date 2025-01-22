@@ -701,7 +701,7 @@ hamrBranch () {
         if [[ "$clean" == true ]]; then
             # delete more intermediate files
             echo "[$smpkey] removing large intermediate files..."
-            rm "$smpout"/sorted_RG.bam
+            rm "$smpout"/sorted_unique.bam
             rm "$smpout"/sorted_RG_unique.bam
             rm "$smpout"/sorted_RG_unique_endsIGN.bam
             rm "$smpout"/sorted_RG_unique_endsIGN_reordered.bam
