@@ -100,7 +100,7 @@ ptest=""
 pcorrect=""
 
 # might change this later
-hamrlinc_dir=""
+hamrlnc_dir=""
 gatk_dir=""
 
 
@@ -219,7 +219,7 @@ while getopts ":o:c:g:i:l:d:D:btI:s:a:hn:O:A:Y:R:yzqrG:x:kupH:U:W:S:M:J:f:m:Q:E:
     fdr=$OPTARG
     ;;
     U)
-    hamrlinc_dir=$OPTARG
+    hamrlnc_dir=$OPTARG
     ;;
     W)
     gatk_dir=$OPTARG
@@ -257,8 +257,8 @@ last_checkpoint=""
 exechamrpy="$path_to_HAMR"/"hamr.py"
 execignoreends="$path_to_HAMR"/"ignoreBamReadEnds.py"
 # this might not work?
-export util="$hamrlinc_dir"/"util"
-export scripts="$hamrlinc_dir"/"scripts"
+export util="$hamrlnc_dir"/"util"
+export scripts="$hamrlnc_dir"/"scripts"
 export PATH="$gatk_dir/:$PATH"
 
 filter="$util"/filter_SAM_number_hits.pl
@@ -1413,7 +1413,7 @@ parallelWrap () {
             fastq2raw
         fi
     else
-        echo "$smpext is a bam file, HAMRLINC will shortcut into appropriate steps"
+        echo "$smpext is a bam file, HAMRLNC will shortcut into appropriate steps"
         fastq2raw
     fi
 }
@@ -1929,7 +1929,7 @@ mainHouseKeeping () {
 
 ######################################################### Main Program #########################################
 echo ""
-echo "##################################### Begin HAMRLINC #################################"
+echo "##################################### Begin HAMRLNC #################################"
 echo ""
 
 if [ ! -d "$out" ]; then mkdir "$out"; echo "created path: $out"; fi
@@ -2064,9 +2064,9 @@ fi
 
 # check for mod_partial flag, if not, run consensus when checkpoint is at 2
 if [[ "$mod_partial" = true ]]; then 
-    echo "User has selected to perform only partial HAMRLINC functions"
+    echo "User has selected to perform only partial HAMRLNC functions"
     echo ""
-    echo "#################################### HAMRLINC has finished running #######################################"
+    echo "#################################### HAMRLNC has finished running #######################################"
     date '+%d/%m/%Y %H:%M:%S'
     echo ""
 elif [ "$last_checkpoint" = "checkpoint2" ]; then 
@@ -2142,6 +2142,9 @@ elif [ "$last_checkpoint" = "checkpoint2" ]; then
         done
         wait
 
+        # if user starts at checkpoint2, depth is not added and downstream gets caught up on this
+        # 20250125 downstream checks for if depth is added, if not, it ignores the depth column
+
         for f in "$out"/hamr_consensus/*.bed
         do
             if [ -s "$f" ]; then
@@ -2155,7 +2158,7 @@ elif [ "$last_checkpoint" = "checkpoint2" ]; then
     # if mod not activated, just quit here
     else
         echo ""
-        echo "#################################### HAMRLINC has finished running #######################################"
+        echo "#################################### HAMRLNC has finished running #######################################"
         date '+%d/%m/%Y %H:%M:%S'
         echo ""
         exit 1
@@ -2197,7 +2200,7 @@ if [ "$last_checkpoint" = "checkpoint3" ]; then
         else
             echo "#########NOTICE###########"
             echo "##########No annotation generator or annotation files found, please check your supplied arguments##########"
-            echo "##########As a result, HAMRLINC will stop here. Please provide the above files in the next run############"
+            echo "##########As a result, HAMRLNC will stop here. Please provide the above files in the next run############"
             exit 1
         fi
     else 
