@@ -6,13 +6,22 @@ options(dplyr.summarise.inform = FALSE)
 args=commandArgs(trailingOnly=TRUE)
 
 lap.clean <- function(bed) {
-  out <- select(bed, seq=V8, pos=V9, mod=V11, bio=V4, gene=V5, strand=V12, depth=V13)
+  # handles the case where depth does not exist
+  if (ncol(bed) < 13) {
+    out <- select(bed, seq=V8, pos=V9, mod=V11, bio=V4, gene=V5, strand=V12)
+  } else {
+    out <- select(bed, seq=V8, pos=V9, mod=V11, bio=V4, gene=V5, strand=V12, depth=V13)
+  }
   return(out)
 }
 
 lap.clean.predln <- function(bed) {
-  out <- select(bed, seq=V1, pos=V2, mod=V4, gene=V16, strand=V5, depth=V6)%>%
-    mutate(bio="lncRNA")
+  # also handles the case where depth does not exist
+  if (ncol(bed) < 6) {
+    out <- select(bed, seq=V1, pos=V2, mod=V4, gene=V16, strand=V5)%>%mutate(bio="lncRNA")
+  } else {
+    out <- select(bed, seq=V1, pos=V2, mod=V4, gene=V16, strand=V5, depth=V6)%>%mutate(bio="lncRNA")
+  }
   return(out)
 }
 
