@@ -87,4 +87,8 @@ findConsensus <- function(in_dir, out_dir) {
   }
 }
 
-findConsensus(args[1], args[2])
+if (length(list.files(args[1])) == 0) {
+  stop("No files found in the input directory")
+} else {
+  findConsensus(args[1], args[2])
+}
