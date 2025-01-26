@@ -520,7 +520,6 @@ hamrBranch () {
         currProg_mod="3"
     fi
 
-    wait
 
     if [[ $currProg_mod == "3" ]]; then
         #filter the accepted hits by uniqueness
@@ -547,7 +546,6 @@ hamrBranch () {
         currProg_mod="4"
     fi
 
-    wait
 
     if [[ $currProg_mod == "4" ]]; then
         echo "[$smpkey] excluding read ends..."
@@ -556,7 +554,6 @@ hamrBranch () {
             "$smpout"/sorted_RG_unique.bam \
             -o "$smpout"/sorted_RG_unique.bai
 
-        wait
 
         # ignore read ends
         #######!!!!!!!!!debugging decision, change back later!!!!!!!!##########
@@ -579,8 +576,6 @@ hamrBranch () {
         echo "5" > "$smpout"/progress_mod.txt
         currProg_mod="5"
     fi 
-
-    wait
 
 
     if [[ $currProg_mod == "5" ]]; then
@@ -609,8 +604,6 @@ hamrBranch () {
         currProg_mod="6"
     fi 
 
-    wait
-
     if [[ $currProg_mod == "6" ]]; then
         #splitting and cigarring the reads, using genome analysis tool kit
         #note can alter arguments to allow cigar reads 
@@ -635,8 +628,6 @@ hamrBranch () {
         currProg_mod="7"
     fi 
 
-    wait
-
     if [[ $currProg_mod == "7" ]]; then
         #final resorting using picard
         echo "[$smpkey] resorting..."
@@ -657,8 +648,6 @@ hamrBranch () {
         echo "8" > "$smpout"/progress_mod.txt
         currProg_mod="8"
     fi 
-
-    wait
 
     if [[ $currProg_mod == "8" ]]; then
         #hamr step, can take ~1hr
@@ -685,8 +674,6 @@ hamrBranch () {
         echo "9" > "$smpout"/progress_mod.txt
         currProg_mod="9"
     fi
-
-    wait
 
     # intermediate file clean up
     if [[ $currProg_mod == "9" ]]; then
@@ -1101,6 +1088,12 @@ featureCountBranch () {
     
     echo "[$smpkey] quantifying exons found in reads..."
     echo "[$smpkey] running featurecount..."
+
+    # temporarily assume all bam tracks to be single end
+    if [[ ! -z "$bam_in" ]]; then
+        det=1
+    fi
+
     if [[ "$det" -eq 1 ]]; then
         featureCounts \
             -T 2 \
@@ -1333,8 +1326,6 @@ fastq2raw () {
         currProg_lnc="1"
     fi
 
-    wait
-
     # if 1, then either last run failed before sorting completion or this run just came out of mapping
     if [[ $currProg_mod == "1" && $currProg_lnc == "1" ]]; then
         if [[ -z $bam_in ]]; then
@@ -1363,8 +1354,6 @@ fastq2raw () {
         currProg_lnc="2"
     fi
 
-    wait
-
     # if both lnc and mod are true, then run them parallelized
     if [[ "$run_lnc" = true ]] && [[ "$run_mod" = true ]]; then
         hamrBranch &
@@ -1376,8 +1365,6 @@ fastq2raw () {
     elif [[ "$run_mod" = true ]]; then
         hamrBranch
     fi
-
-    wait
 
     if [[ "$run_featurecount" = true ]]; then
         featureCountBranch
@@ -1952,10 +1939,15 @@ if [[ -z $bam_in ]]; then
         if [[ $mode -eq 1 ]]; then
             # Grabs the fastq files from acc list provided into the dir ~/datasets
             i=0
-            while IFS= read -r line
-            do ((i=i%threads)); ((i++==0)) && wait
-            fastqGrabSRA &
+            while IFS= read -r line; do
+                ((i=i%threads))
+                if ((i++ == 0)); then
+                    wait
+                fi
+                fastqGrabSRA "$line" &
             done < "$acc"
+            
+            wait
 
         elif [[ $mode -eq 2 ]]; then
             i=0
@@ -1965,7 +1957,6 @@ if [[ -z $bam_in ]]; then
                 fastqGrabLocal &
             done
         fi
-        wait
         ##########fastqGrab main ends############
         echo ""
         echo "################ Finished downloading and processing all fastq files. Entering pipeline for HAMR analysis. ######################"
@@ -1992,11 +1983,9 @@ if [[ -z $bam_in ]]; then
         i=0
         for smp in "$hamrin"/*."$suf"; 
         do
-            ((i=i%ttop)); ((i++==0)) && wait   
+            ((i=i%ttop)); ((i++==0)) && wait
             parallelWrap &
         done
-
-        wait
 
         # these checks apply only if mod arm was on
         if [[ "$run_mod" = true ]]; then
@@ -2035,8 +2024,6 @@ else
         ((i=i%ttop)); ((i++==0)) && wait   
         parallelWrap &
     done
-
-    wait
 
     # these checks apply only if mod arm was on
     if [[ "$run_mod" = true ]]; then
@@ -2101,7 +2088,6 @@ elif [ "$last_checkpoint" = "checkpoint2" ]; then
             "$out"/lnc_consensus
     fi
 
-    wait
     echo "done"
 
     # the below is relevant only if we activated mod analysis
@@ -2140,7 +2126,6 @@ elif [ "$last_checkpoint" = "checkpoint2" ]; then
                 fi
             done &
         done
-        wait
 
         # if user starts at checkpoint2, depth is not added and downstream gets caught up on this
         # 20250125 downstream checks for if depth is added, if not, it ignores the depth column
@@ -2164,7 +2149,6 @@ elif [ "$last_checkpoint" = "checkpoint2" ]; then
         exit 1
     fi
 
-    wait
 
     #############consensus finding ends###############
 
