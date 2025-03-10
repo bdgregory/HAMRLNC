@@ -50,6 +50,7 @@ usage () {
     -P  [HAMR: maximum p-value, default=1]
     -F  [HAMR: maximum fdr, default=0.05]
     -C  [HAMR: minimum coverage, default=10]
+    -B  [HAMR: keep intermediate files (debug)]
   ################################################# END ########################################
 EOF
     exit 0
@@ -87,6 +88,7 @@ adapter_r2=""
 lnc_max_intron_len=""
 clean=true
 clean_fastq_raw=true
+clean_hamr_int=true
 #curdir=$(dirname "$0")
 hsref=""
 fastq_in=""
@@ -105,7 +107,7 @@ gatk_dir=""
 
 
 ######################################################### Grab Arguments #########################################
-while getopts ":o:c:g:i:l:d:D:btI:s:a:hn:O:A:Y:R:yzqrG:x:kupH:U:W:S:M:J:f:m:Q:E:P:F:C:" opt; do
+while getopts ":o:c:g:i:l:d:D:btI:s:a:hn:O:A:Y:R:yzqrG:x:kuBpH:U:W:S:M:J:f:m:Q:E:P:F:C:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -136,6 +138,9 @@ while getopts ":o:c:g:i:l:d:D:btI:s:a:hn:O:A:Y:R:yzqrG:x:kupH:U:W:S:M:J:f:m:Q:E:
     ;;
     k)
     run_mod=true
+    ;;
+    B)
+    clean_hamr_int=false
     ;;
     u)
     run_featurecount=true
@@ -664,8 +669,16 @@ hamrBranch () {
         #hamr step, can take ~1hr
         echo "[$smpkey] hamr..."
         #hamr_path=$(which hamr.py) 
-        python $exechamrpy \
-            -fe "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam "$genome" "$model" "$smpout" $smpname $quality $coverage $err H4 $pvalue $fdr .05
+        
+        # 20250310 add option to keep hamr intermadiate files for debugging -1 problem
+        if [[ "$clean_hamr_int" == true ]]; then
+            python $exechamrpy \
+                -fe "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam "$genome" "$model" "$smpout" $smpname $quality $coverage $err H4 $pvalue $fdr .05
+        else
+            python $exechamrpy \
+                -fe "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam "$genome" "$model" "$smpout" $smpname $quality $coverage $err H4 $pvalue $fdr .05 --retain_tempfiles
+        fi
+        
         status=$?
         if [[ "$status" -eq 0 ]]; then
             if [ ! -e "$smpout/${smpname}.mods.txt" ]; then 
