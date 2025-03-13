@@ -22,6 +22,7 @@ suppressWarnings(for (i in (1:nrow(g))) {
   d <- df%>%
     filter(sample_group == g[i,1] & seq_tech == g[i,2] & lap_type %in% c("ncRNA", "gene", "lncRNAPred"))%>%
     mutate(lap_type = ifelse(lap_type == "lncRNAPred", "ncRNA", lap_type))%>%
+    mutate(lap_type = ifelse(lap_type == "gene", "mRNA", lap_type))%>%
     group_by(lap_type)%>%
     summarize(count=n())%>%
     mutate(group=paste(g[i,1], g[i,2], sep="_"))
