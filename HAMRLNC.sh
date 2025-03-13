@@ -823,8 +823,8 @@ lncCallBranch () {
     if [[ $currProg_lnc == "6" ]]; then
         echo "[$smpkey] filtering for UX..."
         
-        # filter with grep for UX class codes
-        grep -E 'class_code "u";|class_code "x";' filtered_gffcmp_annotated.gtf > UXfiltered_gffcmp_annotated.gtf
+        # filter with grep for U, X, or I class codes
+        grep -E 'class_code "u";|class_code "x";|class_code "i";' filtered_gffcmp_annotated.gtf > UXfiltered_gffcmp_annotated.gtf
         status=$?
         if [[ "$status" -eq 0 ]]; then
             echo "[$smpkey] finished filtering (LNC 5/15)"
