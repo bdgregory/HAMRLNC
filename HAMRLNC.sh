@@ -1,5 +1,6 @@
 #!/bin/bash
 set -u
+set -o pipefail     # exit if pipe command fails
 
 # Harry Li, University of Pennsylvania & Chosen Obih, University of Arizona
 # man page
@@ -261,7 +262,8 @@ last_checkpoint=""
 # HAMR components path assignment
 exechamrpy="$path_to_HAMR"/"hamr.py"
 execignoreends="$path_to_HAMR"/"ignoreBamReadEnds.py"
-# this might not work?
+
+# container specific paths
 export util="$hamrlnc_dir"/"util"
 export scripts="$hamrlnc_dir"/"scripts"
 export PATH="$gatk_dir/:$PATH"
@@ -283,11 +285,9 @@ checkpoint () {
 fastqGrabSRA () {
 
     echo "begin downloading $line..." 
-
     fasterq-dump "$line" -O "$dumpout"/raw --verbose
 
-    # automatically detects the suffix
-    # echo "$dumpout"/raw/"$line"
+    # automatical suffix detection and paired end recognition
     if [[ -f $dumpout/raw/$line"_1.fastq" ]]; then
         suf="fastq"
         PE=true
@@ -309,7 +309,8 @@ fastqGrabSRA () {
         exit 1
     fi
 
-    if [[ "$PE" = false ]]; then  
+    if [[ "$PE" = false ]]; then
+    # case of single end
         if [[ "$do_fastqc" == true ]]; then
             echo "[$line] performing fastqc on raw file..."
             fastqc "$dumpout"/raw/"$line"."$suf" -o "$dumpout"/fastqc_results &
@@ -317,6 +318,7 @@ fastqGrabSRA () {
 
         if [[ "$fastq_trimmed" == false ]]; then
             echo "[$line] trimming..."
+            # moved away from trim_galore 2025-01
             # trim_galore -o "$dumpout"/trimmed "$dumpout"/raw/"$line"."$suf"
             if [[ "$adapter" == "" ]]; then
                 fastp -i "$dumpout"/raw/"$line"."$suf" -o "$dumpout"/trimmed/"$line""_trimmed.fq" -h "$dumpout"/trimming_reports/"$line"".html" 
@@ -338,7 +340,8 @@ fastqGrabSRA () {
             rm "$dumpout"/raw/"$line"."$suf"
         fi
 
-    else 
+    else
+    # case of double end
         if [[ "$do_fastqc" == true ]]; then
             echo "[$line] performing fastqc on raw file..."
             fastqc -o "$dumpout"/fastqc_results "$dumpout"/raw/"$line""_1.$suf"
@@ -352,7 +355,8 @@ fastqGrabSRA () {
             else
                 fastp -i "$dumpout"/raw/"$line""_1.$suf" -I "$dumpout"/raw/"$line""_2.$suf" -o "$dumpout"/trimmed/"$line""_1_trimmed.fq" -O "$dumpout"/trimmed/"$line""_2_trimmed.fq" -h "$dumpout"/trimming_reports/"$line"".html" --adapter_sequence "$adapter" --adapter_sequence_r2 "$adapter_r2"
             fi
-            
+
+            # moved away from trim_galore 2025-01
             # trim_galore --paired \
             #     -o "$dumpout"/trimmed \
             #     "$dumpout"/raw/"$line""_1.$suf" "$dumpout"/raw/"$line""_2.$suf" \
@@ -500,11 +504,12 @@ fastqGrabLocal () {
     # choosing not to remove user provided raw fastq
 }
 
-# called upon completion of each sorted BAM files, takes the file through pre-processing, and performs hamr
+# called upon completion of each read alignment, takes the file through pre-processing, and performs hamr
 hamrBranch () {
-    if [[ $currProg_mod == "2" ]]; then
-        #adds read groups using picard, note the RG arguments are disregarded here
+    if [[ "$currProg_mod" == "2" ]]; then
+        #filter the accepted hits by uniqueness
         echo "[$smpkey] filtering uniquely mapped reads..."
+        
         samtools view \
             -h "$smpout"/sort_accepted.bam \
             | perl "$filter" 1 \
@@ -512,23 +517,21 @@ hamrBranch () {
             | samtools sort \
             -o "$smpout"/sorted_unique.bam
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished filtering (MOD 1/7)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at MOD 1/7, pipeline halted"
             exit 1
         fi
 
-        # RG finished without exiting
+        echo "[$smpkey] finished filtering (MOD 1/7)"
+        echo ""
         echo "3" > "$smpout"/progress_mod.txt
         currProg_mod="3"
     fi
 
     wait
 
-    if [[ $currProg_mod == "3" ]]; then
-        #filter the accepted hits by uniqueness
+    if [[ "$currProg_mod" == "3" ]]; then
+        #adds read groups using picard, note the RG arguments are disregarded here
         echo "[$smpkey] adding/replacing read groups..."
         gatk AddOrReplaceReadGroups \
             I="$smpout"/sorted_unique.bam \
@@ -538,23 +541,22 @@ hamrBranch () {
             RGSM=xxx \
             RGLB=xxx \
             RGPL=illumina 
+
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished adding/replacing read groups (MOD 2/7)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at MOD 2/7, pipeline halted"
             exit 1
         fi
 
-        # filtering unique completed without erroring out if this is reached
+        echo "[$smpkey] finished adding/replacing read groups (MOD 2/7)"
+        echo ""
         echo "4" > "$smpout"/progress_mod.txt
         currProg_mod="4"
     fi
 
     wait
 
-    if [[ $currProg_mod == "4" ]]; then
+    if [[ "$currProg_mod" == "4" ]]; then
         echo "[$smpkey] excluding read ends..."
         # first index the input bam file with samtools
         samtools index \
@@ -564,23 +566,18 @@ hamrBranch () {
         wait
 
         # ignore read ends
-        #######!!!!!!!!!debugging decision, change back later!!!!!!!!##########
-        # mv "$smpout"/sorted_RG_unique.bam "$smpout"/sorted_RG_unique_endsIGN.bam
         python $execignoreends \
             -5p 1 -3p 1 \
             "$smpout"/sorted_RG_unique.bam \
             "$smpout"/sorted_RG_unique_endsIGN.bam
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished excluding (MOD 3/7)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at MOD 3/7, pipeline halted"
             exit 1
         fi
-        ####################################################################
 
-        # removing ends finished without exiting
+        echo "[$smpkey] finished excluding (MOD 3/7)"
+        echo ""
         echo "5" > "$smpout"/progress_mod.txt
         currProg_mod="5"
     fi 
@@ -588,9 +585,9 @@ hamrBranch () {
     wait
 
 
-    if [[ $currProg_mod == "5" ]]; then
-        #reorder the reads using picard
-        # 6/26 adding allow discordance, remove ends might have messed with the length?
+    if [[ "$currProg_mod" == "5" ]]; then
+        # reorder the reads using picard
+        # 2024-6-26 adding allow discordance, remove ends might have messed with the length?
         echo "[$smpkey] reordering..."
         gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" ReorderSam \
             I="$smpout"/sorted_RG_unique_endsIGN.bam \
@@ -601,22 +598,20 @@ hamrBranch () {
             TMP_DIR="$smpout"/tmp \
             ALLOW_CONTIG_LENGTH_DISCORDANCE=true
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished reordering (MOD 4/7)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at MOD 4/7, pipeline halted"
             exit 1
         fi
 
-        # ordering finished without exiting
+        echo "[$smpkey] finished reordering (MOD 4/7)"
+        echo ""
         echo "6" > "$smpout"/progress_mod.txt
         currProg_mod="6"
     fi 
 
     wait
 
-    if [[ $currProg_mod == "6" ]]; then
+    if [[ "$currProg_mod" == "6" ]]; then
         #splitting and cigarring the reads, using genome analysis tool kit
         #note can alter arguments to allow cigar reads 
         echo "[$smpkey] getting split and cigar reads..."
@@ -624,25 +619,22 @@ hamrBranch () {
             -R "$genome" \
             -I "$smpout"/sorted_RG_unique_endsIGN_reordered.bam \
             -O "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC.bam
-            # apparently this is now outdated
-            # -U ALLOW_N_CIGAR_READS
+            # -U ALLOW_N_CIGAR_READS            # apparently this is now outdated
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished splitting N cigarring (MOD 5/7)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at MOD 5/7, pipeline halted"
             exit 1
         fi
 
-        # cigaring and spliting finished without exiting
+        echo "[$smpkey] finished splitting N cigarring (MOD 5/7)"
+        echo ""
         echo "7" > "$smpout"/progress_mod.txt
         currProg_mod="7"
     fi 
 
     wait
 
-    if [[ $currProg_mod == "7" ]]; then
+    if [[ "$currProg_mod" == "7" ]]; then
         #final resorting using picard
         echo "[$smpkey] resorting..."
         gatk --java-options "-Xmx2g -Djava.io.tmpdir=$smpout/tmp" SortSam \
@@ -650,27 +642,24 @@ hamrBranch () {
             O="$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam \
             SORT_ORDER=coordinate
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished resorting (MOD 6/7)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at MOD 6/7, pipeline halted"
             exit 1
         fi
 
-        # cigaring and spliting finished without exiting
+        echo "[$smpkey] finished resorting (MOD 6/7)"
+        echo ""
         echo "8" > "$smpout"/progress_mod.txt
         currProg_mod="8"
     fi 
 
     wait
 
-    if [[ $currProg_mod == "8" ]]; then
-        #hamr step, can take ~1hr
+    if [[ "$currProg_mod" == "8" ]]; then
+        # can take ~1hr for human genome
         echo "[$smpkey] hamr..."
-        #hamr_path=$(which hamr.py) 
         
-        # 20250310 add option to keep hamr intermadiate files for debugging -1 problem
+        # 2025-03-10 add option to keep hamr intermadiate files for debugging -1 problem
         if [[ "$clean_hamr_int" == true ]]; then
             python $exechamrpy \
                 -fe "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam "$genome" "$model" "$smpout" $smpname $quality $coverage $err H4 $pvalue $fdr .05
@@ -680,21 +669,20 @@ hamrBranch () {
         fi
         
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            if [ ! -e "$smpout/${smpname}.mods.txt" ]; then 
-                cd "$hamrout" || exit
-                printf '%s \n' "$smpname" >> zero_mod.txt
-                cd || exit
-            else
-            # HAMR needs separate folders to store temp for each sample, so we move at the end
-                cp "$smpout"/"${smpname}".mods.txt "$hamrout"
-            fi
-            echo "[$smpkey] finished hamr (MOD 7/7)"
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at MOD 7/7, pipeline halted"
-            exit 1
+            exit 1            
         fi
 
+        if [ ! -e "$smpout/${smpname}.mods.txt" ]; then 
+            cd "$hamrout" || exit
+            printf '%s \n' "$smpname" >> zero_mod.txt
+            cd || exit
+        else
+            # HAMR needs separate folders to store temp for each sample, so we move at the end
+            cp "$smpout"/"${smpname}".mods.txt "$hamrout"
+        fi
+        echo "[$smpkey] finished hamr (MOD 7/7)"
         echo "9" > "$smpout"/progress_mod.txt
         currProg_mod="9"
     fi
@@ -702,10 +690,10 @@ hamrBranch () {
     wait
 
     # intermediate file clean up
-    if [[ $currProg_mod == "9" ]]; then
+    if [[ "$currProg_mod" == "9" ]]; then
 
-        echo "[$smpkey] moving files around for depth analysis..."
         # Move the unique_RG_ordered.bam and unique_RG_ordered.bai to a folder for read depth analysis
+        echo "[$smpkey] moving files around for depth analysis..."
         cp "$smpout"/sorted_RG_unique_endsIGN_reordered.bam "$out"/pipeline/depth/"$smpname".bam
         cp "$smpout"/sorted_RG_unique_endsIGN_reordered.bai "$out"/pipeline/depth/"$smpname".bai
         echo "[$smpkey] done"
@@ -732,7 +720,7 @@ lncCallBranch () {
 
     cd $smpout
 
-    if [[ $currProg_lnc == "2" ]]; then
+    if [[ "$currProg_lnc" == "2" ]]; then
         echo "[$smpkey] running stringtie for gtf conversion..."
         # turn bam into gtf
 
@@ -748,193 +736,183 @@ lncCallBranch () {
                 -G $annotation -o stringtie_out.gtf \
                 -f 0.05 -j 9 -c 7 -s 20
         fi
+
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished converting bam to gtf (LNC 1/15)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at LNC 1/15, pipeline halted"
             exit 1
         fi
 
+        echo "[$smpkey] finished converting bam to gtf (LNC 1/15)"
+        echo ""
         echo "3" > "$smpout"/progress_lnc.txt
         currProg_lnc="3"
     fi
     
-    if [[ $currProg_lnc == "3" ]]; then
+    if [[ "$currProg_lnc" == "3" ]]; then
         echo "[$smpkey] merging sample gtf with reference gtf..."
         
         # merge gtf from bam with ref gtf
         stringtie --merge -G $annotation \
             -o stringtie_merge_out.gtf \
             stringtie_out.gtf
+
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished merging (LNC 2/15)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at LNC 2/15, pipeline halted"
             exit 1
         fi
 
+        echo "[$smpkey] finished merging (LNC 2/15)"
+        echo ""
         echo "4" > "$smpout"/progress_lnc.txt
         currProg_lnc="4"
     fi
 
-
-    if [[ $currProg_lnc == "4" ]]; then
+    if [[ "$currProg_lnc" == "4" ]]; then
         echo "[$smpkey] running gffcompare on merged gtf..."
         
         # gffcmp merged gtf
         gffcompare -r $annotation stringtie_merge_out.gtf
+
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished gffcompare (LNC 3/15)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at LNC 3/15, pipeline halted"
             exit 1
         fi
 
+        echo "[$smpkey] finished gffcompare (LNC 3/15)"
+        echo ""
         echo "5" > "$smpout"/progress_lnc.txt
         currProg_lnc="5"
     fi
 
-
-    if [[ $currProg_lnc == "5" ]]; then
+    if [[ "$currProg_lnc" == "5" ]]; then
         echo "[$smpkey] filtering..."
         
         # filter with awk
         awk '$7 != "." {print}' gffcmp.annotated.gtf > filtered_gffcmp_annotated.gtf
+
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished filtering (LNC 4/15)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at LNC 4/15, pipeline halted"
             exit 1
         fi
 
+        echo "[$smpkey] finished filtering (LNC 4/15)"
+        echo ""
         echo "6" > "$smpout"/progress_lnc.txt
         currProg_lnc="6"
     fi
 
-
-    if [[ $currProg_lnc == "6" ]]; then
+    if [[ "$currProg_lnc" == "6" ]]; then
         echo "[$smpkey] filtering for UX..."
         
         # filter with grep for U, X, or I class codes
         grep -E 'class_code "u";|class_code "x";|class_code "i";' filtered_gffcmp_annotated.gtf > UXfiltered_gffcmp_annotated.gtf
+
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished filtering (LNC 5/15)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at LNC 5/15, pipeline halted"
             exit 1
         fi
 
+        echo "[$smpkey] finished filtering (LNC 5/15)"
+        echo ""
         echo "7" > "$smpout"/progress_lnc.txt
         currProg_lnc="7"
     fi
 
-
-    if [[ $currProg_lnc == "7" ]] && [[ -s UXfiltered_gffcmp_annotated.gtf ]]; then
+    if [[ "$currProg_lnc" == "7" ]] && [[ -s UXfiltered_gffcmp_annotated.gtf ]]; then
         echo "[$smpkey] creating index file..."
         
         # I could copy over the already made fai but... eh
         samtools faidx $genome
+
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished indexing (LNC 6/15)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at LNC 6/15, pipeline halted"
             exit 1
         fi
 
+        echo "[$smpkey] finished indexing (LNC 6/15)"
+        echo ""
         echo "8" > "$smpout"/progress_lnc.txt
         currProg_lnc="8"
     fi
-
     
-    if [[ $currProg_lnc == "8" ]]; then
+    if [[ "$currProg_lnc" == "8" ]]; then
         echo "[$smpkey] converting filtered gtf to gff3..."
         
         # covnvert to gff3
         gffread UXfiltered_gffcmp_annotated.gtf -T -o UXfiltered_gffcmp_annotated.gff3
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished conversion (LNC 7/15)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at LNC 7/15, pipeline halted"
             exit 1
         fi
 
+        echo "[$smpkey] finished conversion (LNC 7/15)"
+        echo ""
         echo "9" > "$smpout"/progress_lnc.txt
         currProg_lnc="9"
     fi
 
-
-    if [[ $currProg_lnc == "9" ]]; then
+    if [[ "$currProg_lnc" == "9" ]]; then
         echo "[$smpkey] writing fa file from filtered gtf..."
         
         # write gtf to fasta
         gffread -w transcripts.fa -g $genome UXfiltered_gffcmp_annotated.gtf 
+
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished writing (LNC 8/15)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at LNC 8/15, pipeline halted"
             exit 1
         fi
 
+        echo "[$smpkey] finished writing (LNC 8/15)"
+        echo ""
         echo "10" > "$smpout"/progress_lnc.txt
         currProg_lnc="10"
     fi
 
-
-    if [[ $currProg_lnc == "10" ]]; then
+    if [[ "$currProg_lnc" == "10" ]]; then
         echo "[$smpkey] analyzing for transcript coding probability with cpc2..."
         
         # use cpc2 to analyze for coding probablity
         python $execcpc -i transcripts.fa -o cpc2_output
+
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished analysis (LNC 9/15)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at LNC 9/15, pipeline halted"
             exit 1
         fi
 
+        echo "[$smpkey] finished analysis (LNC 9/15)"
+        echo ""
         echo "11" > "$smpout"/progress_lnc.txt
         currProg_lnc="11"
     fi
 
-
-    if [[ $currProg_lnc == "11" ]]; then
+    if [[ "$currProg_lnc" == "11" ]]; then
         echo "[$smpkey] extracting transcripts with probability less than 0.5..."
         
         # use awk to extract result
         awk '$7 < 0.5' cpc2_output.txt > filtered_transcripts.txt
+
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished extraction (LNC 10/15)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at LNC 10/15, pipeline halted"
             exit 1
         fi
 
+        echo "[$smpkey] finished extraction (LNC 10/15)"
+        echo ""
         echo "12" > "$smpout"/progress_lnc.txt
         currProg_lnc="12"
     fi
 
-
-    if [[ $currProg_lnc == "12" ]]; then
+    if [[ "$currProg_lnc" == "12" ]]; then
         echo "[$smpkey] using cpc2 results to filter gtf..."
         
         # loop to fetch entries from gtf
@@ -945,40 +923,38 @@ lncCallBranch () {
             pattern=$(echo "$line" | cut -f1)
             grep "$pattern" "$gtfFile" >> "$outputFile"
         done < "$inputFile"
+
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished filtering (LNC 11/15)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at LNC 11/15, pipeline halted"
             exit 1
         fi
 
+        echo "[$smpkey] finished filtering (LNC 11/15)"
+        echo ""
         echo "13" > "$smpout"/progress_lnc.txt
         currProg_lnc="13"
     fi
-
-    
-    if [[ $currProg_lnc == "13" ]]; then
+   
+    if [[ "$currProg_lnc" == "13" ]]; then
         echo "[$smpkey] creating fa file from cpc2 filtered gtf..."
         
         # create fa from cpc filtered gtf
         gffread cpc_filtered_transcripts.txt -g $genome -w rfam_in.fa
+
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished writing (LNC 12/15)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at LNC 12/15, pipeline halted"
             exit 1
         fi
 
+        echo "[$smpkey] finished writing (LNC 12/15)"
+        echo ""
         echo "14" > "$smpout"/progress_lnc.txt
         currProg_lnc="14"
     fi
 
-
-    if [[ $currProg_lnc == "14" ]]; then
+    if [[ "$currProg_lnc" == "14" ]]; then
         echo "[$smpkey] performing cmscan..."
         
         # create fa from cpc filtered gtf
@@ -986,21 +962,20 @@ lncCallBranch () {
             --rfam --cut_ga --fmt 2 --oclan --oskip \
             --clanin "$path_to_rfam"/Rfam.clanin -o "$smpout"/my.cmscan.out \
             --tblout "$smpout"/my.cmscan.tblout "$path_to_rfam"/Rfam.cm "$smpout"/rfam_in.fa
+
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished (LNC 13/15)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at LNC 13/15, pipeline halted"
             exit 1
         fi
 
+        echo "[$smpkey] finished (LNC 13/15)"
+        echo ""
         echo "15" > "$smpout"/progress_lnc.txt
         currProg_lnc="15"
     fi
 
-
-    if [[ $currProg_lnc == "15" ]]; then
+    if [[ "$currProg_lnc" == "15" ]]; then
         echo "[$smpkey] sacnning against rfam and finishing lncRNA annotation..."
         
         # tblout info extraction 
@@ -1019,43 +994,38 @@ lncCallBranch () {
                 sed -i "/$pattern/d" "$outputFile"
             fi
         done < "$smpout"/parsed_rfam_out.tblout
+
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished lncRNA annotation (LNC 14/15)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at LNC 14/15, pipeline halted"
             exit 1
         fi
 
+        echo "[$smpkey] finished lncRNA annotation (LNC 14/15)"
+        echo ""
         echo "16" > "$smpout"/progress_lnc.txt
         currProg_lnc="16"
     fi
     
-    if [[ $currProg_lnc == "16" ]]; then
+    if [[ "$currProg_lnc" == "16" ]]; then
         echo "[$smpkey] processing identified lncRNA into GTF..."
 
         cat $annotation "$smpout"/rfam_filtered_transcripts.txt > "$smpout"/final_combined_unsorted.gtf
         sort "$smpout"/final_combined_unsorted.gtf -o "$smpout"/final_combined.gtf
         
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            echo "[$smpkey] finished processing lncRNA annotations (LNC 15/15)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status at LNC 15/15, pipeline halted"
             exit 1
         fi
-
+        
+        # move some files and call out
         cp "$smpout"/rfam_filtered_transcripts.txt "$smpout"/"${smpname}".lnc.gtf
         cp "$smpout"/"${smpname}".lnc.gtf "$lncout"
-
-        # this Rscript is broken, don't know why I kept it
-        # Rscript "$scripts"/lnc_processing.R \
-        #     "$smpout"/rfam_filtered_transcripts.txt \
-        #     "$smpout"/"${smpname}"
-        
-    elif [[ $currProg_lnc == "7" ]]; then
+        echo "[$smpkey] finished processing lncRNA annotations (LNC 15/15)"
+        echo ""
+    # this catches the case where UXI filtering gives empty file
+    elif [[ "$currProg_lnc" == "7" ]]; then
         echo "[$smpkey] filtering by class codes -u -x in gtf yielded no entries, no lncRNA can be annotated"
     fi
 
@@ -1092,17 +1062,17 @@ featureCountBranch () {
                 -o "$smpout"/"$smpname"_transcript_abundance_lncRNA-included.txt \
                 "$smpout"/sort_accepted.bam
         fi
+
         status=$?
-        if [[ "$status" -eq 0 ]]; then
-            # housekeeping for lnc abundance
-            mv "$smpout"/"$smpname"_transcript_abundance_lncRNA-included.txt "$out/featurecount_out"
-            echo "[$smpkey] finished quantifying read features (LNC)"
-            echo ""
-        else
+        if [[ "$status" -ne 0 ]]; then
             echo "[$smpkey] returned non-zero exit status for quantifying read features, pipeline halted"
             exit 1
         fi
-        
+
+        # housekeeping for lnc abundance
+        mv "$smpout"/"$smpname"_transcript_abundance_lncRNA-included.txt "$out/featurecount_out"
+        echo "[$smpkey] finished quantifying read features (LNC)"
+        echo ""
     fi
 
     # always do feature count with the regular gtf
@@ -1138,15 +1108,15 @@ featureCountBranch () {
             -o "$smpout"/"$smpname"_exon_abundance.txt \
             "$smpout"/sort_accepted.bam
     fi
+
     status=$?
-    if [[ "$status" -eq 0 ]]; then
-        echo "[$smpkey] finished quantifying read features (regular)"
-        echo ""
-    else
+    if [[ "$status" -ne 0 ]]; then
         echo "[$smpkey] returned non-zero exit status for quantifying read features, pipeline halted"
         exit 1
     fi
 
+    echo "[$smpkey] finished quantifying read features (regular)"
+    echo ""
     # housekeeping for regular abundance
     mv "$smpout"/"$smpname"_exon_abundance.txt "$out/featurecount_out"
 }
@@ -1221,7 +1191,7 @@ fastq2raw () {
 
     
     # if 0, then either this run failed before mapping completion or this run just started
-    if [[ $currProg_mod == "0" && $currProg_lnc == "0" ]]; then
+    if [[ "$currProg_mod" == "0" && "$currProg_lnc" == "0" ]]; then
         if [[ -z $bam_in ]]; then
             cd "$smpout" || exit
             # maps the trimmed reads to provided annotated genome, can take ~1.5hr
@@ -1337,6 +1307,7 @@ fastq2raw () {
             else
                 echo "user requested sorting provided bam files..."
                 samtools sort \
+                    -@ 2 \      # adding multithreading
                     "$smp" \
                     -o "$smpout"/sort_accepted.bam
                 echo "[$smpkey] finished sorting"
@@ -1355,7 +1326,7 @@ fastq2raw () {
     wait
 
     # if 1, then either last run failed before sorting completion or this run just came out of mapping
-    if [[ $currProg_mod == "1" && $currProg_lnc == "1" ]]; then
+    if [[ "$currProg_mod" == "1" && "$currProg_lnc" == "1" ]]; then
         if [[ -z $bam_in ]]; then
             echo "[$smpkey] renaming file"
 
@@ -1412,9 +1383,9 @@ parallelWrap () {
     original_ext="${smpext##*.}"
 
     # this function will be split into bam route and fastq route, 6/30/24
-    if [[ -z $bam_in ]]; then
+    if [[ -z "$bam_in" ]]; then
         # always run the below to ensure necessary variables are assigned
-        if [[ $smpkey == *_1* ]]; then
+        if [[ "$smpkey" == *_1* ]]; then
             smpkey="${smpkey%_1*}"
             smp1="$smpdir/${smpkey}_1_trimmed.$original_ext"
             smp2="$smpdir/${smpkey}_2_trimmed.$original_ext"
@@ -1422,7 +1393,7 @@ parallelWrap () {
             det=0
             echo "$smpext is a part of a paired-end sequencing file"
             fastq2raw
-        elif [[ $smpkey == *_2* ]]; then
+        elif [[ "$smpkey" == *_2* ]]; then
             # If _2 is in the filename, this file was processed along with its corresponding _1 so we skip
             echo "$smpext has already been processed with its _1 counter part. Skipped."
             echo ""
@@ -1564,7 +1535,7 @@ fastqGrabHouseKeeping () {
     if [ ! -d "$out/datasets" ]; then mkdir "$out"/datasets; echo "created path: $out/datasets"; fi
 
     # first see whether input folder is provided
-    if [[ ! -z $fastq_in ]]; then
+    if [[ ! -z "$fastq_in" ]]; then
         fastq_in="$user_dir"/"$fastq_in"
         echo "Directory $fastq_in is found, assuming raw fastq files are provided..."
         mode=2
@@ -1963,7 +1934,7 @@ exec > >(tee -a "$logfile") 2>&1
 # perform house keeping steps
 mainHouseKeeping
 
-if [[ -z $bam_in ]]; then
+if [[ -z "$bam_in" ]]; then
     # run fastqGrab when checkpoint is at start
     if [ "$last_checkpoint" = "start" ] || [ "$last_checkpoint" = "" ]; then
         fastqGrabHouseKeeping
