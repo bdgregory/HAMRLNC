@@ -95,6 +95,7 @@ docker run \
   -l 50 -n 4 -k -p -u -r -t
 
 # if your system uses Apple Silicon chip
+# not yet supported 2025-03-13
 docker run \
   --platform linux/amd64 \
   --rm -v $(pwd):/working-dir \
