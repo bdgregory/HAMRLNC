@@ -25,8 +25,8 @@ usage () {
     -a  [adapter sequence for trimming R2]
     -D  [input a directory of bam]
     -b  [sort input bam files, default=false]
+    -r  [perform fastqc, default=false]
     -I  [input genome annotation folder for STAR]
-    -h  [help message] 
     -n  number of threads (default=4)
     -O  [Panther: organism taxon ID, default=3702]
     -A  [Panther: annotation dataset, default="GO:0008150"]
@@ -52,6 +52,10 @@ usage () {
     -F  [HAMR: maximum fdr, default=0.05]
     -C  [HAMR: minimum coverage, default=10]
     -B  [HAMR: keep intermediate files (debug)]
+    -T  [HAMR: provide target bed, default=NA]
+    -z  [keep raw fastq files downloaded from SRA,default=false]
+    -x  [max intron length for lncRNA-annotation-unique STAR mapping, default=NA]
+    -h  [help message] 
   ################################################# END ########################################
 EOF
     exit 0
@@ -68,6 +72,7 @@ fdr=0.05
 path_to_HAMR="/HAMR"
 path_to_rfam="/"
 path_to_STARref=""
+path_to_targetbed=""
 
 # hamr downstream
 execpthr="/pantherapi-pyclient/pthr_go_annots.py"
@@ -108,7 +113,7 @@ gatk_dir=""
 
 
 ######################################################### Grab Arguments #########################################
-while getopts ":o:c:g:i:l:d:D:btI:s:a:hn:O:A:Y:R:yzqrG:x:kuBpH:U:W:S:M:J:f:m:Q:E:P:F:C:" opt; do
+while getopts ":o:c:g:i:l:d:D:btI:s:a:hn:O:A:Y:R:yzqT:rG:x:kuBpH:U:W:S:M:J:f:m:Q:E:P:F:C:" opt; do
   case $opt in
     o)
     out=$OPTARG # project output directory root
@@ -193,6 +198,9 @@ while getopts ":o:c:g:i:l:d:D:btI:s:a:hn:O:A:Y:R:yzqrG:x:kuBpH:U:W:S:M:J:f:m:Q:E
     ;;
     I)
     path_to_STARref=$OPTARG
+    ;;
+    T)
+    path_to_targetbed=$OPTARG
     ;;
     b)
     bam_sorted=false
@@ -660,12 +668,23 @@ hamrBranch () {
         echo "[$smpkey] hamr..."
         
         # 2025-03-10 add option to keep hamr intermadiate files for debugging -1 problem
+        # 2025-03-14 add option to allow target bed specification
         if [[ "$clean_hamr_int" == true ]]; then
-            python $exechamrpy \
-                -fe "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam "$genome" "$model" "$smpout" $smpname $quality $coverage $err H4 $pvalue $fdr .05
+            if [[ -n "$path_to_targetbed" ]]; then
+                python $exechamrpy \
+                    -fe "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam "$genome" "$model" "$smpout" $smpname $quality $coverage $err H4 $pvalue $fdr .05 --target_bed "$path_to_targetbed"
+            else
+                python $exechamrpy \
+                    -fe "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam "$genome" "$model" "$smpout" $smpname $quality $coverage $err H4 $pvalue $fdr .05
+            fi
         else
-            python $exechamrpy \
-                -fe "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam "$genome" "$model" "$smpout" $smpname $quality $coverage $err H4 $pvalue $fdr .05 --retain_tempfiles
+            if [[ -n "$path_to_targetbed" ]]; then
+                python $exechamrpy \
+                    -fe "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam "$genome" "$model" "$smpout" $smpname $quality $coverage $err H4 $pvalue $fdr .05 --retain_tempfiles --target_bed "$path_to_targetbed"
+            else 
+                python $exechamrpy \
+                    -fe "$smpout"/sorted_RG_unique_endsIGN_reordered_SNC_resorted.bam "$genome" "$model" "$smpout" $smpname $quality $coverage $err H4 $pvalue $fdr .05 --retain_tempfiles
+            fi
         fi
         
         status=$?
