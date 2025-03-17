@@ -68,7 +68,7 @@ Running HAMRLNC
 
 ```
 # pull HAMRLNC docker image:  
-docker pull chosenobih/hamrlnc:v0.05
+docker pull chosenobih/hamrlnc:v0.13
 ```
 ```
 # clone HAMRLNC repo
@@ -91,7 +91,7 @@ cd /your/working/directory
 # run HAMRLNC with SRA IDs with all three arms activated
 docker run \
   --rm -v $(pwd):/working-dir \
-  -w /working-dir chosenobih/hamrlnc:v0.05 \
+  -w /working-dir chosenobih/hamrlnc:v0.13 \
   -o test_run \
   -c demo/demo_filenames.csv \
   -g Arabidopsis_thaliana.TAIR10.dna.toplevel.fa \
@@ -103,7 +103,7 @@ docker run \
 docker run \
   --platform linux/amd64 \
   --rm -v $(pwd):/working-dir \
-  -w /working-dir chosenobih/hamrlnc:v0.05 \
+  -w /working-dir chosenobih/hamrlnc:v0.13 \
   -o test_run \
   -c demo/demo_filenames.csv \
   -g Arabidopsis_thaliana.TAIR10.dna.toplevel.fa \
