@@ -446,7 +446,13 @@ fastqGrabLocal () {
     if [[ "$PE" = false ]]; then  
         if [[ "$fastq_trimmed" == true ]]; then
             echo "[$sname] is already trimmed, skipping trimming step..."
-            cp "$fq" "$dumpout"/trimmed/"$tt""_trimmed.fq"
+
+            # 2025-03-19 the edge case where user provided fastq is 1) zipped 2) pretrimmed (3) needs fastqc)
+            if [[ "$suf" == *"gz" ]]; then
+                zcat "$fq" > "$dumpout"/trimmed/"$tt""_trimmed.fq"
+            else
+                cp "$fq" "$dumpout"/trimmed/"$tt""_trimmed.fq"
+            fi
 
             if [[ "$do_fastqc" == true ]]; then
                 echo "[$sname] performing fastqc on raw file..."
@@ -471,8 +477,15 @@ fastqGrabLocal () {
     else 
         if [[ "$fastq_trimmed" == true ]]; then
             echo "[$sname] is already trimmed, skipping trimming step..."
-            cp "$fastq_in"/"$tt""_1.$suf" "$dumpout"/trimmed/"$tt""_1_trimmed.fq"
-            cp "$fastq_in"/"$tt""_2.$suf" "$dumpout"/trimmed/"$tt""_2_trimmed.fq"
+
+            # 2025-03-19 the edge case where user provided fastq is 1) zipped 2) pretrimmed (3) needs fastqc)
+            if [[ "$suf" == *"gz" ]]; then
+                zcat "$fastq_in"/"$tt""_1.$suf" > "$dumpout"/trimmed/"$tt""_1_trimmed.fq"
+                zcat "$fastq_in"/"$tt""_2.$suf" > "$dumpout"/trimmed/"$tt""_2_trimmed.fq"
+            else
+                cp "$fastq_in"/"$tt""_1.$suf" "$dumpout"/trimmed/"$tt""_1_trimmed.fq"
+                cp "$fastq_in"/"$tt""_2.$suf" "$dumpout"/trimmed/"$tt""_2_trimmed.fq"
+            fi
 
             if [[ "$do_fastqc" == true ]]; then
                 echo "[$sname] performing fastqc on raw file..."
